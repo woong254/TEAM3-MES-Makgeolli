@@ -237,7 +237,6 @@ const menuGroups = [
       },
       {
         icon: PlugInIcon,
-
         name: "영업",
         subItems: [
           { name: "Signin", path: "/signin", pro: false },
