@@ -118,48 +118,53 @@
                       isSubmenuOpen(groupIndex, index) && (isExpanded || isHovered || isMobileOpen)
                     "
                   >
-                    <ul class="mt-2 space-y-1 ml-9">
-                      <li v-for="subItem in item.subItems" :key="subItem.name">
-                        <router-link
-                          :to="subItem.path"
-                          :class="[
-                            'menu-dropdown-item',
-                            {
-                              'menu-dropdown-item-active': isActive(subItem.path),
-                              'menu-dropdown-item-inactive': !isActive(subItem.path),
-                            },
-                          ]"
-                        >
-                          {{ subItem.name }}
-                          <span class="flex items-center gap-1 ml-auto">
-                            <span
-                              v-if="subItem.new"
-                              :class="[
-                                'menu-dropdown-badge',
-                                {
-                                  'menu-dropdown-badge-active': isActive(subItem.path),
-                                  'menu-dropdown-badge-inactive': !isActive(subItem.path),
-                                },
-                              ]"
-                            >
-                              new
-                            </span>
-                            <span
-                              v-if="subItem.pro"
-                              :class="[
-                                'menu-dropdown-badge',
-                                {
-                                  'menu-dropdown-badge-active': isActive(subItem.path),
-                                  'menu-dropdown-badge-inactive': !isActive(subItem.path),
-                                },
-                              ]"
-                            >
-                              pro
-                            </span>
-                          </span>
-                        </router-link>
-                      </li>
-                    </ul>
+                            <ul class="mt-2 space-y-1 ml-9">
+                              <li v-for="subItem in item.subItems" :key="subItem.name">
+                                <template v-if="subItem.path">
+                                  <router-link
+                                    :to="subItem.path"
+                                    :class="[
+                                      'menu-dropdown-item',
+                                      {
+                                        'menu-dropdown-item-active': isActive(subItem.path),
+                                        'menu-dropdown-item-inactive': !isActive(subItem.path),
+                                      },
+                                    ]"
+                                  >
+                                    {{ subItem.name }}
+                                    <span class="flex items-center gap-1 ml-auto">
+                                      <span
+                                        v-if="subItem.new"
+                                        :class="[
+                                          'menu-dropdown-badge',
+                                          {
+                                            'menu-dropdown-badge-active': isActive(subItem.path),
+                                            'menu-dropdown-badge-inactive': !isActive(subItem.path),
+                                          },
+                                        ]"
+                                      >
+                                        new
+                                      </span>
+                                      <span
+                                        v-if="subItem.pro"
+                                        :class="[
+                                          'menu-dropdown-badge',
+                                          {
+                                            'menu-dropdown-badge-active': isActive(subItem.path),
+                                            'menu-dropdown-badge-inactive': !isActive(subItem.path),
+                                          },
+                                        ]"
+                                      >
+                                        pro
+                                      </span>
+                                    </span>
+                                  </router-link>
+                                </template>
+                                <template v-else>
+                                  <div class="menu-dropdown-item menu-dropdown-item-inactive">{{ subItem.name }}</div>
+                                </template>
+                              </li>
+                            </ul>
                   </div>
                 </transition>
               </li>
@@ -171,8 +176,8 @@
   </aside>
 </template>
 
-<script setup>
-import { ref, computed } from 'vue'
+<script setup lang="ts">
+import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 
 import {
@@ -185,9 +190,28 @@ import { useSidebar } from '@/composables/useSidebar'
 
 const route = useRoute()
 
-const { isExpanded, isMobileOpen, isHovered, openSubmenu } = useSidebar()
+interface SubItem {
+  name: string
+  path?: string
+  new?: boolean
+  pro?: boolean
+}
 
-const menuGroups = [
+interface Item {
+  icon: unknown
+  name: string
+  path?: string
+  subItems?: SubItem[]
+}
+
+interface MenuGroup {
+  title: string
+  items: Item[]
+}
+
+const { isExpanded, isMobileOpen, isHovered, openSubmenu, closedSubmenus, toggleSubmenu: toggleSubmenuAction } = useSidebar()
+
+const menuGroups: MenuGroup[] = [
   // 템플릿 기본 메뉴 (다 만들고 삭제할 것)
   {
     title: "템플릿 기본 메뉴",
@@ -279,39 +303,44 @@ const menuGroups = [
   },
 ]
 
-const isActive = (path) => route.path === path
+const isActive = (path: string) => route.path === path
 
-const toggleSubmenu = (groupIndex, itemIndex) => {
+const toggleSubmenu = (groupIndex: number, itemIndex: number) => {
   const key = `${groupIndex}-${itemIndex}`
-  openSubmenu.value = openSubmenu.value === key ? null : key
+  toggleSubmenuAction(key)
 }
 
 const isAnySubmenuRouteActive = computed(() => {
-  return menuGroups.some((group) =>
-    group.items.some(
-      (item) => item.subItems && item.subItems.some((subItem) => isActive(subItem.path)),
+  return menuGroups.some((group: MenuGroup) =>
+    group.items.some((item: Item) =>
+      !!item.subItems && item.subItems.some((subItem: SubItem) => !!subItem.path && isActive(subItem.path)),
     ),
   )
 })
 
-const isSubmenuOpen = (groupIndex, itemIndex) => {
+const isSubmenuOpen = (groupIndex: number, itemIndex: number) => {
   const key = `${groupIndex}-${itemIndex}`
+  // If user manually closed this submenu, respect that and keep it closed
+  if (closedSubmenus.value.includes(key)) return false
   return (
     openSubmenu.value === key ||
     (isAnySubmenuRouteActive.value &&
-      menuGroups[groupIndex].items[itemIndex].subItems?.some((subItem) => isActive(subItem.path)))
+      !!menuGroups[groupIndex].items[itemIndex].subItems &&
+      menuGroups[groupIndex].items[itemIndex].subItems!.some((subItem: SubItem) => !!subItem.path && isActive(subItem.path!)))
   )
 }
 
-const startTransition = (el) => {
-  el.style.height = 'auto'
-  const height = el.scrollHeight
-  el.style.height = '0px'
-  el.offsetHeight // force reflow
-  el.style.height = height + 'px'
+const startTransition = (el: Element) => {
+  const htmlEl = el as HTMLElement
+  htmlEl.style.height = 'auto'
+  const height = htmlEl.scrollHeight
+  htmlEl.style.height = '0px'
+  void htmlEl.offsetHeight // force reflow
+  htmlEl.style.height = height + 'px'
 }
 
-const endTransition = (el) => {
-  el.style.height = ''
+const endTransition = (el: Element) => {
+  const htmlEl = el as HTMLElement
+  htmlEl.style.height = ''
 }
 </script>
