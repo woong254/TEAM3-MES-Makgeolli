@@ -1,3 +1,4 @@
+<!-- 정보 아이콘 -->
 <template>
   <svg
     className="fill-current"
