@@ -5,7 +5,7 @@ const books = require("./sqls/reference.js");
 const books = require("./sqls/sales.js");
 
 // 생산
-const books = require("./sqls/production.js");
+const books = require("./sqls/prodord.js");
 
 // 자재
 const books = require("./sqls/materials.js");
@@ -25,7 +25,7 @@ module.exports = {
   ...sales,
 
   // 생산
-  ...production,
+  ...prodord,       // 생산지시
 
   // 자재
   ...materials,

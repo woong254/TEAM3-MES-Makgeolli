@@ -181,10 +181,16 @@ import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 
 import {
+  GridIcon,
+  CalenderIcon,
+
   ChevronDownIcon,
   HorizontalDots,
+  PageIcon,
+  TableIcon,
+  ListIcon,
   PlugInIcon,
-} from '../../icons'
+} from "../../icons";
 import BoxCubeIcon from '@/icons/BoxCubeIcon.vue'
 import { useSidebar } from '@/composables/useSidebar'
 
@@ -229,6 +235,8 @@ const menuGroups: MenuGroup[] = [
           { name: "Buttons", path: "/buttons", pro: false },
           { name: "Images", path: "/images", pro: false },
           { name: "Videos", path: "/videos", pro: false },
+          { name: "Basic Tables", path: "/basic-tables", pro: false },
+          { name: "Form Elements", path: "/form-elements", pro: false },
         ],
       },
       {
@@ -260,7 +268,7 @@ const menuGroups: MenuGroup[] = [
         ],
       },
       {
-        icon: PlugInIcon,
+        icon: GridIcon,
         name: "영업",
         subItems: [
           { name: "Signin", path: "/signin", pro: false },
@@ -268,7 +276,7 @@ const menuGroups: MenuGroup[] = [
         ],
       },
       {
-        icon: PlugInIcon,
+        icon: CalenderIcon,
         name: "생산",
         subItems: [
           { name: "Signin", path: "/signin", pro: false },
@@ -276,7 +284,7 @@ const menuGroups: MenuGroup[] = [
         ],
       },
       {
-        icon: PlugInIcon,
+        icon: ListIcon,
         name: "자재",
         subItems: [
           { name: "Signin", path: "/signin", pro: false },
@@ -284,7 +292,7 @@ const menuGroups: MenuGroup[] = [
         ],
       },
       {
-        icon: PlugInIcon,
+        icon: TableIcon,
         name: "품질",
         subItems: [
           { name: "Signin", path: "/signin", pro: false },
@@ -292,7 +300,7 @@ const menuGroups: MenuGroup[] = [
         ],
       },
       {
-        icon: PlugInIcon,
+        icon: PageIcon,
         name: "설비",
         subItems: [
           { name: 'Signin', path: '/signin', pro: false },
