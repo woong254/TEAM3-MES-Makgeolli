@@ -11,11 +11,23 @@ import App from './App.vue'
 import router from './router'
 import VueApexCharts from 'vue3-apexcharts'
 import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community'
+
+import PrimeVue from 'primevue/config';
+import Lara from '@primeuix/themes/lara';
+
+
 ModuleRegistry.registerModules([AllCommunityModule])
 
 const app = createApp(App)
 
 app.use(router)
 app.use(VueApexCharts)
+app.use(PrimeVue, { 
+    theme: {
+        preset: Lara,
+    }
+});
 
 app.mount('#app')
+
+
