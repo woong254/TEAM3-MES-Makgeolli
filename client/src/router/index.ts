@@ -57,6 +57,11 @@ const router = createRouter({
       component: () => import('../views/Chart/BarChart/BarChart.vue'),
     },
     {
+      path: '/PurManagement',
+      name: 'PurManagement',
+      component: () => import('../views/Department/materials/PurManagement.vue'),
+    },
+    {
       path: '/alerts',
       name: 'Alerts',
       component: () => import('../views/UiElements/Alerts.vue'),

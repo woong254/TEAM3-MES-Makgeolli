@@ -299,16 +299,19 @@ const menuGroups: MenuGroup[] = [
         ],
       },
       {
-        icon: ListIcon,
-        name: "자재",
+        icon: BoxCubeIcon,
+        name: '자재',
         subItems: [
-          { name: 'Signin', path: '/signin', pro: false },
-          { name: 'Signup', path: '/signup', pro: false },
+          { name: '입고관리', path: '/signin', pro: false },
+          { name: '발주관리', path: '/purManagement', pro: false },
+          { name: '발주조회', path: '/signup', pro: false },
+          { name: '자재조회', path: '/signup', pro: false },
+          { name: 'MPR관리', path: '/signup', pro: false },
         ],
       },
       {
-        icon: TableIcon,
-        name: "품질",
+        icon: PlugInIcon,
+        name: '품질',
         subItems: [
           { name: 'Signin', path: '/signin', pro: false },
           { name: 'Signup', path: '/signup', pro: false },
