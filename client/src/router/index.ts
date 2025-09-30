@@ -31,7 +31,7 @@ const router = createRouter({
       },
     },
     {
-      path: '/form-elements',
+      path: '/form_elements',
       name: 'Form Elements',
       component: () => import('../views/Forms/FormElements.vue'),
       meta: {
@@ -39,7 +39,7 @@ const router = createRouter({
       },
     },
     {
-      path: '/basic-tables',
+      path: '/basic_tables',
       name: 'Basic Tables',
       component: () => import('../views/Tables/BasicTables.vue'),
       meta: {
@@ -47,14 +47,19 @@ const router = createRouter({
       },
     },
     {
-      path: '/line-chart',
+      path: '/line_chart',
       name: 'Line Chart',
       component: () => import('../views/Chart/LineChart/LineChart.vue'),
     },
     {
-      path: '/bar-chart',
+      path: '/bar_chart',
       name: 'Bar Chart',
       component: () => import('../views/Chart/BarChart/BarChart.vue'),
+    },
+    {
+      path: '/PurManagement',
+      name: 'PurManagement',
+      component: () => import('../views/Department/materials/PurManagement.vue'),
     },
     {
       path: '/alerts',
@@ -116,7 +121,7 @@ const router = createRouter({
     },
 
     {
-      path: '/error-404',
+      path: '/error_404',
       name: '404 Error',
       component: () => import('../views/Errors/FourZeroFour.vue'),
       meta: {
@@ -140,6 +145,58 @@ const router = createRouter({
         title: 'Signup',
       },
     },
+    
+    // 
+    {
+      path: '/of',
+      name: '주문서조회',
+      component: () => import('../views/Department/sales/OrderForm.vue'),
+      meta: {
+        title: '주문서조회',
+      },
+    },
+    {
+      path: '/ofm',
+      name: '주문서관리',
+      component: () => import('../views/Department/sales/OrderFormManage.vue'),
+      meta: {
+        title: '주문서관리',
+      },
+    },
+    {
+      path: '/ep-instore',
+      name: '완제품입고조회',
+      component: () => import('../views/Department/sales/EpInstore.vue'),
+      meta: {
+        title: '완제품입고조회',
+      },
+    },
+    {
+      path: '/ep-instoremanage',
+      name: '완제품입고관리',
+      component: () => import('../views/Department/sales/EpInstoreManage.vue'),
+      meta: {
+        title: '완제품입고관리',
+      },
+    },
+    {
+      path: '/ep-outstore',
+      name: '완제품출고조회',
+      component: () => import('../views/Department/sales/EpOutstore.vue'),
+      meta: {
+        title: '완제품출고조회',
+      },
+    },
+    {
+      path: '/ep-outstoremanage',
+      name: '완제품출고관리',
+      component: () => import('../views/Department/sales/EpOutstoreManage.vue'),
+      meta: {
+        title: '완제품출고관리',
+      },
+    },
+    
+    // 
     {
       path: '/quamaster',
       name: 'QualityMaster',
