@@ -3,6 +3,9 @@ const express = require('express');
 
 const router = express.Router();
 
-const productionService = require('../services/production_service.js');
+const prodOrdService = require('../services/prodOrd_service.js');
+
+// 1. 등록
+router.post('/')
 
 module.exports = router;

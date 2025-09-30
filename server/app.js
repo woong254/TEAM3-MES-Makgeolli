@@ -19,7 +19,7 @@ const referenceRouter = require("./routers/reference_router.js");
 const salesRouter = require("./routers/sales_router.js");
 
 // 2. 생산
-const productionRouter = require("./routers/production_router.js");
+const prodOrdRouter = require("./routers/prodOrd_router.js");
 
 // 3. 자재
 const materialsRouter = require("./routers/materials_router.js");
@@ -44,7 +44,7 @@ app.use("/", referenceRouter);
 app.use("/", salesRouter);
 
 // 2. 생산
-app.use("/", productionRouter);
+app.use("/prodOrd", prodOrdRouter);     // 생산지시서
 
 // 3. 자재
 app.use("/", materialsRouter);
