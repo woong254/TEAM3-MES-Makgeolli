@@ -8,34 +8,11 @@
           <Button size="md" variant="primary"> Button Text </Button>
         </div>
       </ComponentCard>
-      <ComponentCard title="Primary Button with Left Icon">
-        <div class="flex items-center gap-5">
-          <Button size="sm" variant="primary" :startIcon="BoxIcon"> Button Text </Button>
-          <Button size="md" variant="primary" :startIcon="BoxIcon"> Button Text </Button>
-        </div>
-      </ComponentCard>
-      <ComponentCard title="Primary Button with Right Icon">
-        <div class="flex items-center gap-5">
-          <Button size="sm" variant="primary" :endIcon="BoxIcon"> Button Text </Button>
-          <Button size="md" variant="primary" :endIcon="BoxIcon"> Button Text </Button>
-        </div>
-      </ComponentCard>
+
       <ComponentCard title="Primary Button">
         <div class="flex items-center gap-5">
           <Button size="sm" variant="outline"> Button Text </Button>
           <Button size="md" variant="outline"> Button Text </Button>
-        </div>
-      </ComponentCard>
-      <ComponentCard title="Primary Button with Left Icon">
-        <div class="flex items-center gap-5">
-          <Button size="sm" variant="outline" :startIcon="BoxIcon"> Button Text </Button>
-          <Button size="md" variant="outline" :startIcon="BoxIcon"> Button Text </Button>
-        </div>
-      </ComponentCard>
-      <ComponentCard title="Primary Button with Right Icon">
-        <div class="flex items-center gap-5">
-          <Button size="sm" variant="outline" :endIcon="BoxIcon"> Button Text </Button>
-          <Button size="md" variant="outline" :endIcon="BoxIcon"> Button Text </Button>
         </div>
       </ComponentCard>
     </div>

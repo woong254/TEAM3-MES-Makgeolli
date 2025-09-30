@@ -141,11 +141,51 @@ const router = createRouter({
       },
     },
     {
-      path: '/equipment',
-      name: 'equipment',
-      component: () => import('../views/Department/equipment/test.vue'),
+      path: '/of',
+      name: '주문서조회',
+      component: () => import('../views/Department/sales/OrderForm.vue'),
       meta: {
-        title: 'equipment',
+        title: '주문서조회',
+      },
+    },
+    {
+      path: '/ofm',
+      name: '주문서관리',
+      component: () => import('../views/Department/sales/OrderFormManage.vue'),
+      meta: {
+        title: '주문서관리',
+      },
+    },
+    {
+      path: '/ep-instore',
+      name: '완제품입고조회',
+      component: () => import('../views/Department/sales/EpInstore.vue'),
+      meta: {
+        title: '완제품입고조회',
+      },
+    },
+    {
+      path: '/ep-instoremanage',
+      name: '완제품입고관리',
+      component: () => import('../views/Department/sales/EpInstoreManage.vue'),
+      meta: {
+        title: '완제품입고관리',
+      },
+    },
+    {
+      path: '/ep-outstore',
+      name: '완제품출고조회',
+      component: () => import('../views/Department/sales/EpOutstore.vue'),
+      meta: {
+        title: '완제품출고조회',
+      },
+    },
+    {
+      path: '/ep-outstoremanage',
+      name: '완제품출고관리',
+      component: () => import('../views/Department/sales/EpOutstoreManage.vue'),
+      meta: {
+        title: '완제품출고관리',
       },
     },
   ],

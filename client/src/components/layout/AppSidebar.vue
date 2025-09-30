@@ -280,15 +280,19 @@ const menuGroups: MenuGroup[] = [
       },
       {
         icon: GridIcon,
-        name: "영업",
+        name: '영업',
         subItems: [
-          { name: 'Signin', path: '/signin', pro: false },
-          { name: 'Signup', path: '/signup', pro: false },
+          { name: '주문서조회', path: '/of', pro: false },
+          { name: '주문서관리', path: '/ofm', pro: false },
+          { name: '완제품입고조회', path: '/ep-instore', pro: false },
+          { name: '완제품입고관리', path: '/ep-instoremanage', pro: false },
+          { name: '완제품출고조회', path: '/ep-outstore', pro: false },
+          { name: '완제품출고관리', path: '/ep-outstoremanage', pro: false },
         ],
       },
       {
-        icon: CalenderIcon,
-        name: "생산",
+        icon: PlugInIcon,
+        name: '생산',
         subItems: [
           { name: 'Signin', path: '/signin', pro: false },
           { name: 'Signup', path: '/signup', pro: false },
