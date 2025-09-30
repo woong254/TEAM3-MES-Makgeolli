@@ -285,7 +285,7 @@ const menuGroups: MenuGroup[] = [
         name: '자재',
         subItems: [
           { name: '입고관리', path: '/signin', pro: false },
-          { name: '발주관리', path: '/signup', pro: false },
+          { name: '발주관리', path: '/purManagement', pro: false },
           { name: '발주조회', path: '/signup', pro: false },
           { name: '자재조회', path: '/signup', pro: false },
           { name: 'MPR관리', path: '/signup', pro: false },
