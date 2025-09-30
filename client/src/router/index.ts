@@ -31,7 +31,7 @@ const router = createRouter({
       },
     },
     {
-      path: '/form-elements',
+      path: '/form_elements',
       name: 'Form Elements',
       component: () => import('../views/Forms/FormElements.vue'),
       meta: {
@@ -39,7 +39,7 @@ const router = createRouter({
       },
     },
     {
-      path: '/basic-tables',
+      path: '/basic_tables',
       name: 'Basic Tables',
       component: () => import('../views/Tables/BasicTables.vue'),
       meta: {
@@ -47,12 +47,12 @@ const router = createRouter({
       },
     },
     {
-      path: '/line-chart',
+      path: '/line_chart',
       name: 'Line Chart',
       component: () => import('../views/Chart/LineChart/LineChart.vue'),
     },
     {
-      path: '/bar-chart',
+      path: '/bar_chart',
       name: 'Bar Chart',
       component: () => import('../views/Chart/BarChart/BarChart.vue'),
     },
@@ -116,7 +116,7 @@ const router = createRouter({
     },
 
     {
-      path: '/error-404',
+      path: '/error_404',
       name: '404 Error',
       component: () => import('../views/Errors/FourZeroFour.vue'),
       meta: {
