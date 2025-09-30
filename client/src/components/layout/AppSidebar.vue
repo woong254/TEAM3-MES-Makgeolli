@@ -313,13 +313,19 @@ const menuGroups: MenuGroup[] = [
         icon: PlugInIcon,
         name: '품질',
         subItems: [
-          { name: 'Signin', path: '/signin', pro: false },
-          { name: 'Signup', path: '/signup', pro: false },
+          { name: '품질검사 기준관리', path: '/quamaster', pro: false },
+          { name: '자재입고검사 조회', path: '/signup', pro: false },
+          { name: '자재입고검사 관리', path: '/signup', pro: false },
+          { name: '공정검사 조회', path: '/signup', pro: false },
+          { name: '공정검사 관리', path: '/signup', pro: false },
+          { name: '완제품검사 조회', path: '/signup', pro: false },
+          { name: '완제품검사 관리', path: '/signup', pro: false },
+          { name: '불량 기준 관리', path: '/signup', pro: false },
         ],
       },
       {
-        icon: PageIcon,
-        name: "설비",
+        icon: PlugInIcon,
+        name: '설비',
         subItems: [
           { name: '설비관리', path: '/equipment', pro: false },
           { name: '비가동 설비조회', path: '/', pro: false },

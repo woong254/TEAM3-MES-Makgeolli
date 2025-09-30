@@ -145,6 +145,8 @@ const router = createRouter({
         title: 'Signup',
       },
     },
+    
+    // 
     {
       path: '/of',
       name: '주문서조회',
@@ -191,6 +193,16 @@ const router = createRouter({
       component: () => import('../views/Department/sales/EpOutstoreManage.vue'),
       meta: {
         title: '완제품출고관리',
+      },
+    },
+    
+    // 
+    {
+      path: '/quamaster',
+      name: 'QualityMaster',
+      component: () => import('../views/Department/quality/QualityMaster.vue'),
+      meta: {
+        title: '품질검사 기준관리',
       },
     },
   ],
