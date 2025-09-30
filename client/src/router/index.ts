@@ -140,6 +140,54 @@ const router = createRouter({
         title: 'Signup',
       },
     },
+    {
+      path: '/of',
+      name: '주문서조회',
+      component: () => import('../views/Department/equipment/OrderForm.vue'),
+      meta: {
+        title: '주문서조회',
+      },
+    },
+    {
+      path: '/ofm',
+      name: '주문서관리',
+      component: () => import('../views/Department/equipment/OrderFormManage.vue'),
+      meta: {
+        title: '주문서관리',
+      },
+    },
+    {
+      path: '/ep-instore',
+      name: '완제품입고조회',
+      component: () => import('../views/Department/equipment/EpInstore.vue'),
+      meta: {
+        title: '완제품입고조회',
+      },
+    },
+    {
+      path: '/ep-instoremanage',
+      name: '완제품입고관리',
+      component: () => import('../views/Department/equipment/EpInstoreManage.vue'),
+      meta: {
+        title: '완제품입고관리',
+      },
+    },
+    {
+      path: '/ep-outstore',
+      name: '완제품출고조회',
+      component: () => import('../views/Department/equipment/EpOutstore.vue'),
+      meta: {
+        title: '완제품출고조회',
+      },
+    },
+    {
+      path: '/ep-outstoremanage',
+      name: '완제품출고관리',
+      component: () => import('../views/Department/equipment/EpOutstoreManage.vue'),
+      meta: {
+        title: '완제품출고관리',
+      },
+    },
   ],
 })
 
