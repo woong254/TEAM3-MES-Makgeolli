@@ -140,6 +140,14 @@ const router = createRouter({
         title: 'Signup',
       },
     },
+    {
+      path: '/quamaster',
+      name: 'QualityMaster',
+      component: () => import('../views/Department/quality/QualityMaster.vue'),
+      meta: {
+        title: '품질검사 기준관리',
+      },
+    },
   ],
 })
 

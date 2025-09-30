@@ -118,53 +118,55 @@
                       isSubmenuOpen(groupIndex, index) && (isExpanded || isHovered || isMobileOpen)
                     "
                   >
-                            <ul class="mt-2 space-y-1 ml-9">
-                              <li v-for="subItem in item.subItems" :key="subItem.name">
-                                <template v-if="subItem.path">
-                                  <router-link
-                                    :to="subItem.path"
-                                    :class="[
-                                      'menu-dropdown-item',
-                                      {
-                                        'menu-dropdown-item-active': isActive(subItem.path),
-                                        'menu-dropdown-item-inactive': !isActive(subItem.path),
-                                      },
-                                    ]"
-                                  >
-                                    {{ subItem.name }}
-                                    <span class="flex items-center gap-1 ml-auto">
-                                      <span
-                                        v-if="subItem.new"
-                                        :class="[
-                                          'menu-dropdown-badge',
-                                          {
-                                            'menu-dropdown-badge-active': isActive(subItem.path),
-                                            'menu-dropdown-badge-inactive': !isActive(subItem.path),
-                                          },
-                                        ]"
-                                      >
-                                        new
-                                      </span>
-                                      <span
-                                        v-if="subItem.pro"
-                                        :class="[
-                                          'menu-dropdown-badge',
-                                          {
-                                            'menu-dropdown-badge-active': isActive(subItem.path),
-                                            'menu-dropdown-badge-inactive': !isActive(subItem.path),
-                                          },
-                                        ]"
-                                      >
-                                        pro
-                                      </span>
-                                    </span>
-                                  </router-link>
-                                </template>
-                                <template v-else>
-                                  <div class="menu-dropdown-item menu-dropdown-item-inactive">{{ subItem.name }}</div>
-                                </template>
-                              </li>
-                            </ul>
+                    <ul class="mt-2 space-y-1 ml-9">
+                      <li v-for="subItem in item.subItems" :key="subItem.name">
+                        <template v-if="subItem.path">
+                          <router-link
+                            :to="subItem.path"
+                            :class="[
+                              'menu-dropdown-item',
+                              {
+                                'menu-dropdown-item-active': isActive(subItem.path),
+                                'menu-dropdown-item-inactive': !isActive(subItem.path),
+                              },
+                            ]"
+                          >
+                            {{ subItem.name }}
+                            <span class="flex items-center gap-1 ml-auto">
+                              <span
+                                v-if="subItem.new"
+                                :class="[
+                                  'menu-dropdown-badge',
+                                  {
+                                    'menu-dropdown-badge-active': isActive(subItem.path),
+                                    'menu-dropdown-badge-inactive': !isActive(subItem.path),
+                                  },
+                                ]"
+                              >
+                                new
+                              </span>
+                              <span
+                                v-if="subItem.pro"
+                                :class="[
+                                  'menu-dropdown-badge',
+                                  {
+                                    'menu-dropdown-badge-active': isActive(subItem.path),
+                                    'menu-dropdown-badge-inactive': !isActive(subItem.path),
+                                  },
+                                ]"
+                              >
+                                pro
+                              </span>
+                            </span>
+                          </router-link>
+                        </template>
+                        <template v-else>
+                          <div class="menu-dropdown-item menu-dropdown-item-inactive">
+                            {{ subItem.name }}
+                          </div>
+                        </template>
+                      </li>
+                    </ul>
                   </div>
                 </transition>
               </li>
@@ -180,11 +182,7 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 
-import {
-  ChevronDownIcon,
-  HorizontalDots,
-  PlugInIcon,
-} from '../../icons'
+import { ChevronDownIcon, HorizontalDots, PlugInIcon } from '../../icons'
 import BoxCubeIcon from '@/icons/BoxCubeIcon.vue'
 import { useSidebar } from '@/composables/useSidebar'
 
@@ -209,91 +207,104 @@ interface MenuGroup {
   items: Item[]
 }
 
-const { isExpanded, isMobileOpen, isHovered, openSubmenu, closedSubmenus, toggleSubmenu: toggleSubmenuAction } = useSidebar()
+const {
+  isExpanded,
+  isMobileOpen,
+  isHovered,
+  openSubmenu,
+  closedSubmenus,
+  toggleSubmenu: toggleSubmenuAction,
+} = useSidebar()
 
 const menuGroups: MenuGroup[] = [
   // 템플릿 기본 메뉴 (다 만들고 삭제할 것)
   {
-    title: "템플릿 기본 메뉴",
+    title: '템플릿 기본 메뉴',
     items: [
       {
         icon: BoxCubeIcon,
-        name: "Ui Elements",
+        name: 'Ui Elements',
         subItems: [
-          { name: "Ecommerce", path: "/", pro: false },
-          { name: "404 Page", path: "/error-404", pro: false },
-          { name: "Bar Chart", path: "/bar-chart", pro: false },
-          { name: "Alerts", path: "/alerts", pro: false },
-          { name: "Avatars", path: "/avatars", pro: false },
-          { name: "Badge", path: "/badge", pro: false },
-          { name: "Buttons", path: "/buttons", pro: false },
-          { name: "Images", path: "/images", pro: false },
-          { name: "Videos", path: "/videos", pro: false },
+          { name: 'Ecommerce', path: '/', pro: false },
+          { name: '404 Page', path: '/error-404', pro: false },
+          { name: 'Bar Chart', path: '/bar-chart', pro: false },
+          { name: 'Alerts', path: '/alerts', pro: false },
+          { name: 'Avatars', path: '/avatars', pro: false },
+          { name: 'Badge', path: '/badge', pro: false },
+          { name: 'Buttons', path: '/buttons', pro: false },
+          { name: 'Images', path: '/images', pro: false },
+          { name: 'Videos', path: '/videos', pro: false },
         ],
       },
       {
         icon: PlugInIcon,
-        name: "Authentication",
+        name: 'Authentication',
         subItems: [
-          { name: "Signin", path: "/signin", pro: false },
-          { name: "Signup", path: "/signup", pro: false },
+          { name: 'Signin', path: '/signin', pro: false },
+          { name: 'Signup', path: '/signup', pro: false },
         ],
       },
     ],
   },
   {
-    title: "Menu",
+    title: 'Menu',
     items: [
       {
         icon: BoxCubeIcon,
-        name: "기준정보",
+        name: '기준정보',
         subItems: [
-          { name: "Ecommerce", path: "/", pro: false },
-          { name: "404 Page", path: "/error-404", pro: false },
-          { name: "Bar Chart", path: "/bar-chart", pro: false },
-          { name: "Alerts", path: "/alerts", pro: false },
-          { name: "Avatars", path: "/avatars", pro: false },
-          { name: "Badge", path: "/badge", pro: false },
-          { name: "Buttons", path: "/buttons", pro: false },
-          { name: "Images", path: "/images", pro: false },
-          { name: "Videos", path: "/videos", pro: false },
+          { name: 'Ecommerce', path: '/', pro: false },
+          { name: '404 Page', path: '/error-404', pro: false },
+          { name: 'Bar Chart', path: '/bar-chart', pro: false },
+          { name: 'Alerts', path: '/alerts', pro: false },
+          { name: 'Avatars', path: '/avatars', pro: false },
+          { name: 'Badge', path: '/badge', pro: false },
+          { name: 'Buttons', path: '/buttons', pro: false },
+          { name: 'Images', path: '/images', pro: false },
+          { name: 'Videos', path: '/videos', pro: false },
         ],
       },
       {
         icon: PlugInIcon,
-        name: "영업",
+        name: '영업',
         subItems: [
-          { name: "Signin", path: "/signin", pro: false },
-          { name: "Signup", path: "/signup", pro: false },
+          { name: 'Signin', path: '/signin', pro: false },
+          { name: 'Signup', path: '/signup', pro: false },
         ],
       },
       {
         icon: PlugInIcon,
-        name: "생산",
+        name: '생산',
         subItems: [
-          { name: "Signin", path: "/signin", pro: false },
-          { name: "Signup", path: "/signup", pro: false },
+          { name: 'Signin', path: '/signin', pro: false },
+          { name: 'Signup', path: '/signup', pro: false },
         ],
       },
       {
         icon: PlugInIcon,
-        name: "자재",
+        name: '자재',
         subItems: [
-          { name: "Signin", path: "/signin", pro: false },
-          { name: "Signup", path: "/signup", pro: false },
+          { name: 'Signin', path: '/signin', pro: false },
+          { name: 'Signup', path: '/signup', pro: false },
         ],
       },
       {
         icon: PlugInIcon,
-        name: "품질",
+        name: '품질',
         subItems: [
-          { name: "Signin", path: "/signin", pro: false },
-          { name: "Signup", path: "/signup", pro: false },
+          { name: '품질검사 기준관리', path: '/quamaster', pro: false },
+          { name: '자재입고검사 조회', path: '/signup', pro: false },
+          { name: '자재입고검사 관리', path: '/signup', pro: false },
+          { name: '공정검사 조회', path: '/signup', pro: false },
+          { name: '공정검사 관리', path: '/signup', pro: false },
+          { name: '완제품검사 조회', path: '/signup', pro: false },
+          { name: '완제품검사 관리', path: '/signup', pro: false },
+          { name: '불량 기준 관리', path: '/signup', pro: false },
         ],
       },
       {
         icon: PlugInIcon,
-        name: "설비",
+        name: '설비',
         subItems: [
           { name: 'Signin', path: '/signin', pro: false },
           { name: 'Signup', path: '/signup', pro: false },
@@ -312,8 +323,10 @@ const toggleSubmenu = (groupIndex: number, itemIndex: number) => {
 
 const isAnySubmenuRouteActive = computed(() => {
   return menuGroups.some((group: MenuGroup) =>
-    group.items.some((item: Item) =>
-      !!item.subItems && item.subItems.some((subItem: SubItem) => !!subItem.path && isActive(subItem.path)),
+    group.items.some(
+      (item: Item) =>
+        !!item.subItems &&
+        item.subItems.some((subItem: SubItem) => !!subItem.path && isActive(subItem.path)),
     ),
   )
 })
@@ -326,7 +339,9 @@ const isSubmenuOpen = (groupIndex: number, itemIndex: number) => {
     openSubmenu.value === key ||
     (isAnySubmenuRouteActive.value &&
       !!menuGroups[groupIndex].items[itemIndex].subItems &&
-      menuGroups[groupIndex].items[itemIndex].subItems!.some((subItem: SubItem) => !!subItem.path && isActive(subItem.path!)))
+      menuGroups[groupIndex].items[itemIndex].subItems!.some(
+        (subItem: SubItem) => !!subItem.path && isActive(subItem.path!),
+      ))
   )
 }
 
