@@ -182,7 +182,18 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 
-import { ChevronDownIcon, HorizontalDots, PlugInIcon } from '../../icons'
+import {
+  GridIcon,
+  CalenderIcon,
+
+  ChevronDownIcon,
+  HorizontalDots,
+  PageIcon,
+  TableIcon,
+  ListIcon,
+  PlugInIcon,
+} from "../../icons";
+
 import BoxCubeIcon from '@/icons/BoxCubeIcon.vue'
 import { useSidebar } from '@/composables/useSidebar'
 import Signin from '@/views/Auth/Signin.vue'
@@ -226,15 +237,17 @@ const menuGroups: MenuGroup[] = [
         icon: BoxCubeIcon,
         name: 'Ui Elements',
         subItems: [
-          { name: 'Ecommerce', path: '/', pro: false },
-          { name: '404 Page', path: '/error-404', pro: false },
-          { name: 'Bar Chart', path: '/bar-chart', pro: false },
-          { name: 'Alerts', path: '/alerts', pro: false },
-          { name: 'Avatars', path: '/avatars', pro: false },
-          { name: 'Badge', path: '/badge', pro: false },
-          { name: 'Buttons', path: '/buttons', pro: false },
-          { name: 'Images', path: '/images', pro: false },
-          { name: 'Videos', path: '/videos', pro: false },
+          { name: "Ecommerce", path: "/", pro: false },
+          { name: "404 Page", path: "/error-404", pro: false },
+          { name: "Bar Chart", path: "/bar-chart", pro: false },
+          { name: "Alerts", path: "/alerts", pro: false },
+          { name: "Avatars", path: "/avatars", pro: false },
+          { name: "Badge", path: "/badge", pro: false },
+          { name: "Buttons", path: "/buttons", pro: false },
+          { name: "Images", path: "/images", pro: false },
+          { name: "Videos", path: "/videos", pro: false },
+          { name: "Basic Tables", path: "/basic-tables", pro: false },
+          { name: "Form Elements", path: "/form-elements", pro: false },
         ],
       },
       {
@@ -266,40 +279,40 @@ const menuGroups: MenuGroup[] = [
         ],
       },
       {
-        icon: PlugInIcon,
-        name: '영업',
+        icon: GridIcon,
+        name: "영업",
         subItems: [
           { name: 'Signin', path: '/signin', pro: false },
           { name: 'Signup', path: '/signup', pro: false },
         ],
       },
       {
-        icon: PlugInIcon,
-        name: '생산',
+        icon: CalenderIcon,
+        name: "생산",
         subItems: [
           { name: 'Signin', path: '/signin', pro: false },
           { name: 'Signup', path: '/signup', pro: false },
         ],
       },
       {
-        icon: PlugInIcon,
-        name: '자재',
+        icon: ListIcon,
+        name: "자재",
         subItems: [
           { name: 'Signin', path: '/signin', pro: false },
           { name: 'Signup', path: '/signup', pro: false },
         ],
       },
       {
-        icon: PlugInIcon,
-        name: '품질',
+        icon: TableIcon,
+        name: "품질",
         subItems: [
           { name: 'Signin', path: '/signin', pro: false },
           { name: 'Signup', path: '/signup', pro: false },
         ],
       },
       {
-        icon: PlugInIcon,
-        name: '설비',
+        icon: PageIcon,
+        name: "설비",
         subItems: [
           { name: '설비관리', path: '/equipment', pro: false },
           { name: '비가동 설비조회', path: '/', pro: false },
