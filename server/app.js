@@ -35,5 +35,22 @@ app.get("/", (req, res) => {
   res.send("Welcome!!");
 });
 
-// 라우터 모듈 등록
+// 라우팅 영역
+
+// 0. 기준정보
 app.use("/", referenceRouter);
+
+// 1. 영업
+app.use("/", salesRouter);
+
+// 2. 생산
+app.use("/", productionRouter);
+
+// 3. 자재
+app.use("/", materialsRouter);
+
+// 4. 품질
+app.use("/", qualityRouter);
+
+// 5. 장비
+app.use("/", equipmentRouter);
