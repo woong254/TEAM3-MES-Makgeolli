@@ -143,7 +143,7 @@ const router = createRouter({
     {
       path: '/of',
       name: '주문서조회',
-      component: () => import('../views/Department/equipment/OrderForm.vue'),
+      component: () => import('../views/Department/sales/OrderForm.vue'),
       meta: {
         title: '주문서조회',
       },
@@ -151,7 +151,7 @@ const router = createRouter({
     {
       path: '/ofm',
       name: '주문서관리',
-      component: () => import('../views/Department/equipment/OrderFormManage.vue'),
+      component: () => import('../views/Department/sales/OrderFormManage.vue'),
       meta: {
         title: '주문서관리',
       },
@@ -159,7 +159,7 @@ const router = createRouter({
     {
       path: '/ep-instore',
       name: '완제품입고조회',
-      component: () => import('../views/Department/equipment/EpInstore.vue'),
+      component: () => import('../views/Department/sales/EpInstore.vue'),
       meta: {
         title: '완제품입고조회',
       },
@@ -167,7 +167,7 @@ const router = createRouter({
     {
       path: '/ep-instoremanage',
       name: '완제품입고관리',
-      component: () => import('../views/Department/equipment/EpInstoreManage.vue'),
+      component: () => import('../views/Department/sales/EpInstoreManage.vue'),
       meta: {
         title: '완제품입고관리',
       },
@@ -175,7 +175,7 @@ const router = createRouter({
     {
       path: '/ep-outstore',
       name: '완제품출고조회',
-      component: () => import('../views/Department/equipment/EpOutstore.vue'),
+      component: () => import('../views/Department/sales/EpOutstore.vue'),
       meta: {
         title: '완제품출고조회',
       },
@@ -183,7 +183,7 @@ const router = createRouter({
     {
       path: '/ep-outstoremanage',
       name: '완제품출고관리',
-      component: () => import('../views/Department/equipment/EpOutstoreManage.vue'),
+      component: () => import('../views/Department/sales/EpOutstoreManage.vue'),
       meta: {
         title: '완제품출고관리',
       },
