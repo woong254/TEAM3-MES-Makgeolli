@@ -13,6 +13,7 @@
       <p v-if="desc" class="mt-1 text-sm text-gray-500 dark:text-gray-400">
         {{ desc }}
       </p>
+      <slot name="cardHeader"></slot>
     </div>
 
     <!-- Card Body -->
