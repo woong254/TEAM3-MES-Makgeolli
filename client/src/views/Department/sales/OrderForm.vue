@@ -16,8 +16,8 @@ const currentPageTitle = ref('주문서조회')
         <!---->
       </OrderFormSearch>
     </div>
-    <div class="space-y-5 sm:space-y-6">
-      <OrderFormView> </OrderFormView>
+    <div class="space-y-5 sm:space-y-6 mt-5">
+      <OrderFormView title="주문서조회"> </OrderFormView>
     </div>
   </AdminLayout>
 </template>

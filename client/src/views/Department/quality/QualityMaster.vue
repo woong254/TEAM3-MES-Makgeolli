@@ -133,7 +133,7 @@
       <div class="left">
         <h2>목록</h2>
         <div class="ag-theme-alpine" style="height: 500px; width: 100%">
-          <AgGridVue :rowData="rowData" :columnDefs="colDefs" :defaultColDef="defaultColDef" />
+          <AgGridVue style="width: 500px; height: 0px;" :rowData="rowData" :columnDefs="colDefs" :defaultColDef="defaultColDef" />
         </div>
         <!-- <table>
           <thead>
