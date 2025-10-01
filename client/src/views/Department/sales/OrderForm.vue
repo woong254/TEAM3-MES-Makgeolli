@@ -8,6 +8,7 @@ import { defineProps, ref, onMounted } from 'vue'
 import flatPickr from 'vue-flatpickr-component'
 import 'flatpickr/dist/flatpickr.css'
 import '@/assets/common.css'
+// import axios from 'axios';
 
 interface Props {
   title: string
@@ -33,8 +34,9 @@ const flatpickrConfig = {
   wrap: true,
 }
 
-
 const currentPageTitle = ref('주문서조회')
+
+
 
 const ProductService = {
   getProductData() {
@@ -210,6 +212,7 @@ const ProductService = {
 
 onMounted(() => {
   products.value = ProductService.getProductData()
+  
 })
 
 // 체크박스 눌렀는지 확인하는 리턴용도 watch
@@ -462,7 +465,7 @@ onMounted(() => {
             ></Column>
             <Column
               field="empName"
-              header="사원명"
+              header="주문서작성자"
               :pt="{ columnHeaderContent: 'justify-center' }"
             ></Column>
             <Column
