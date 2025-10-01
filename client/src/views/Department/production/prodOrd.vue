@@ -1,5 +1,10 @@
 <script setup lang="ts">
-const currentPageTitle = '생산지시관리';
+import AdminLayout from '@/components/layout/AdminLayout.vue'
+import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
+import ComponentCard from '@/components/common/ComponentCard.vue';
+import Button from '@/components/ui/Button.vue'
+
+const currentPageTitle = ref('생산지시관리');
 </script>
 
 <template>

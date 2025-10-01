@@ -15,3 +15,7 @@ const selectMakeForm = `
 const addProdToMakeForm = `
 
 `;
+
+module.exports = {
+  selectMakeForm,
+}
