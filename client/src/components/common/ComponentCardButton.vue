@@ -1,3 +1,5 @@
+<!-- 오른쪽 버튼 들어가는 컴포넌트 카드형식 -->
+
 <template>
   <div
     :class="[
@@ -6,27 +8,22 @@
     ]"
   >
     <!-- Card Header -->
-    <div class="px-2 pt-2 pb-1 m-1">
-      <div class="flex items-center justify-between gap-4">
-        <h3 class="text-base font-medium text-gray-800 dark:text-white/90">
-          {{ title }}
-        </h3>
-        <slot name="header"></slot>
-      </div>
+    <div class="px-6 py-5 flex justify-between items-center">
+      <h3 class="text-base font-medium text-gray-800 dark:text-white/90">
+        {{ title }}
+      </h3>
       <p v-if="desc" class="mt-1 text-sm text-gray-500 dark:text-gray-400">
         {{ desc }}
       </p>
-<<<<<<< HEAD
-      <slot name="header"></slot>
-=======
-      <slot name="cardHeader"></slot>
->>>>>>> b0b866112b0e104464d4f7d69b9fe9f10d98255c
+
+      <!-- button -->
+      <slot name="header-right"></slot>
     </div>
 
     <!-- Card Body -->
     <div class="p-4 border-t border-gray-100 dark:border-gray-800 sm:p-6">
       <div class="space-y-5">
-        <slot name="body"></slot>
+        <slot name="body-content"></slot>
       </div>
     </div>
   </div>
