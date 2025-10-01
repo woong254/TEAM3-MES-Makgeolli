@@ -5,9 +5,12 @@ const router = express.Router();
 
 const prodOrdService = require('../services/prodOrd_service.js');
 
-// 1. 등록
+// 본인이 작성한 지시서 조회
 router.get('/prodOrd', async(req, res) => {
+  // 나중에 로그인 기능 구현 후 변경예정
+  // let empId = req.body;
   let empId = 'EMP-20250616-0002';
+  
   let prodOrdList = await prodOrdService
     .findByEmpId(empId)
     .catch(err => console.error(err));
