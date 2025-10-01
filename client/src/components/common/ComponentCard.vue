@@ -6,10 +6,13 @@
     ]"
   >
     <!-- Card Header -->
-    <div class="px-6 py-5">
-      <h3 class="text-base font-medium text-gray-800 dark:text-white/90">
-        {{ title }}
-      </h3>
+    <div class="px-2 pt-2 pb-1 m-1">
+      <div class="flex items-center justify-between gap-4">
+        <h3 class="text-base font-medium text-gray-800 dark:text-white/90">
+          {{ title }}
+        </h3>
+        <slot name="header"></slot>
+      </div>
       <p v-if="desc" class="mt-1 text-sm text-gray-500 dark:text-gray-400">
         {{ desc }}
       </p>
@@ -19,7 +22,7 @@
     <!-- Card Body -->
     <div class="p-4 border-t border-gray-100 dark:border-gray-800 sm:p-6">
       <div class="space-y-5">
-        <slot></slot>
+        <slot name="body"></slot>
       </div>
     </div>
   </div>
