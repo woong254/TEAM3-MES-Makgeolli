@@ -40,7 +40,7 @@ const flatpickrConfig = {
         <h3 class="text-base font-medium text-gray-800 dark:text-white/90">
           {{ title }}
         </h3>
-        <div class="flex items-center gap-2">
+        <div class="items-center gap-2">
           <button type="button" class="btn-white btn-common">초기화</button>
           <button type="button" class="btn-color btn-common">조회</button>
         </div>
