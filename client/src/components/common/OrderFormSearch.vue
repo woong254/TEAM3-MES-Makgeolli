@@ -5,6 +5,7 @@ import { defineProps } from 'vue'
 import flatPickr from 'vue-flatpickr-component'
 import 'flatpickr/dist/flatpickr.css'
 
+import { ref, reactive } from 'vue'
 
 interface Props {
   title: string
@@ -13,6 +14,15 @@ interface Props {
 }
 
 defineProps<Props>()
+
+const date = ref(null)
+
+const flatpickrConfig = {
+  dateFormat: 'Y-m-d',
+  altInput: true,
+  altFormat: 'F j, Y',
+  wrap: true,
+}
 </script>
 <template>
   <div
@@ -37,7 +47,9 @@ defineProps<Props>()
     </div>
     <!-- Card Body -->
     <form action="">
-      <div class="pt-2 px-4 pb-3 border-t border-gray-100 dark:border-gray-800 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">        
+      <div
+        class="pt-2 px-4 pb-3 border-t border-gray-100 dark:border-gray-800 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+      >
         <div>
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-400 mb-2">
             주문서명
@@ -46,7 +58,7 @@ defineProps<Props>()
             type="text"
             class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
             placeholder=""
-          />            
+          />
           <div>
             <label class="mt-1.5 mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
               납기일자
@@ -79,7 +91,7 @@ defineProps<Props>()
                   </svg>
                 </span>
               </div>
-              <span>ㅡ</span>      
+              <span>ㅡ</span>
               <div class="relative w-45">
                 <flat-pickr
                   v-model="date"
@@ -118,7 +130,7 @@ defineProps<Props>()
             type="text"
             class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
             placeholder=""
-          />            
+          />
           <div>
             <label class="mt-1.5 mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
               주문일자
@@ -151,7 +163,7 @@ defineProps<Props>()
                   </svg>
                 </span>
               </div>
-              <span>ㅡ</span>      
+              <span>ㅡ</span>
               <div class="relative w-45">
                 <flat-pickr
                   v-model="date"
@@ -201,22 +213,12 @@ defineProps<Props>()
             class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
             placeholder=""
           />
-        </div>        
+        </div>
       </div>
-    </form>    
-  </div>  
+    </form>
+  </div>
 </template>
 
 <style>
-/* 네이티브 캘린더 아이콘 보이게
-input[type='date'] {
-  -webkit-appearance: auto;
-  appearance: auto;
-}
-
-크로미엄에서 캘린더 인디케이터 표시
-input[type='date']::-webkit-calendar-picker-indicator {
-  display: block;
-  opacity: 1;
-} */
+/*  */
 </style>
