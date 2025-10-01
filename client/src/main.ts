@@ -5,17 +5,22 @@ import 'swiper/css/navigation'
 import 'swiper/css/pagination'
 import 'jsvectormap/dist/jsvectormap.css'
 import 'flatpickr/dist/flatpickr.css'
-
 import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
 import VueApexCharts from 'vue3-apexcharts'
 import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community'
+import Lara from '@primeuix/themes/lara'
+import PrimeVue from 'primevue/config'
 ModuleRegistry.registerModules([AllCommunityModule])
 
 const app = createApp(App)
 
 app.use(router)
 app.use(VueApexCharts)
-
+app.use(PrimeVue, {
+  theme: {
+    preset: Lara,
+  },
+})
 app.mount('#app')
