@@ -5,6 +5,8 @@ import { ref, onMounted, watch } from 'vue'
 
 import Button from '@/components/ui/Button.vue'
 
+import '@/assets/common.css'
+
 const products = ref()
 const selectedProducts = ref([])
 // const metaKey = ref(true);
@@ -228,7 +230,19 @@ onMounted(() => {
           {{ title }}
         </h3>
         <div class="flex items-center gap-2">
-          <Button size="sm" variant="primary"> 엑셀내보내기 </Button>
+          <button
+            type="button"
+            class="btn-color"
+            style="
+              width: 150px;
+              padding: 8px 20px;
+              border-radius: 8px;
+              margin: 0 5px;
+              transition: all 0.3s;
+            "
+          >
+            엑셀내보내기
+          </button>
         </div>
       </div>
       <p v-if="desc" class="mt-1 text-sm text-gray-500 dark:text-gray-400">

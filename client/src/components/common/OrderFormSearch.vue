@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import Button from '@/components/ui/Button.vue'
-import { defineProps } from 'vue'
+// import Button from '@/components/ui/Button.vue'
+import { defineProps, ref, reactive } from 'vue'
 
 import flatPickr from 'vue-flatpickr-component'
 import 'flatpickr/dist/flatpickr.css'
 
-import { ref, reactive } from 'vue'
+import '@/assets/common.css'
 
 interface Props {
   title: string
@@ -15,12 +15,16 @@ interface Props {
 
 defineProps<Props>()
 
-const date = ref(null)
+// const date = ref(null)
+const deliveryStartDates = ref<string | string[] | null>(null)
+const deliveryEndDates = ref<string | string[] | null>(null)
+const orderStartDates = ref<string | string[] | null>(null)
+const orderEndDates = ref<string | string[] | null>(null)
 
 const flatpickrConfig = {
   dateFormat: 'Y-m-d',
   altInput: true,
-  altFormat: 'F j, Y',
+  altFormat: 'y-m-d',
   wrap: true,
 }
 </script>
@@ -37,8 +41,8 @@ const flatpickrConfig = {
           {{ title }}
         </h3>
         <div class="flex items-center gap-2">
-          <Button size="sm" variant="primary"> 초기화 </Button>
-          <Button size="sm" variant="primary"> 조회 </Button>
+          <button type="button" class="btn-white btn-common">초기화</button>
+          <button type="button" class="btn-color btn-common">조회</button>
         </div>
       </div>
       <p v-if="desc" class="mt-1 text-sm text-gray-500 dark:text-gray-400">
@@ -66,10 +70,10 @@ const flatpickrConfig = {
             <div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
               <div class="relative w-45">
                 <flat-pickr
-                  v-model="date"
+                  v-model="deliveryStartDates"
                   :config="flatpickrConfig"
                   class="dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pl-4 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                  placeholder="Select date"
+                  placeholder="시작일"
                 />
                 <span
                   class="absolute text-gray-500 -translate-y-1/2 pointer-events-none right-3 top-1/2 dark:text-gray-400"
@@ -94,10 +98,10 @@ const flatpickrConfig = {
               <span>ㅡ</span>
               <div class="relative w-45">
                 <flat-pickr
-                  v-model="date"
+                  v-model="deliveryEndDates"
                   :config="flatpickrConfig"
                   class="dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pl-4 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                  placeholder="Select date"
+                  placeholder="종료일"
                 />
                 <span
                   class="absolute text-gray-500 -translate-y-1/2 pointer-events-none right-3 top-1/2 dark:text-gray-400"
@@ -138,10 +142,10 @@ const flatpickrConfig = {
             <div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
               <div class="relative w-45">
                 <flat-pickr
-                  v-model="date"
+                  v-model="orderStartDates"
                   :config="flatpickrConfig"
                   class="dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pl-4 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                  placeholder="Select date"
+                  placeholder="시작일"
                 />
                 <span
                   class="absolute text-gray-500 -translate-y-1/2 pointer-events-none right-3 top-1/2 dark:text-gray-400"
@@ -166,10 +170,10 @@ const flatpickrConfig = {
               <span>ㅡ</span>
               <div class="relative w-45">
                 <flat-pickr
-                  v-model="date"
+                  v-model="orderEndDates"
                   :config="flatpickrConfig"
                   class="dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pl-4 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                  placeholder="Select date"
+                  placeholder="종료일"
                 />
                 <span
                   class="absolute text-gray-500 -translate-y-1/2 pointer-events-none right-3 top-1/2 dark:text-gray-400"
