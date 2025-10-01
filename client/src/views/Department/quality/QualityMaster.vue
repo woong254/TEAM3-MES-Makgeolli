@@ -6,8 +6,11 @@ import ComponentCard from '@/components/common/ComponentCardButton.vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 
-import DataTable from 'primevue/datatable';
-import Column from 'primevue/column';
+import DataTable from 'primevue/datatable'
+import DataCol from 'primevue/column'
+import Column from 'primevue/column'
+import 'primeicons/primeicons.css'
+import Button from 'primevue/button'
 
 const currentPageTitle = ref('품질검사 기준관리')
 
@@ -17,20 +20,49 @@ const inputStyle =
 const selectStyle =
   'dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-950 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
 const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400'
+const textareaStyle =
+  'dark:bg-dark-900 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-950 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
 
 // table data
-const purChase = ref([
+const inspData = ref([
   {
-    pur_code: 'BAL-001',
-    pur_name: '20250930쌀발주',
-    bcnc_code: 2001,
-    bcnc_name: '농협',
-    pur_date: '2025-09-30',
-    receipt_date: '2025-10-30',
-    emp_name: '홍길동',
-    remark: '쌀 많이 주세요~~',
+    inspCode: 'QC0001',
+    inspName: '쌀 외관검사',
+    inspTarget: '쌀20kg(원재료)',
+    inspUsing: 'Y',
+  },
+  {
+    inspCode: 'QC0002',
+    inspName: '알코올 도수 검사',
+    inspTarget: '막걸리(반제품)',
+    inspUsing: 'Y',
+  },
+  {
+    inspCode: 'QC0003',
+    inspName: '대장균 검사',
+    inspTarget: '막걸리(반제품)',
+    inspUsing: 'Y',
+  },
+  {
+    inspCode: '-',
+    inspName: '-',
+    inspTarget: '-',
+    inspUsing: '-',
   },
 ])
+
+const inspTarget = ref([
+  {
+    proID: 'QC0001',
+    proName: '쌀 외관검사',
+    proType: '쌀20kg(원재료)',
+    proStrand: 'Y',
+    proUnit: 'Y',
+  },
+])
+
+// table radio button
+const selectedInspData = ref(null)
 </script>
 
 <template>
@@ -109,58 +141,217 @@ const purChase = ref([
       </template>
     </ComponentCard>
 
-    <div class="flex gap-2 mt-2 width-full">
+    <div class="flex gap-2 mt-2 width-full" style="height: 500px">
       <ComponentCard title="목록" className="shadow-sm w-1/2">
         <template #body-content>
-          <DataTable :value="purChase" showGridlines :rows="1">
+          <DataTable
+            :value="inspData"
+            showGridlines
+            scrollable
+            size="small"
+            :rows="1"
+            class="text-sm"
+            v-model:selection="selectedInspData"
+          >
             <DataCol
-              field="pur_code"
-              header="발주코드"
+              field="inspCheck"
+              header=""
+              :pt="{ columnHeaderContent: 'justify-center' }"
+              selectionMode="single"
+              style="width: 10px"
+            />
+            <DataCol
+              field="inspCode"
+              header="검사항목ID"
+              sortable
+              :pt="{ columnHeaderContent: 'justify-center' }"
+              style="width: 120px"
+            />
+            <DataCol
+              field="inspName"
+              header="검사대상명"
+              sortable
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
             <DataCol
-              field="pur_name"
-              header="발주명"
+              field="inspTarget"
+              header="검사대상"
+              sortable
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
             <DataCol
-              field="bcnc_code"
-              header="공급업체코드"
-              style="text-align: right"
+              field="inspUsing"
+              header="사용여부"
+              sortable
               :pt="{ columnHeaderContent: 'justify-center' }"
+              style="width: 100px; text-align: center"
             />
-            <DataCol
-              field="bcnc_name"
-              header="공급업체명"
-              :pt="{ columnHeaderContent: 'justify-center' }"
-            />
-            <DataCol
-              field="pur_date"
-              header="발주일자"
-              style="text-align: center"
-              :pt="{ columnHeaderContent: 'justify-center' }"
-            />
-            <DataCol
-              field="receipt_date"
-              header="입고일자"
-              style="text-align: center"
-              :pt="{ columnHeaderContent: 'justify-center' }"
-            />
-            <DataCol
-              field="emp_name"
-              header="담당자"
-              :pt="{ columnHeaderContent: 'justify-center' }"
-            />
-            <DataCol field="remark" header="비고" :pt="{ columnHeaderContent: 'justify-center' }" />
           </DataTable>
         </template>
       </ComponentCard>
-      <ComponentCard title="등록" className="shadow-sm w-1/2">
+
+      <ComponentCard title="등록" className="shadow-sm w-1/2 overflow-y-auto">
         <template #header-right>
           <div class="flex justify-end">
-            <button class="btn-common btn-color">등록</button>
+            <button type="submit" class="btn-common btn-color" form="insp-form">등록</button>
             <button class="btn-common btn-white">삭제</button>
           </div>
+        </template>
+        <template #body-content>
+          <form action="" id="insp-form">
+            <div class="flex gap-10 mb-4">
+              <div class="w-3/4 flex items-center">
+                <label :class="labelStyle" class="w-1/3"> 검사항목명 </label>
+                <input type="text" :class="inputStyle" class="w-2/3" required />
+              </div>
+              <div class="w-1/4 flex items-center">
+                <div :class="labelStyle" style="margin-right: 20px">사용여부</div>
+                <label :class="labelStyle">
+                  <input type="checkbox" class="checkboxStyle" />미사용
+                </label>
+              </div>
+            </div>
+            <div class="flex items-center gap-17 mb-2">
+              <div :class="labelStyle">검사유형</div>
+              <label :class="labelStyle">
+                <input type="radio" name="insp-using" class="checkboxStyle" checked />범위
+              </label>
+              <label :class="labelStyle">
+                <input type="radio" name="insp-using" class="checkboxStyle" />관능
+              </label>
+            </div>
+            <div class="flex mb-4">
+              <label :class="labelStyle" class="w-[140px]"> 검사방법 </label>
+              <textarea
+                placeholder="검사방법에 대해서 작성하세요"
+                rows="4"
+                :class="textareaStyle"
+                class="w-4/5"
+              ></textarea>
+            </div>
+            <hr class="" />
+            <!-- 검사대상조회 -->
+            <div class="flex justify-between items-center mt-4 mb-4">
+              <h3>검사대상조회</h3>
+              <button type="button" class="btn-common btn-color btn-insp-target-search">
+                검사대상조회
+              </button>
+            </div>
+            <!-- primevue..... -->
+            <DataTable
+              :value="inspTarget"
+              showGridlines
+              scrollable
+              size="small"
+              :rows="1"
+              class="text-sm mb-4"
+            >
+              <Column
+                field="proID"
+                header="자재/제품ID"
+                :pt="{ columnHeaderContent: 'justify-center' }"
+              />
+              <Column
+                field="proName"
+                header="자재/제품명"
+                :pt="{ columnHeaderContent: 'justify-center' }"
+              />
+              <Column
+                field="proType"
+                header="품목구분"
+                :pt="{ columnHeaderContent: 'justify-center' }"
+              />
+              <Column
+                field="proStrand"
+                header="규격"
+                :pt="{ columnHeaderContent: 'justify-center' }"
+              />
+              <Column
+                field="proUnit"
+                header="단위"
+                :pt="{ columnHeaderContent: 'justify-center' }"
+              />
+              <Column field="proDel" header="삭제" :pt="{ columnHeaderContent: 'justify-center' }">
+                <template #body>
+                  <div class="flex justify-center">
+                    <Button
+                      icon="pi pi-trash"
+                      variant="outlined"
+                      class="p-button-text p-button-danger p-button-sm"
+                      style="width: 20px; height: 15px; text-align: center"
+                    />
+                  </div>
+                </template>
+              </Column>
+            </DataTable>
+
+            <hr />
+            <h3 class="mt-4 mb-3">검사내용</h3>
+            <div class="flex items-center gap-4 mb-3">
+              <label :class="labelStyle" class="w-1/3"> 최소범위 </label>
+              <input type="text" :class="inputStyle" required />
+              <div class="relative z-20 bg-transparent w-1/2">
+                <select :class="selectStyle">
+                  <option value="" selected>이상</option>
+                  <option value="">초과</option>
+                </select>
+                <span
+                  class="absolute z-30 text-gray-500 -translate-y-1/2 pointer-events-none right-4 top-1/2 dark:text-gray-400"
+                >
+                  <svg
+                    class="stroke-current"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M4.79175 7.396L10.0001 12.6043L15.2084 7.396"
+                      stroke=""
+                      stroke-width="1.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </span>
+              </div>
+            </div>
+            <div class="flex items-center gap-4 mb-3">
+              <label :class="labelStyle" class="w-1/3"> 최대범위 </label>
+              <input type="text" :class="inputStyle" required />
+              <div class="relative z-20 bg-transparent w-1/2">
+                <select :class="selectStyle">
+                  <option value="" selected>이하</option>
+                  <option value="">미만</option>
+                </select>
+                <span
+                  class="absolute z-30 text-gray-500 -translate-y-1/2 pointer-events-none right-4 top-1/2 dark:text-gray-400"
+                >
+                  <svg
+                    class="stroke-current"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M4.79175 7.396L10.0001 12.6043L15.2084 7.396"
+                      stroke=""
+                      stroke-width="1.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </span>
+              </div>
+            </div>
+            <div class="flex items-center mb-4">
+              <label :class="labelStyle" class="w-[166px]">단위</label>
+              <input type="text" :class="inputStyle" required />
+            </div>
+          </form>
         </template>
       </ComponentCard>
     </div>
@@ -173,5 +364,12 @@ const purChase = ref([
   border: 1px solid #eee;
   margin-right: 8px;
   cursor: pointer;
+}
+.btn-insp-target-search {
+  width: 150px;
+}
+h3 {
+  font-weight: 500;
+  color: #222;
 }
 </style>
