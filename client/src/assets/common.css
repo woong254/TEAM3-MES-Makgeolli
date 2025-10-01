@@ -1,0 +1,32 @@
+/* button */
+/* 
+  사용법 : 
+  1) <script> :  import '@/assets/common.css'
+  2) <template> : <button type="button" class="btn-reset btn-common" />
+
+  - 공통 css btn-common
+  - 초기화, 수정, 삭제 btn-white
+  - 조회, 등록 btn-color
+*/
+
+.btn-common {
+  width: 100px;
+  padding: 8px 20px;
+  border-radius: 8px;
+  margin: 0 5px;
+  transition: all 0.3s;
+}
+.btn-white {
+  background-color: #fff;
+  border: 1px solid #ddd;
+}
+.btn-white:hover {
+  background-color: #eee;
+}
+.btn-color {
+  background-color: #213555;
+  color: #fff;
+}
+.btn-color:hover {
+  background-color: #3e5879;
+}

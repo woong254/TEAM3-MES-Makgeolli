@@ -1,3 +1,4 @@
+require('dotenv').config({ path:'./database/configs/dbConfig.env' });
 const express = require("express");
 const app = express();
 
@@ -44,7 +45,7 @@ app.use("/", referenceRouter);
 app.use("/", salesRouter);
 
 // 2. 생산
-app.use("/prodOrd", prodOrdRouter);     // 생산지시서
+app.use("/", prodOrdRouter);     // 생산지시서
 
 // 3. 자재
 app.use("/", materialsRouter);
