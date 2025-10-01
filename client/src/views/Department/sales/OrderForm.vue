@@ -4,6 +4,12 @@ import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import OrderFormSearch from '@/components/common/OrderFormSearch.vue'
 import OrderFormView from '@/components/common/OrderFormView.vue'
 import ComponentCard from '@/components/common/ComponentCard.vue'
+
+import flatPickr from 'vue-flatpickr-component'
+import 'flatpickr/dist/flatpickr.css'
+
+import '@/assets/common.css'
+
 import { ref } from 'vue'
 
 const currentPageTitle = ref('주문서조회')
