@@ -3,10 +3,11 @@
     :class="[
       'rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]',
       className,
+      'shadow-md rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]',
     ]"
   >
     <!-- Card Header -->
-    <div class="px-2 pt-2 pb-1 m-1">
+    <div class="px-2 pt-2 pl-5 pb-1 m-1">
       <div class="flex items-center justify-between gap-4">
         <h3 class="text-base font-medium text-gray-800 dark:text-white/90">
           {{ title }}
