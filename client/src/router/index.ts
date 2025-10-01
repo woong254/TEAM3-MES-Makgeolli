@@ -145,7 +145,7 @@ const router = createRouter({
         title: 'Signup',
       },
     },
-    
+
     // 영업
     {
       path: '/of',
@@ -208,8 +208,6 @@ const router = createRouter({
 
     // 자재
 
-
-    
     // 품질
     {
       path: '/quamaster',
@@ -221,6 +219,14 @@ const router = createRouter({
     },
 
     // 설비
+    {
+      path: '/equipment',
+      name: 'EquipMaster',
+      component: () => import('../views/Department/equipment/EquipMaster.vue'),
+      meta: {
+        title: '설비관리',
+      },
+    },
   ],
 })
 
