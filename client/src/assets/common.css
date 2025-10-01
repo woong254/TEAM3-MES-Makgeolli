@@ -30,3 +30,13 @@
 .btn-color:hover {
   background-color: #3e5879;
 }
+
+/* 다크 모드 감지 */
+@media (prefers-color-scheme: dark) {
+  .btn-color {
+    color: #fff;
+  }
+  .btn-white {
+    color: #000;
+  }
+}

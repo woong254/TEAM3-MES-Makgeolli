@@ -5,10 +5,8 @@ import ComponentCard from '@/components/common/ComponentCardButton.vue'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import { defineProps, ref, onMounted } from 'vue'
-
 import flatPickr from 'vue-flatpickr-component'
 import 'flatpickr/dist/flatpickr.css'
-
 import '@/assets/common.css'
 
 interface Props {
@@ -34,6 +32,7 @@ const flatpickrConfig = {
   altFormat: 'Y-m-d',
   wrap: true,
 }
+
 
 const currentPageTitle = ref('주문서조회')
 
