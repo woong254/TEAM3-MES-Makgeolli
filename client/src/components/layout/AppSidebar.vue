@@ -294,8 +294,7 @@ const menuGroups: MenuGroup[] = [
         icon: PlugInIcon,
         name: '생산',
         subItems: [
-          { name: 'Signin', path: '/signin', pro: false },
-          { name: 'Signup', path: '/signup', pro: false },
+          { name: '생산지시관리', path: '/prodOrd', pro: false },
         ],
       },
       {
