@@ -6,6 +6,9 @@ import ComponentCard from '@/components/common/ComponentCardButton.vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 
+import DataTable from 'primevue/datatable';
+import Column from 'primevue/column';
+
 const currentPageTitle = ref('품질검사 기준관리')
 
 // style
@@ -14,6 +17,20 @@ const inputStyle =
 const selectStyle =
   'dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-950 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
 const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400'
+
+// table data
+const purChase = ref([
+  {
+    pur_code: 'BAL-001',
+    pur_name: '20250930쌀발주',
+    bcnc_code: 2001,
+    bcnc_name: '농협',
+    pur_date: '2025-09-30',
+    receipt_date: '2025-10-30',
+    emp_name: '홍길동',
+    remark: '쌀 많이 주세요~~',
+  },
+])
 </script>
 
 <template>
@@ -93,7 +110,51 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
     </ComponentCard>
 
     <div class="flex gap-2 mt-2 width-full">
-      <ComponentCard title="목록" className="shadow-sm w-1/2"> </ComponentCard>
+      <ComponentCard title="목록" className="shadow-sm w-1/2">
+        <template #body-content>
+          <DataTable :value="purChase" showGridlines :rows="1">
+            <DataCol
+              field="pur_code"
+              header="발주코드"
+              :pt="{ columnHeaderContent: 'justify-center' }"
+            />
+            <DataCol
+              field="pur_name"
+              header="발주명"
+              :pt="{ columnHeaderContent: 'justify-center' }"
+            />
+            <DataCol
+              field="bcnc_code"
+              header="공급업체코드"
+              style="text-align: right"
+              :pt="{ columnHeaderContent: 'justify-center' }"
+            />
+            <DataCol
+              field="bcnc_name"
+              header="공급업체명"
+              :pt="{ columnHeaderContent: 'justify-center' }"
+            />
+            <DataCol
+              field="pur_date"
+              header="발주일자"
+              style="text-align: center"
+              :pt="{ columnHeaderContent: 'justify-center' }"
+            />
+            <DataCol
+              field="receipt_date"
+              header="입고일자"
+              style="text-align: center"
+              :pt="{ columnHeaderContent: 'justify-center' }"
+            />
+            <DataCol
+              field="emp_name"
+              header="담당자"
+              :pt="{ columnHeaderContent: 'justify-center' }"
+            />
+            <DataCol field="remark" header="비고" :pt="{ columnHeaderContent: 'justify-center' }" />
+          </DataTable>
+        </template>
+      </ComponentCard>
       <ComponentCard title="등록" className="shadow-sm w-1/2">
         <template #header-right>
           <div class="flex justify-end">
