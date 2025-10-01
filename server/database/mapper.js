@@ -16,6 +16,7 @@ const connectionPool = mariadb.createPool({
     query: console.log,
     error: console.log,
   },
+  // allowPublicKeyRetrieval: true,
 });
 
 const query = async (alias, values) => {

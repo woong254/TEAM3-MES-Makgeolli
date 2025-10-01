@@ -1,38 +1,38 @@
 // 기준 정보 
-const books = require("./sqls/reference.js");
+// const reference = require("./sqls/reference.js");
 
 // 영업
-const books = require("./sqls/sales.js");
+// const sales = require("./sqls/sales.js");
 
 // 생산
-const books = require("./sqls/prodord.js");
+const prodord = require("./sqls/prodord.js");
 
 // 자재
-const books = require("./sqls/materials.js");
+// const materials = require("./sqls/materials.js");
 
 // 품질
-const books = require("./sqls/quality.js");
+// const quality = require("./sqls/quality.js");
 
 // 설비
-const books = require("./sqls/equipment.js");
+// const equipment = require("./sqls/equipment.js");
 
 
 module.exports = {
   // 기준 정보 
-  ...reference,
+  // ...reference,
 
   // 영업
-  ...sales,
+  // ...sales,
 
   // 생산
   ...prodord,       // 생산지시
 
   // 자재
-  ...materials,
+  // ...materials,
 
   // 품질
-  ...quality,
+  // ...quality,
 
   // 설비
-  ...equipment,
+  // ...equipment,
 };
