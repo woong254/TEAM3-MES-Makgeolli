@@ -146,7 +146,7 @@ const router = createRouter({
       },
     },
     
-    // 
+    // 영업
     {
       path: '/of',
       name: '주문서조회',
@@ -195,8 +195,22 @@ const router = createRouter({
         title: '완제품출고관리',
       },
     },
+
+    // 생산
+    {
+      path: '/prodOrd',
+      name: '생산지시관리',
+      component: () => import('../views/Department/production/prodOrd.vue'),
+      meta: {
+        title: '생산지시관리',
+      },
+    },
+
+    // 자재
+
+
     
-    // 
+    // 품질
     {
       path: '/quamaster',
       name: 'QualityMaster',
@@ -205,6 +219,8 @@ const router = createRouter({
         title: '품질검사 기준관리',
       },
     },
+
+    // 설비
   ],
 })
 
