@@ -16,7 +16,8 @@ const connectionPool = mariadb.createPool({
     query: console.log,
     error: console.log,
   },
-  // allowPublicKeyRetrieval: true,
+  // 프로시저 사용할 경우 변수 선언해서 가지고 와야할 때 필요한 코드들을 위한 설정
+  multipleStatements: true,
 });
 
 const query = async (alias, values) => {
