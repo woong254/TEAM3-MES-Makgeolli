@@ -8,7 +8,7 @@ import { defineProps, ref, onMounted } from 'vue'
 import flatPickr from 'vue-flatpickr-component'
 import 'flatpickr/dist/flatpickr.css'
 import '@/assets/common.css'
-// import axios from 'axios';
+import axios from 'axios'
 
 interface Props {
   title: string
@@ -19,12 +19,13 @@ interface Props {
 defineProps<Props>()
 
 // const date = ref(null)
+// 날짜 변수 선언
 const deliveryStartDates = ref(null)
 const deliveryEndDates = ref(null)
 const orderStartDates = ref(null)
 const orderEndDates = ref(null)
 
-const products = ref()
+const products = ref([])
 // const selectedProducts = ref([])
 
 const flatpickrConfig = {
@@ -36,183 +37,46 @@ const flatpickrConfig = {
 
 const currentPageTitle = ref('주문서조회')
 
+const getOrdersForms = async () => {
+  const result = await axios.get('/ordFormView').catch((err) => console.log(err))
 
-
-const ProductService = {
-  getProductData() {
-    return [
-      {
-        id: '1',
-        name: '생막걸리',
-        empName: '홍길잠',
-        bcncName: '예담',
-        pic: '홍길동',
-        dueDate: '2025-10-01',
-        ordDate: '2025-10-01',
-        prodCode: 'mk001',
-        prodName: '생막걸리(750ml*20병)',
-        spec: '750ml',
-        unit: '병',
-        qty: 100,
-        status: '출고대기',
-      },
-      {
-        id: '2',
-        name: '생막걸리',
-        empName: '홍길잠',
-        bcncName: '예담',
-        pic: '홍길동',
-        dueDate: '2025-10-01',
-        ordDate: '2025-10-01',
-        prodCode: 'mk001',
-        prodName: '생막걸리',
-        spec: '750ml',
-        unit: '병',
-        qty: 100,
-        status: '출고대기',
-      },
-      {
-        id: '1',
-        name: '생막걸리',
-        empName: '홍길잠',
-        bcncName: '예담',
-        pic: '홍길동',
-        dueDate: '2025-10-01',
-        ordDate: '2025-10-01',
-        prodCode: 'mk001',
-        prodName: '생막걸리(750ml*20병)',
-        spec: '750ml',
-        unit: '병',
-        qty: 100,
-        status: '출고대기',
-      },
-      {
-        id: '1',
-        name: '생막걸리',
-        empName: '홍길잠',
-        bcncName: '예담',
-        pic: '홍길동',
-        dueDate: '2025-10-01',
-        ordDate: '2025-10-01',
-        prodCode: 'mk001',
-        prodName: '생막걸리(750ml*20병)',
-        spec: '750ml',
-        unit: '병',
-        qty: 100,
-        status: '출고대기',
-      },
-      {
-        id: '1',
-        name: '생막걸리',
-        empName: '홍길잠',
-        bcncName: '예담',
-        pic: '홍길동',
-        dueDate: '2025-10-01',
-        ordDate: '2025-10-01',
-        prodCode: 'mk001',
-        prodName: '생막걸리(750ml*20병)',
-        spec: '750ml',
-        unit: '병',
-        qty: 100,
-        status: '출고대기',
-      },
-      {
-        id: '1',
-        name: '생막걸리',
-        empName: '홍길잠',
-        bcncName: '예담',
-        pic: '홍길동',
-        dueDate: '2025-10-01',
-        ordDate: '2025-10-01',
-        prodCode: 'mk001',
-        prodName: '생막걸리(750ml*20병)',
-        spec: '750ml',
-        unit: '병',
-        qty: 100,
-        status: '출고대기',
-      },
-      {
-        id: '1',
-        name: '생막걸리',
-        empName: '홍길잠',
-        bcncName: '예담',
-        pic: '홍길동',
-        dueDate: '2025-10-01',
-        ordDate: '2025-10-01',
-        prodCode: 'mk001',
-        prodName: '생막걸리(750ml*20병)',
-        spec: '750ml',
-        unit: '병',
-        qty: 100,
-        status: '출고대기',
-      },
-      {
-        id: '1',
-        name: '생막걸리',
-        empName: '홍길잠',
-        bcncName: '예담',
-        pic: '홍길동',
-        dueDate: '2025-10-01',
-        ordDate: '2025-10-01',
-        prodCode: 'mk001',
-        prodName: '생막걸리(750ml*20병)',
-        spec: '750ml',
-        unit: '병',
-        qty: 100,
-        status: '출고대기',
-      },
-      {
-        id: '1',
-        name: '생막걸리',
-        empName: '홍길잠',
-        bcncName: '예담',
-        pic: '홍길동',
-        dueDate: '2025-10-01',
-        ordDate: '2025-10-01',
-        prodCode: 'mk001',
-        prodName: '생막걸리(750ml*20병)',
-        spec: '750ml',
-        unit: '병',
-        qty: 100,
-        status: '출고대기',
-      },
-      {
-        id: '1',
-        name: '생막걸리',
-        empName: '홍길잠',
-        bcncName: '예담',
-        pic: '홍길동',
-        dueDate: '2025-10-01',
-        ordDate: '2025-10-01',
-        prodCode: 'mk001',
-        prodName: '생막걸리(750ml*20병)',
-        spec: '750ml',
-        unit: '병',
-        qty: 100,
-        status: '출고대기',
-      },
-      {
-        id: '1',
-        name: '생막걸리',
-        empName: '홍길잠',
-        bcncName: '예담',
-        pic: '홍길동',
-        dueDate: '2025-10-01',
-        ordDate: '2025-10-01',
-        prodCode: 'mk001',
-        prodName: '생막걸리(750ml*20병)',
-        spec: '750ml',
-        unit: '병',
-        qty: 100,
-        status: '출고대기',
-      },
-    ]
-  },
+  products.value = result.data
 }
+// const getOrdersForms = async () => {
+//   // products를 로딩 시작 시 비워줍니다.
+//   products.value = []
+//   console.log('API 호출 시작: /ordFormView')
+
+//   try {
+//     const response = await axios.get('/ordFormView')
+
+//     // 1. 응답 데이터가 있는지 확인
+//     if (response.data) {
+//       // 2. 응답 데이터가 객체 배열인지 확인
+//       if (Array.isArray(response.data)) {
+//         // 성공: DataTable이 기대하는 올바른 형식
+//         products.value = response.data
+//         console.log('✅ 데이터 로드 성공. 항목 수:', products.value.length)
+//       } else {
+//         // 실패: 응답은 받았지만 HTML 문자열 등 배열이 아님 (이전 오류의 근본 원인)
+//         console.error(
+//           '❌ API 응답이 유효한 배열 형식이 아닙니다.',
+//           typeof response.data,
+//           response.data,
+//         )
+//       }
+//     } else {
+//       console.error('❌ API 응답에 데이터(response.data)가 없습니다.')
+//     }
+//   } catch (err) {
+//     // 네트워크 오류 또는 HTTP 오류(404, 500 등) 발생 시
+//     console.error('❌ 주문서 데이터를 불러오는 중 심각한 오류 발생:', err)
+//     // 오류가 발생해도 products는 이미 빈 배열로 초기화되어 있으므로 경고는 발생하지 않습니다.
+//   }
+// }
 
 onMounted(() => {
-  products.value = ProductService.getProductData()
-  
+  getOrdersForms()
 })
 
 // 체크박스 눌렀는지 확인하는 리턴용도 watch
@@ -454,22 +318,22 @@ onMounted(() => {
           >
             <!-- <Column selectionMode="multiple" headerStyle="width: 3rem"></Column> -->
             <Column
-              field="id"
+              field="ord_id"
               header="주문서번호"
               :pt="{ columnHeaderContent: 'justify-center' }"
             ></Column>
             <Column
-              field="name"
+              field="ord_name"
               header="주문서명"
               :pt="{ columnHeaderContent: 'justify-center' }"
             ></Column>
             <Column
-              field="empName"
+              field="emp_name"
               header="주문서작성자"
               :pt="{ columnHeaderContent: 'justify-center' }"
             ></Column>
             <Column
-              field="bcncName"
+              field="bcnc_name"
               header="거래처"
               :pt="{ columnHeaderContent: 'justify-center' }"
             ></Column>
@@ -479,46 +343,46 @@ onMounted(() => {
               :pt="{ columnHeaderContent: 'justify-center' }"
             ></Column>
             <Column
-              field="dueDate"
+              field="due_date"
               header="납기일자"
               :pt="{ columnHeaderContent: 'justify-center' }"
               bodyStyle="text-align: center"
             ></Column>
             <Column
-              field="ordDate"
+              field="ord_date"
               header="주문일자"
               :pt="{ columnHeaderContent: 'justify-center' }"
               bodyStyle="text-align: center"
             ></Column>
             <Column
-              field="prodCode"
+              field="prod_code"
               header="제품코드"
               :pt="{ columnHeaderContent: 'justify-center' }"
             ></Column>
             <Column
-              field="prodName"
+              field="prod_name"
               header="제품명"
               :pt="{ columnHeaderContent: 'justify-center' }"
             ></Column>
             <Column
-              field="spec"
+              field="prod_spec"
               header="규격"
               :pt="{ columnHeaderContent: 'justify-center' }"
               bodyStyle="text-align: right"
             ></Column>
             <Column
-              field="unit"
+              field="prod_unit"
               header="단위"
               :pt="{ columnHeaderContent: 'justify-center' }"
             ></Column>
             <Column
-              field="qty"
+              field="op_qty"
               header="수량"
               :pt="{ columnHeaderContent: 'justify-center' }"
               bodyStyle="text-align: right"
             ></Column>
             <Column
-              field="status"
+              field="order_status"
               header="상태"
               :pt="{ columnHeaderContent: 'justify-center' }"
             ></Column>

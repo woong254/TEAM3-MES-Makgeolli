@@ -28,6 +28,8 @@ SELECT o.ord_id,
        o.ord_date,       
        p.prod_code,
        p.prod_name,
+       p.prod_spec,
+       p.prod_unit,
        od.op_qty,
        o.order_status
 FROM   orderform o
@@ -66,6 +68,9 @@ DESC orderform;
 DESC orderdetail;
 DESC prod_master;
 DESC bcnc_master;
+DESC equip_downtime;
+DESC equip_repair;
+DESC equip_inspection;
 
 -- 거래처기준관리, 거래처 데이터 삽입
 INSERT INTO bcnc_master(bcnc_code, bcnc_name, bcnc_type, brn, pic, biz_type, bcnc_category, bcnc_tel, writer, write_date)
@@ -82,4 +87,5 @@ INSERT INTO orderdetail(ord_id, no, prod_code, op_qty, ofd_st)
 -- 주문서조회, 주문서 데이터 삽입
 INSERT INTO orderform(ord_id, ord_name, due_date, bcnc_code, emp_id, ord_date, ord_knd, order_status)
 			   VALUES('20251002-01', '생막걸리예담주문', '2025-10-10','1','EMP-20250616-0001', '2025-10-02','생막걸리(750ml*20병)외2건','주문완료');
+                        
                         

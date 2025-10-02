@@ -10,6 +10,8 @@ SELECT o.ord_id,
        o.ord_date,       
        p.prod_code,
        p.prod_name,
+       p.prod_spec,
+       p.prod_unit,
        od.op_qty,
        o.order_status
 FROM   orderform o
@@ -24,4 +26,4 @@ FROM   orderform o
 
 module.exports = {
   selectOrderForm,
-}
+};
