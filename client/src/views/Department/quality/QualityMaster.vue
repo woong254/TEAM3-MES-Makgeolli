@@ -23,7 +23,7 @@ const selectStyle =
   'dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-950 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
 const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400'
 const textareaStyle =
-  'dark:bg-dark-900 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-950 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
+  'dark:bg-dark-900 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-950 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 overflow-y-auto'
 
 // table data
 const inspData = ref([
@@ -44,6 +44,48 @@ const inspData = ref([
     inspName: '대장균 검사',
     inspTarget: '막걸리(반제품)',
     inspUsing: 'Y',
+  },
+  {
+    inspCode: '-',
+    inspName: '-',
+    inspTarget: '-',
+    inspUsing: '-',
+  },
+  {
+    inspCode: '-',
+    inspName: '-',
+    inspTarget: '-',
+    inspUsing: '-',
+  },
+  {
+    inspCode: '-',
+    inspName: '-',
+    inspTarget: '-',
+    inspUsing: '-',
+  },
+  {
+    inspCode: '-',
+    inspName: '-',
+    inspTarget: '-',
+    inspUsing: '-',
+  },
+  {
+    inspCode: '-',
+    inspName: '-',
+    inspTarget: '-',
+    inspUsing: '-',
+  },
+  {
+    inspCode: '-',
+    inspName: '-',
+    inspTarget: '-',
+    inspUsing: '-',
+  },
+  {
+    inspCode: '-',
+    inspName: '-',
+    inspTarget: '-',
+    inspUsing: '-',
   },
   {
     inspCode: '-',
@@ -159,8 +201,9 @@ const closeModal = () => {
             :value="inspData"
             showGridlines
             scrollable
+            scrollHeight="390px"
             size="small"
-            :rows="1"
+            :rows="10"
             class="text-sm"
             v-model:selection="selectedInspData"
           >
@@ -202,7 +245,7 @@ const closeModal = () => {
         </template>
       </ComponentCard>
 
-      <ComponentCard title="등록" className="shadow-sm w-1/2 overflow-y-auto">
+      <ComponentCard title="등록" className="shadow-sm w-1/2 ">
         <template #header-right>
           <div class="flex justify-end">
             <button type="submit" class="btn-common btn-color" form="insp-form">등록</button>
@@ -210,7 +253,7 @@ const closeModal = () => {
           </div>
         </template>
         <template #body-content>
-          <form action="" id="insp-form">
+          <form action="" id="insp-form" class="overflow-y-auto" style="height: 380px">
             <div class="flex gap-10 mb-4">
               <div class="w-3/4 flex items-center">
                 <label :class="labelStyle" class="w-1/3"> 검사항목명 </label>

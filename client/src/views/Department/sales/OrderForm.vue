@@ -55,6 +55,7 @@ const flatpickrConfig = {
   altFormat: 'Y-m-d',
   wrap: true,
 }
+
 const currentPageTitle = ref('주문서조회')
 const search = ref<SearchCondition>({
   ord_name: '',
