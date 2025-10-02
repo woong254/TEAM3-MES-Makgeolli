@@ -2,7 +2,7 @@
 // const reference = require("./sqls/reference.js");
 
 // 영업
-// const sales = require("./sqls/sales.js");
+ const sales = require("./sqls/orderform.js");
 
 // 생산
 const prodord = require("./sqls/prodord.js");
@@ -22,7 +22,7 @@ module.exports = {
   // ...reference,
 
   // 영업
-  // ...sales,
+   ...sales,
 
   // 생산
   ...prodord,       // 생산지시
