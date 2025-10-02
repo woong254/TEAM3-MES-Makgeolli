@@ -43,20 +43,19 @@ interface Product {
 
 defineProps<Props>()
 
-// 날짜 변수 선언
-// const deliveryStartDates = ref(null)
-// const deliveryEndDates = ref(null)
-// const orderStartDates = ref(null)
-// const orderEndDates = ref(null)
 const selectedProducts = ref(null)
-const products = ref<Product>()
-const flatpickrConfig = {
-  dateFormat: 'Y-m-d',
-  altInput: true,
-  altFormat: 'Y-m-d',
-  wrap: true,
-}
+// const products = ref<Product>()
+const products = ref([
+  {
+    prod_code: 'P001',
+    prod_name: '막걸리',
+    prod_spec: '750ml',
+    prod_unit: '병',
+    op_qty: 100
+  },
+]);
 
+// input태그 데이터 초기화
 const search = ref<SearchCondition>({
   ord_name: '',
   bcnc_name: '',
@@ -68,52 +67,49 @@ const search = ref<SearchCondition>({
   ord_end_date: '',
 })
 
-const getOrdersForms = async () => {
-  const result = await axios
-    .get<Product[]>('/api/ordFormView', { params: search.value })
-    .catch((err) => console.log(err))
+// 테이블 v-for 컬럼 정의
+const columns = ref([
+  { field: 'prod_code', header: '제품코드'},
+  { field: 'prod_name', header: '제품명'},
+  { field: 'prod_spec', header: '규격'},
+  { field: 'prod_unit', header: '단위'},
+  { field: 'op_qty', header: '수량'},
+])
 
-  products.value = result.data
-}
+// 주문서조회 데이터 가져오는 함수 axios
+// const getOrdersForms = async () => {
+//   const result = await axios
+//     .get<Product[]>('/api/ordFormView', { params: search.value })
+//     .catch((err) => console.log(err))
+
+//   products.value = result.data
+// }
+
+// 페이지 타이틀
+const currentPageTitle = ref('주문서관리')
 
 onMounted(() => {
-  getOrdersForms()
+  // getOrdersForms()
+  
 })
 
-// const onCellEditComplete = (event) => {
-//   let { data, newValue, field } = event
+// 달력
+const flatpickrConfig = {
+  dateFormat: 'Y-m-d',
+  altInput: true,
+  altFormat: 'Y-m-d',
+  wrap: true,
+}
 
-//   switch (field) {
-//     case 'quantity':
-//     case 'price':
-//       if (isPositiveInteger(newValue)) data[field] = newValue
-//       else event.preventDefault()
-//       break
+// 테이블 셀 편집 완료 이벤트
+const onCellEditComplete = (event) => {
+  let { data, newValue, field } = event;
+  // data는 행 전체, field는 컬럼, newValue는 수정된 값
+  if (newValue.trim().length > 0) data[field] = newValue;
+  // trim() 공백제거 data[field]는 실제 데이터 객체 data의 해당하는 field
+  else event.preventDefault();
+};
 
-//     default:
-//       if (newValue.trim().length > 0) data[field] = newValue
-//       else event.preventDefault()
-//       break
-//   }
-// }
-// const isPositiveInteger = (val) => {
-//   let str = String(val)
-
-//   str = str.trim()
-
-//   if (!str) {
-//     return false
-//   }
-
-//   str = str.replace(/^0+/, '') || '0'
-//   var n = Math.floor(Number(str))
-
-//   return n !== Infinity && String(n) === str && n >= 0
-// }
-// const formatCurrency = (value) => {
-//   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value)
-// }
-const currentPageTitle = ref('주문서관리')
 </script>
 <template>
   <AdminLayout>
@@ -375,37 +371,28 @@ const currentPageTitle = ref('주문서관리')
             v-model:selection="selectedProducts"
             :value="products"
             dataKey="id"
-            tableStyle="min-width: 50rem"
+            tableStyle="min-width:50rem; min-height:20rem"           
             showGridlines
             editMode="cell"
             @cell-edit-complete="onCellEditComplete"
+            size="small"
+            :pt = "{
+              column: {
+                bodycell: ({ state }:{state:{d_editing: boolean}}) => ({
+                  class: [{ '!py-0': state['d_editing']}]
+                }),                
+              }              
+            }"
           >
-            <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
-            <Column
-              field="prod_code"
-              header="제품코드"
-              :pt="{ columnHeaderContent: 'justify-center' }"
-            ></Column>
-            <Column
-              field="prod_name"
-              header="제품명"
-              :pt="{ columnHeaderContent: 'justify-center' }"
-            ></Column>
-            <Column
-              field="prod_spec"
-              header="규격"
-              :pt="{ columnHeaderContent: 'justify-center' }"
-            ></Column>
-            <Column
-              field="prod_unit"
-              header="단위"
-              :pt="{ columnHeaderContent: 'justify-center' }"
-            ></Column>
-            <Column
-              field="op_qty"
-              header="수량"
-              :pt="{ columnHeaderContent: 'justify-center' }"
-            ></Column>
+            <Column selectionMode="multiple" headerStyle="width: 3rem" ></Column>
+            <Column v-for="col of columns" :key="col.field" :field="col.field" :header="col.header" style="width: 20%" :pt="{ columnHeaderContent: 'justify-center' }">
+              <template #body="{ data, field}">
+                {{ data[field] }}
+              </template>
+              <template #editor="{ data, field }">
+                <InputText v-model="data[field]" autofocus fluid /> 
+              </template>
+            </Column>
           </DataTable>
         </template>
       </ComponentCard>
