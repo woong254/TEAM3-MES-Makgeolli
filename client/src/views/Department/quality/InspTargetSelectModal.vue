@@ -113,8 +113,8 @@ const inspData = ref([
     <Modal title="검사대상" :fullScreenBackdrop="true">
       <template #modal-header>
         <div class="flex justify-end">
-          <button class="btn-common-modal btn-white">초기화</button>
-          <button class="btn-common-modal btn-color">조회</button>
+          <button type="button" class="btn-common-modal btn-white">초기화</button>
+          <button type="button" class="btn-common-modal btn-color">조회</button>
         </div>
       </template>
       <template #modal-body>
@@ -165,7 +165,6 @@ const inspData = ref([
             class="text-sm z-[100001]"
             paginator
             :rows="8"
-            :rowsPerPageOptions="[5, 10, 20, 50]"
           >
             <DataCol
               field="inspCheck"
