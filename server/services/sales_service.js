@@ -1,6 +1,22 @@
 // 영업 서비스
 const mariadb = require("../database/mapper.js");
 
+const testService = ()=>{
+  let conn = null;
+  try {
+    conn = await mariadb.getConnection();
+    await conn.beginTransaction();
+    await conn.query("INSERT INTO testTransaction values ('test')");
+    await conn.query("INSERT INTO testTransaction values ('test2')");
+    await conn.commit();
+    
+  } catch(err){
+    if(conn) conn.rollback();
+  } finally {
+    if(conn) conn.release();
+  }
+}
+
 // 날짜 객체를 'YYYY-MM-DD' 문자열로 변환하는 헬퍼 함수
 const formatDate = (date) => {
   if (!(date instanceof Date)) {
