@@ -12,6 +12,8 @@ import Column from 'primevue/column'
 import 'primeicons/primeicons.css'
 import Button from 'primevue/button'
 
+import InspTargetSelectModal from './InspTargetSelectModal.vue' // import the modal component (검사대상조회)
+
 const currentPageTitle = ref('품질검사 기준관리')
 
 // style
@@ -63,6 +65,15 @@ const inspTarget = ref([
 
 // table radio button
 const selectedInspData = ref(null)
+
+// modal event
+const isModalOpen = ref(false)
+const openModal = () => {
+  isModalOpen.value = true
+}
+const closeModal = () => {
+  isModalOpen.value = false
+}
 </script>
 
 <template>
@@ -166,6 +177,7 @@ const selectedInspData = ref(null)
               sortable
               :pt="{ columnHeaderContent: 'justify-center' }"
               style="width: 120px"
+              bodyStyle="text-align: center"
             />
             <DataCol
               field="inspName"
@@ -230,14 +242,17 @@ const selectedInspData = ref(null)
               ></textarea>
             </div>
             <hr class="" />
-            <!-- 검사대상조회 -->
             <div class="flex justify-between items-center mt-4 mb-4">
               <h3>검사대상조회</h3>
-              <button type="button" class="btn-common btn-color btn-insp-target-search">
+              <button
+                type="button"
+                @click="openModal"
+                class="btn-common btn-color btn-insp-target-search"
+              >
                 검사대상조회
               </button>
             </div>
-            <!-- primevue..... -->
+            <InspTargetSelectModal :visible="isModalOpen" @close="closeModal" />
             <DataTable
               :value="inspTarget"
               showGridlines
@@ -250,6 +265,7 @@ const selectedInspData = ref(null)
                 field="proID"
                 header="자재/제품ID"
                 :pt="{ columnHeaderContent: 'justify-center' }"
+                bodyStyle="text-align: center"
               />
               <Column
                 field="proName"
