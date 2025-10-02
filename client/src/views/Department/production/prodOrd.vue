@@ -6,7 +6,10 @@ import '@/assets/common.css'
 import flatPickr from 'vue-flatpickr-component'
 import 'flatpickr/dist/flatpickr.css'
 
-import { ref } from 'vue'
+// import ProductData from './ProductData.vue';
+
+import { ref, onMounted } from 'vue';
+// import { ProductService } from '@/service/ProductService';
 
 const currentPageTitle = ref('생산지시관리');
 
@@ -21,8 +24,15 @@ const flatpickrConfig = {
 }
 
 const inputStyle = "dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-
 const labelStyle = "block text-sm font-medium text-gray-700 dark:text-gray-400 mb-2";
+
+// onMounted(() => {
+//     ProductService.getProductsMini().then((data) => (products.value = data));
+// });
+// const products = ref();
+// const selectedProducts = ref();
+// const metaKey = ref(true);
+
 </script>
 
 <template>
@@ -163,9 +173,16 @@ const labelStyle = "block text-sm font-medium text-gray-700 dark:text-gray-400 m
         ]"
       >
         <template #header-right>
-          <div class="flex justify-end space-x-2 mb-2">
+          <div class="flex justify-end">
             <button type="button" class="btn-color btn-common">제품추가</button>
             <button type="button" class="btn-white btn-common">제품삭제</button>
+          </div>
+        </template>
+        <template #body-content>
+          <div class="card">
+            <DataTable>
+              <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
+            </DataTable>
           </div>
         </template>
       </ComponentCard>
