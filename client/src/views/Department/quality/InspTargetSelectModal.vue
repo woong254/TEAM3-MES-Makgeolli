@@ -165,7 +165,6 @@ const inspData = ref([
             class="text-sm z-[100001]"
             paginator
             :rows="8"
-            :rowsPerPageOptions="[5, 10, 20, 50]"
           >
             <DataCol
               field="inspCheck"

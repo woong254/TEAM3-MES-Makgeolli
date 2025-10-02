@@ -8,7 +8,7 @@
       aria-hidden="true"
     ></div>
     <!-- modal -->
-    <div class="bg-white p-6 rounded-lg shadow-md z-[100000] max-w-3xl w-full relative">
+    <div class="bg-white p-6 rounded-lg shadow-md max-w-4xl w-full relative">
       <!-- header -->
       <div class="flex justify-between items-center mb-3">
         <h3 class="text-base font-medium text-gray-800 dark:text-white/90">
