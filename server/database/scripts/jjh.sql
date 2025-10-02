@@ -40,7 +40,8 @@ FROM   orderform o
        JOIN orderdetail od
        ON   o.ord_id = od.ord_id
        JOIN prod_master p
-       ON   od.prod_code = p.prod_code;
+       ON   od.prod_code = p.prod_code
+WHERE  o.ord_name LIKE '%막걸리%';
 
 SELECT *
 FROM   orderform;

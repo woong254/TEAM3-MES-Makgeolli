@@ -15,90 +15,69 @@ interface Props {
   className?: string
   desc?: string
 }
+interface SearchCondition {
+  ord_name: string
+  bcnc_name: string
+  pic: string
+  emp_name: string
+  due_start_date: string
+  due_end_date: string
+  ord_start_date: string
+  ord_end_date: string
+}
+interface Product {
+  ord_id: string
+  ord_name: string
+  emp_name: string
+  bcnc_name: string
+  pic: string
+  due_date: string
+  ord_date: string
+  prod_code: string
+  prod_name: string
+  prod_spec: string
+  prod_unit: string
+  op_qty: string
+  order_status: string
+}
 
 defineProps<Props>()
 
-// const date = ref(null)
 // 날짜 변수 선언
-const deliveryStartDates = ref(null)
-const deliveryEndDates = ref(null)
-const orderStartDates = ref(null)
-const orderEndDates = ref(null)
-
-const products = ref([])
-// const selectedProducts = ref([])
-
+// const deliveryStartDates = ref(null)
+// const deliveryEndDates = ref(null)
+// const orderStartDates = ref(null)
+// const orderEndDates = ref(null)
+const products = ref<Product>()
 const flatpickrConfig = {
   dateFormat: 'Y-m-d',
   altInput: true,
   altFormat: 'Y-m-d',
   wrap: true,
 }
-
 const currentPageTitle = ref('주문서조회')
+const search = ref<SearchCondition>({
+  ord_name: '',
+  bcnc_name: '',
+  pic: '',
+  emp_name: '',
+  due_start_date: '',
+  due_end_date: '',
+  ord_start_date: '',
+  ord_end_date: '',
+})
 
 const getOrdersForms = async () => {
-  const result = await axios.get('/ordFormView').catch((err) => console.log(err))
+  const result = await axios
+    .get<Product[]>('/api/ordFormView', { params: search.value })
+    .catch((err) => console.log(err))
 
   products.value = result.data
 }
-// const getOrdersForms = async () => {
-//   // products를 로딩 시작 시 비워줍니다.
-//   products.value = []
-//   console.log('API 호출 시작: /ordFormView')
-
-//   try {
-//     const response = await axios.get('/ordFormView')
-
-//     // 1. 응답 데이터가 있는지 확인
-//     if (response.data) {
-//       // 2. 응답 데이터가 객체 배열인지 확인
-//       if (Array.isArray(response.data)) {
-//         // 성공: DataTable이 기대하는 올바른 형식
-//         products.value = response.data
-//         console.log('✅ 데이터 로드 성공. 항목 수:', products.value.length)
-//       } else {
-//         // 실패: 응답은 받았지만 HTML 문자열 등 배열이 아님 (이전 오류의 근본 원인)
-//         console.error(
-//           '❌ API 응답이 유효한 배열 형식이 아닙니다.',
-//           typeof response.data,
-//           response.data,
-//         )
-//       }
-//     } else {
-//       console.error('❌ API 응답에 데이터(response.data)가 없습니다.')
-//     }
-//   } catch (err) {
-//     // 네트워크 오류 또는 HTTP 오류(404, 500 등) 발생 시
-//     console.error('❌ 주문서 데이터를 불러오는 중 심각한 오류 발생:', err)
-//     // 오류가 발생해도 products는 이미 빈 배열로 초기화되어 있으므로 경고는 발생하지 않습니다.
-//   }
-// }
 
 onMounted(() => {
   getOrdersForms()
 })
-
-// 체크박스 눌렀는지 확인하는 리턴용도 watch
-// watch(selectedProducts, (newSelection) => {
-//     console.log("=========================================");
-//     console.log("✅ 체크박스가 눌렸습니다! (선택 목록 업데이트)");
-
-//     if (newSelection.length > 0) {
-//         // 새로 선택된 목록의 전체 객체 출력
-//         console.log("새로 선택된 제품 목록 (전체 객체):", newSelection);
-
-//         // 특정 정보(예: ID와 이름)만 추출하여 출력
-//         const selectedInfo = newSelection.map(item => ({ id: item.id, name: item.name }));
-//         console.log("선택된 제품 ID 및 이름:", selectedInfo);
-//     } else {
-//         console.log("모든 항목이 선택 해제되었습니다.");
-//     }
-//     console.log("=========================================");
-// }, {
-//     // deep: true는 배열 내부 객체의 속성 변화까지 감지할 때 필요하지만,
-//     // 이 경우 v-model이 배열 전체를 새 배열로 대체하므로 보통 생략해도 잘 작동합니다.
-// });
 </script>
 <template>
   <AdminLayout>
@@ -123,6 +102,7 @@ onMounted(() => {
                   type="text"
                   class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
                   placeholder=""
+                  v-model="search.ord_name"
                 />
                 <div>
                   <label
@@ -133,7 +113,7 @@ onMounted(() => {
                   <div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
                     <div class="relative w-45">
                       <flat-pickr
-                        v-model="deliveryStartDates"
+                        v-model="search.due_start_date"
                         :config="flatpickrConfig"
                         class="dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pl-4 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
                         placeholder="시작일"
@@ -161,7 +141,7 @@ onMounted(() => {
                     <span>ㅡ</span>
                     <div class="relative w-45">
                       <flat-pickr
-                        v-model="deliveryEndDates"
+                        v-model="search.due_end_date"
                         :config="flatpickrConfig"
                         class="dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pl-4 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
                         placeholder="종료일"
@@ -207,7 +187,7 @@ onMounted(() => {
                   <div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
                     <div class="relative w-45">
                       <flat-pickr
-                        v-model="orderStartDates"
+                        v-model="search.ord_start_date"
                         :config="flatpickrConfig"
                         class="dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pl-4 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
                         placeholder="시작일"
@@ -235,7 +215,7 @@ onMounted(() => {
                     <span>ㅡ</span>
                     <div class="relative w-45">
                       <flat-pickr
-                        v-model="orderEndDates"
+                        v-model="search.ord_end_date"
                         :config="flatpickrConfig"
                         class="dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pl-4 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
                         placeholder="종료일"
@@ -271,6 +251,7 @@ onMounted(() => {
                   type="text"
                   class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
                   placeholder=""
+                  v-model="search.pic"
                 />
               </div>
               <div>
@@ -281,6 +262,7 @@ onMounted(() => {
                   type="text"
                   class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
                   placeholder=""
+                  v-model="search.emp_name"
                 />
               </div>
             </div>
