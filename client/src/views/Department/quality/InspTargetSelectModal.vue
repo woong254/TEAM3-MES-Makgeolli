@@ -110,7 +110,7 @@ const inspData = ref([
 
 <template>
   <div v-if="props.visible">
-    <Modal title="검사대상" :fullScreenBackdrop="true">
+    <Modal title="검사대상" :fullScreenBackdrop="true" title-align="left" header-align="right">
       <template #modal-header>
         <div class="flex justify-end">
           <button type="button" class="btn-common-modal btn-white">초기화</button>
