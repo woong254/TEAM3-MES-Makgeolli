@@ -4,28 +4,61 @@ import DataCol from 'primevue/column'
 import ComponentCard from '@/components/common/ComponentCardButton.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
-import InputText from 'primevue/inputtext'
 import flatPickr from 'vue-flatpickr-component'
+import MatModal from './MatModal/MatModal.vue'
+import PurModal from './MatModal/PurModal.vue'
+import BcncModal from './MatModal/BcncModal.vue'
 import sysdate from 'moment'
 import 'flatpickr/dist/flatpickr.css'
 import '@/assets/common.css'
 import { ref } from 'vue'
-import InputNumber from 'primevue/inputnumber'
 
-const makeDates = ref(null)
+const baseInputClass =
+  'dark:bg-dark-900 h-8 w-full rounded-lg border border-gray-300 bg-transparent pl-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
 const currentPageTitle = ref('발주관리')
+const isPurModalOpen = ref(false)
+const isMatModalOpen = ref(false)
+const isBcncModalOpen = ref(false)
+const selectMat = ref([])
+
+const resetBtn = () => {
+  purChaseMat.value = []
+  purChase.value = [
+    {
+      pur_code: '',
+      pur_name: '',
+      bcnc_name: '',
+      pur_date: sysdate().format('YYYY-MM-DD'),
+      receipt_date: '',
+      mat_name: '',
+      remark: '',
+    },
+  ]
+  selectMat.value = []
+}
 
 const flatpickrConfig = {
   dateFormat: 'Y-m-d',
   altInput: true,
   altFormat: 'Y-m-d',
+  altInputClass: baseInputClass,
+}
+
+const deleteSelectedRows = () => {
+  purChaseMat.value = purChaseMat.value.filter((item) => !selectMat.value.includes(item))
+  selectMat.value = []
+}
+
+const handleCloseModal = () => {
+  isPurModalOpen.value = false
+  isMatModalOpen.value = false
+  isBcncModalOpen.value = false
 }
 
 const purChase = ref([
   {
     pur_code: 'BAL-001',
     pur_name: '20250930쌀발주',
-    bcnc_code: 2001,
     bcnc_name: '농협',
     pur_date: sysdate().format('YYYY-MM-DD'),
     receipt_date: '2025-10-30',
@@ -54,14 +87,9 @@ const purChaseMat = ref([
     MAT_UNIT: '포대',
   },
 ])
-
-const selectedbox = ref([])
-
-const deleteSelectedRows = () => {
-  purChaseMat.value = purChaseMat.value.filter((item) => !selectedbox.value.includes(item))
-  selectedbox.value = []
-}
 </script>
+
+<!--발주서 컴포넌트-->
 
 <template>
   <AdminLayout>
@@ -70,8 +98,10 @@ const deleteSelectedRows = () => {
       <ComponentCard title="발주서">
         <template #header-right>
           <div class="flex justify-end space-x-2 mb-1">
-            <button type="button" class="btn-white btn-common">초기화</button>
-            <button type="button" class="btn-white btn-common">조회</button>
+            <button type="button" class="btn-white btn-common" @click="resetBtn()">초기화</button>
+            <button type="button" class="btn-white btn-common" @click="isPurModalOpen = true">
+              조회
+            </button>
             <button type="button" class="btn-color btn-common">등록/수정</button>
             <button type="button" class="btn-color btn-common">삭제</button>
           </div>
@@ -79,7 +109,6 @@ const deleteSelectedRows = () => {
         <template #body-content>
           <DataTable
             :value="purChase"
-            class="custom-table"
             showGridlines
             @cell-edit-complete="
               (e) => {
@@ -91,41 +120,70 @@ const deleteSelectedRows = () => {
               field="pur_code"
               header="발주코드"
               :pt="{ columnHeaderContent: 'justify-center' }"
+              style="width: 120px"
             />
             <DataCol
               field="pur_name"
-              header="발주명"
+              header="발주서명"
               :pt="{ columnHeaderContent: 'justify-center' }"
-              style="width: 200px"
+              style="width: 200px; padding: 8px"
             >
               <template #body="{ data, field }">
-                <InputText
+                <input
                   v-model="data[field]"
                   type="text"
-                  class="dark:bg-dark-900 h-8 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+                  :class="baseInputClass"
+                  placeholder="발주서명을 입력해주세요."
                 />
               </template>
             </DataCol>
             <DataCol
-              field="bcnc_code"
-              header="공급업체코드"
-              style="text-align: right"
-              :pt="{ columnHeaderContent: 'justify-center' }"
-            />
-            <DataCol
               field="bcnc_name"
               header="공급업체명"
               :pt="{ columnHeaderContent: 'justify-center' }"
-            />
+              style="width: 200px"
+            >
+              <template #body="{ data, field }">
+                <div class="relative">
+                  <input
+                    v-model="data[field]"
+                    type="text"
+                    readonly
+                    @click="isBcncModalOpen = true"
+                    :class="[baseInputClass, 'pr-10']"
+                  />
+                  <span
+                    class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                  >
+                    <!-- 돋보기 SVG -->
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="w-4 h-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 103.6 3.6a7.5 7.5 0 0013.05 13.05z"
+                      />
+                    </svg>
+                  </span>
+                </div>
+              </template>
+            </DataCol>
             <DataCol
               field="pur_date"
               header="발주일자"
-              style="text-align: center"
+              style="width: 140px; text-align: center"
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
             <DataCol
               field="receipt_date"
               header="입고일자"
+              style="width: 200px; padding: 8px"
               :pt="{ columnHeaderContent: 'justify-center' }"
             >
               <template #body="{ data, field }">
@@ -133,9 +191,7 @@ const deleteSelectedRows = () => {
                   <flat-pickr
                     v-model="data[field]"
                     :config="flatpickrConfig"
-                    style="text-align: center"
-                    class="flatpickr-input dark:bg-dark-900 h-8 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                    placeholder="입고일자"
+                    placeholder="날짜를 선택해주세요."
                   />
                   <span
                     class="absolute text-gray-500 -translate-y-1/2 pointer-events-none right-3 top-1/2 dark:text-gray-400"
@@ -163,18 +219,20 @@ const deleteSelectedRows = () => {
               field="emp_name"
               header="담당자"
               :pt="{ columnHeaderContent: 'justify-center' }"
+              style="width: 120px"
             />
             <DataCol
               field="remark"
               header="비고"
               :pt="{ columnHeaderContent: 'justify-center' }"
-              style="width: 300px"
+              style="width: 300px; padding: 8px"
             >
               <template #body="{ data, field }">
-                <InputText
+                <input
                   v-model="data[field]"
                   type="text"
-                  class="dark:bg-dark-900 h-8 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+                  :class="baseInputClass"
+                  placeholder="내용을 입력해주세요."
                 />
               </template>
             </DataCol>
@@ -182,10 +240,14 @@ const deleteSelectedRows = () => {
         </template>
       </ComponentCard>
 
+      <!-- 발주자재 컴포넌트-->
+
       <ComponentCard title="발주자재">
         <template #header-right>
           <div class="flex justify-end space-x-2">
-            <button type="button" class="btn-white btn-common">행추가</button>
+            <button type="button" class="btn-white btn-common" @click="isMatModalOpen = true">
+              행추가
+            </button>
             <button type="button" class="btn-color btn-common" @click="deleteSelectedRows">
               행삭제
             </button>
@@ -194,176 +256,76 @@ const deleteSelectedRows = () => {
         <template #body-content>
           <DataTable
             :value="purChaseMat"
-            v-model:selection="selectedbox"
+            v-model:selection="selectMat"
             showGridlines
             dataKey="mat_code"
-            class="custom-table"
           >
-            <DataCol selectionMode="multiple" headerStyle="width: 37px" />
+            <DataCol selectionMode="multiple" headerStyle="width: 37px" bodyStyle="width: 37px" />
             <DataCol
               field="mat_code"
               header="자재코드"
+              style="width: 160px"
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
             <DataCol
               field="mat_name"
               header="자재명"
+              style="width: 300px"
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
             <DataCol
               field="stock_qty"
               header="재고"
-              style="text-align: right"
+              style="width: 180px; text-align: right"
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
             <DataCol
               field="safe_stock"
               header="안전재고"
-              style="text-align: right"
+              style="width: 180px; text-align: right"
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
             <DataCol
               field="pur_qty"
               header="발주수량"
-              style="text-align: right"
+              style="width: 200px; padding: 8px"
               :pt="{ columnHeaderContent: 'justify-center' }"
             >
               <template #body="{ data, field }">
-                <InputNumber
-                  :modelValue="data[field]"
-                  :min="1"
+                <input
+                  v-model="data[field]"
+                  type="number"
+                  min="1"
                   style="text-align: right"
-                  class="cell-editor"
-                  @update:modelValue="(val) => (data[field] = val < 1 ? 1 : val)"
+                  :class="baseInputClass"
+                  placeholder="발주수량"
                 />
               </template>
             </DataCol>
             <DataCol
               field="MAT_SPEC"
               header="규격"
+              style="width: 140px"
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
             <DataCol
               field="MAT_UNIT"
               header="단위"
+              style="width: 140px"
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
           </DataTable>
         </template>
       </ComponentCard>
     </div>
+
+    <!--발주서 조회 모달-->
+    <PurModal v-model="isPurModalOpen" @close="handleCloseModal" />
+    <!--발주자재 조회 모달-->
+    <MatModal v-model="isMatModalOpen" @close="handleCloseModal" />
+    <!-- 공급업체 조회 모달-->
+    <BcncModal v-model="isBcncModalOpen" @close="handleCloseModal" />
   </AdminLayout>
 </template>
 
-<style scoped>
-/* deep selector로 PrimeVue 내부 엘리먼트까지 도달시킴 */
-::v-deep(.custom-table) table {
-  table-layout: fixed !important;
-}
-
-/* td / th 패딩을 강제로 줄임 */
-::v-deep(.custom-table) .p-datatable-thead > tr > th,
-::v-deep(.custom-table) .p-datatable-tbody > tr > td {
-  padding: 6px 6px !important; /* 필요하면 2px 6px 까지 줄여봐 */
-  vertical-align: middle !important;
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-}
-
-/* 행 높이 강제 고정 (포커스되어도 변하지 않도록) */
-::v-deep(.custom-table) .p-datatable-tbody > tr {
-  height: 40px !important; /* 더 작게 원하면 36px 등으로 조정 */
-}
-
-/* 편집용 InputText (cell-editor 클래스 사용) */
-/* td의 padding이 줄어도 input이 셀 모두를 채우도록 box-sizing + height 처리 */
-::v-deep(.custom-table) .cell-editor,
-::v-deep(.custom-table) .p-datatable-tbody > tr > td .cell-editor,
-::v-deep(.custom-table) .p-datatable .p-cell-editor input {
-  display: block !important;
-  width: 100% !important;
-  height: 100% !important;
-  margin: 0 !important;
-  padding: 6px 6px !important; /* td padding과 균형 맞춤 */
-  box-sizing: border-box !important;
-  line-height: 1 !important;
-  font-size: 14px !important;
-  border-radius: 4px !important; /* 원치 않으면 0으로 */
-}
-
-/* 포커스시 outline/box-shadow가 셀 크기 변경시키지 않게 */
-::v-deep(.custom-table) .cell-editor:focus,
-::v-deep(.custom-table) .p-datatable .p-cell-editor input:focus {
-  outline: none !important;
-  box-shadow: none !important;
-}
-
-/* (옵션) PrimeVue 기본 클래스가 더 우선일 때를 대비한 최종 오버라이드 */
-::v-deep(.custom-table) .p-datatable .p-inputtext {
-  margin: 0 !important;
-  height: 100% !important;
-}
-
-/* ✅ InputNumber wrapper 자체 스타일 */
-::v-deep(.custom-table .p-inputnumber) {
-  width: 100% !important;
-  height: 100% !important;
-  display: flex !important;
-  align-items: center !important;
-  padding: 0 !important;
-  box-sizing: border-box !important;
-}
-
-/* ✅ InputNumber 내부 input 요소 스타일 */
-::v-deep(.custom-table .p-inputnumber .p-inputtext) {
-  width: 100% !important;
-  height: 100% !important;
-  padding: 6px 6px !important;
-  font-size: 14px !important;
-  border-radius: 4px !important;
-  box-sizing: border-box !important;
-  text-align: right !important;
-  margin: 0 !important;
-}
-
-/* ✅ 포커스 시 테두리 강조 (선택 사항) */
-::v-deep(.custom-table .p-inputnumber .p-inputtext:focus) {
-  box-shadow: none !important;
-  outline: none !important;
-}
-
-::v-deep(.custom-table .p-inputnumber) {
-  padding: 0 !important;
-  margin: 0 !important;
-  height: 100% !important;
-  display: flex !important;
-  align-items: center !important;
-  box-sizing: border-box !important;
-}
-
-::v-deep(.custom-table .p-inputnumber-input) {
-  padding: 6px 6px !important;
-  height: 100% !important;
-  box-sizing: border-box !important;
-  text-align: right !important;
-  margin: 0 !important;
-  border-radius: 4px !important;
-}
-
-::v-deep(.custom-table .flatpickr-input) {
-  border: 1px solid #ccc; /* 기본 테두리 */
-  border-radius: 4px;
-  padding: 6px;
-  height: 100%;
-  box-sizing: border-box;
-}
-
-::v-deep(.custom-table .flatpickr-input:focus) {
-  outline: none !important;
-}
-
-[data-v-40f2626c] .custom-table .p-datatable-tbody > tr > td .p-inputnumber.cell-editor {
-  padding: 0 !important;
-}
-</style>
+<style scoped></style>
