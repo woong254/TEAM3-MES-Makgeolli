@@ -185,14 +185,13 @@ import { useRoute } from 'vue-router'
 import {
   GridIcon,
   CalenderIcon,
-
   ChevronDownIcon,
   HorizontalDots,
   PageIcon,
   TableIcon,
   ListIcon,
   PlugInIcon,
-} from "../../icons";
+} from '../../icons'
 
 import BoxCubeIcon from '@/icons/BoxCubeIcon.vue'
 import { useSidebar } from '@/composables/useSidebar'
@@ -237,17 +236,17 @@ const menuGroups: MenuGroup[] = [
         icon: BoxCubeIcon,
         name: 'Ui Elements',
         subItems: [
-          { name: "Ecommerce", path: "/", pro: false },
-          { name: "404 Page", path: "/error-404", pro: false },
-          { name: "Bar Chart", path: "/bar-chart", pro: false },
-          { name: "Alerts", path: "/alerts", pro: false },
-          { name: "Avatars", path: "/avatars", pro: false },
-          { name: "Badge", path: "/badge", pro: false },
-          { name: "Buttons", path: "/buttons", pro: false },
-          { name: "Images", path: "/images", pro: false },
-          { name: "Videos", path: "/videos", pro: false },
-          { name: "Basic Tables", path: "/basic-tables", pro: false },
-          { name: "Form Elements", path: "/form-elements", pro: false },
+          { name: 'Ecommerce', path: '/', pro: false },
+          { name: '404 Page', path: '/error-404', pro: false },
+          { name: 'Bar Chart', path: '/bar-chart', pro: false },
+          { name: 'Alerts', path: '/alerts', pro: false },
+          { name: 'Avatars', path: '/avatars', pro: false },
+          { name: 'Badge', path: '/badge', pro: false },
+          { name: 'Buttons', path: '/buttons', pro: false },
+          { name: 'Images', path: '/images', pro: false },
+          { name: 'Videos', path: '/videos', pro: false },
+          { name: 'Basic Tables', path: '/basic-tables', pro: false },
+          { name: 'Form Elements', path: '/form-elements', pro: false },
         ],
       },
       {
@@ -293,9 +292,7 @@ const menuGroups: MenuGroup[] = [
       {
         icon: PlugInIcon,
         name: '생산',
-        subItems: [
-          { name: '생산지시관리', path: '/prodOrd', pro: false },
-        ],
+        subItems: [{ name: '생산지시관리', path: '/prodOrd', pro: false }],
       },
       {
         icon: BoxCubeIcon,
