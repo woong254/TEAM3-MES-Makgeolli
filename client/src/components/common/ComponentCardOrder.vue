@@ -8,7 +8,7 @@
     ]"
   >
     <!-- Card Header -->
-    <div class="px-4 py-1 flex justify-between items-center">
+    <div class="px-4 py-2 flex justify-between items-center">
       <h3 class="text-base font-medium text-gray-800 dark:text-white/90">
         {{ title }}
       </h3>
@@ -21,7 +21,7 @@
     </div>
 
     <!-- Card Body -->
-    <div class="p-1 border-t border-gray-100 dark:border-gray-800 sm:p-">
+    <div class="px-4 p-2 border-t border-gray-100 dark:border-gray-800 sm:p-">
       <div class="space-y-5">
         <slot name="body-content"></slot>
       </div>
