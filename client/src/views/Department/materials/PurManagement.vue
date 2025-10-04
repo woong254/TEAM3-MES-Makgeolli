@@ -5,13 +5,14 @@ import ComponentCard from '@/components/common/ComponentCardButton.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import flatPickr from 'vue-flatpickr-component'
-import Modal from '@/components/ui/Modal.vue'
+import MatModal from './MatModal/MatModal.vue'
+import PurModal from './MatModal/PurModal.vue'
+import BcncModal from './MatModal/BcncModal.vue'
 import sysdate from 'moment'
 import 'flatpickr/dist/flatpickr.css'
 import '@/assets/common.css'
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
 
-const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400'
 const baseInputClass =
   'dark:bg-dark-900 h-8 w-full rounded-lg border border-gray-300 bg-transparent pl-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
 const currentPageTitle = ref('발주관리')
@@ -19,21 +20,30 @@ const isPurModalOpen = ref(false)
 const isMatModalOpen = ref(false)
 const isBcncModalOpen = ref(false)
 const selectMat = ref([])
-const selectPur = ref()
-const selectModalMat = ref([])
-const selectModalBcnc = ref()
 
-// 값 확인용
-watch(selectPur, (newVal) => {
-  console.log('selectPur changed:', newVal)
-})
+const resetBtn = () => {
+  purChaseMat.value = []
+  purChase.value = [
+    {
+      pur_code: '',
+      pur_name: '',
+      bcnc_name: '',
+      pur_date: sysdate().format('YYYY-MM-DD'),
+      receipt_date: '',
+      mat_name: '',
+      remark: '',
+    },
+  ]
+  selectMat.value = []
+}
 
 const flatpickrConfig = {
   dateFormat: 'Y-m-d',
   altInput: true,
   altFormat: 'Y-m-d',
-  altInputClass: baseInputClass + ' text-center',
+  altInputClass: baseInputClass,
 }
+
 const deleteSelectedRows = () => {
   purChaseMat.value = purChaseMat.value.filter((item) => !selectMat.value.includes(item))
   selectMat.value = []
@@ -43,9 +53,6 @@ const handleCloseModal = () => {
   isPurModalOpen.value = false
   isMatModalOpen.value = false
   isBcncModalOpen.value = false
-  selectModalMat.value = []
-  selectPur.value = null
-  selectModalBcnc.value = null
 }
 
 const purChase = ref([
@@ -80,60 +87,6 @@ const purChaseMat = ref([
     MAT_UNIT: '포대',
   },
 ])
-
-const modalPur = ref([
-  {
-    pur_code: 'BAL-001',
-    pur_name: '20250930쌀발주',
-    bcnc_code: 2001,
-    bcnc_name: '농협',
-    pur_date: sysdate().format('YYYY-MM-DD'),
-    receipt_date: '2025-10-30',
-    emp_name: '정지웅',
-    remark: '쌀 많이 주세요~~',
-  },
-  {
-    pur_code: 'BAL-002',
-    pur_name: '202501003보리발주',
-    bcnc_name: '삼성물산',
-    pur_date: sysdate().format('YYYY-MM-DD'),
-    receipt_date: '2025-11-25',
-    emp_name: '박봉근',
-    remark: '보리 넉넉하게 주세요',
-  },
-])
-
-const modalMat = ref([
-  {
-    mat_code: 'MAT-001',
-    mat_name: '쌀',
-    stock_qty: 500,
-    safe_stock: 200,
-    MAT_SPEC: '20kg',
-    MAT_UNIT: '포대',
-  },
-  {
-    mat_code: 'MAT-002',
-    mat_name: '밀가루',
-    stock_qty: 300,
-    safe_stock: 100,
-    MAT_SPEC: '20kg',
-    MAT_UNIT: '포대',
-  },
-])
-
-const modalBcnc = ref([
-  {
-    bcnc_code: 2001,
-    bcnc_name: '농협',
-    bcnc_type: '농축산물',
-  },
-  {
-    bcnc_code: 2002,
-    bcnc_name: 'CJ제일제당',
-    bcnc_type: '효모/첨가물',
-  },
-])
 </script>
 
 <!--발주서 컴포넌트-->
@@ -145,7 +98,7 @@ const modalBcnc = ref([
       <ComponentCard title="발주서">
         <template #header-right>
           <div class="flex justify-end space-x-2 mb-1">
-            <button type="button" class="btn-white btn-common">초기화</button>
+            <button type="button" class="btn-white btn-common" @click="resetBtn()">초기화</button>
             <button type="button" class="btn-white btn-common" @click="isPurModalOpen = true">
               조회
             </button>
@@ -167,6 +120,7 @@ const modalBcnc = ref([
               field="pur_code"
               header="발주코드"
               :pt="{ columnHeaderContent: 'justify-center' }"
+              style="width: 120px"
             />
             <DataCol
               field="pur_name"
@@ -223,7 +177,7 @@ const modalBcnc = ref([
             <DataCol
               field="pur_date"
               header="발주일자"
-              style="text-align: center"
+              style="width: 140px; text-align: center"
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
             <DataCol
@@ -265,6 +219,7 @@ const modalBcnc = ref([
               field="emp_name"
               header="담당자"
               :pt="{ columnHeaderContent: 'justify-center' }"
+              style="width: 120px"
             />
             <DataCol
               field="remark"
@@ -309,29 +264,31 @@ const modalBcnc = ref([
             <DataCol
               field="mat_code"
               header="자재코드"
+              style="width: 160px"
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
             <DataCol
               field="mat_name"
               header="자재명"
+              style="width: 300px"
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
             <DataCol
               field="stock_qty"
               header="재고"
-              style="text-align: right"
+              style="width: 180px; text-align: right"
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
             <DataCol
               field="safe_stock"
               header="안전재고"
-              style="text-align: right"
+              style="width: 180px; text-align: right"
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
             <DataCol
               field="pur_qty"
               header="발주수량"
-              style="width: 220px; padding: 8px"
+              style="width: 200px; padding: 8px"
               :pt="{ columnHeaderContent: 'justify-center' }"
             >
               <template #body="{ data, field }">
@@ -341,18 +298,20 @@ const modalBcnc = ref([
                   min="1"
                   style="text-align: right"
                   :class="baseInputClass"
-                  placeholder="발주수량을 입력해주세요."
+                  placeholder="발주수량"
                 />
               </template>
             </DataCol>
             <DataCol
               field="MAT_SPEC"
               header="규격"
+              style="width: 140px"
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
             <DataCol
               field="MAT_UNIT"
               header="단위"
+              style="width: 140px"
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
           </DataTable>
@@ -361,214 +320,12 @@ const modalBcnc = ref([
     </div>
 
     <!--발주서 조회 모달-->
-
-    <Modal
-      v-if="isPurModalOpen"
-      :full-screen-backdrop="true"
-      title-align="left"
-      header-align="right"
-      title="발주서 조회"
-      width="1200px"
-      @close="handleCloseModal"
-    >
-      <template #modal-header>
-        <button type="button" class="btn-white btn-common">조회</button>
-        <button type="button" class="btn-color btn-common">등록</button>
-      </template>
-      <template #modal-body>
-        <div class="modal-container flex gap-2 mb-2">
-          <div class="w-1/3">
-            <label :class="labelStyle"> 발주서명 </label>
-            <input type="text" :class="baseInputClass" style="width: 200px" />
-          </div>
-        </div>
-        <div class="modal-container flex gap-2 mb-2">
-          <DataTable
-            :value="modalPur"
-            show-gridlines
-            v-model:selection="selectPur"
-            datakey="pur_code"
-            @row-click="onRowClick"
-            style="width: 1200px"
-          >
-            <DataCol
-              selectionMode="single"
-              headerStyle="width: 37px"
-              bodyStyle="width: 37px"
-            ></DataCol>
-            <DataCol
-              field="pur_code"
-              header="발주코드"
-              :pt="{ columnHeaderContent: 'justify-center' }"
-            />
-            <DataCol
-              field="pur_name"
-              header="발주서명"
-              :pt="{ columnHeaderContent: 'justify-center' }"
-            />
-            <DataCol
-              field="bcnc_name"
-              header="공급업체명"
-              :pt="{ columnHeaderContent: 'justify-center' }"
-            />
-            <DataCol
-              field="pur_date"
-              header="발주일자"
-              style="text-align: center"
-              :pt="{ columnHeaderContent: 'justify-center' }"
-            />
-            <DataCol
-              field="receipt_date"
-              header="임고일자"
-              style="text-align: center"
-              :pt="{ columnHeaderContent: 'justify-center' }"
-            />
-            <DataCol
-              field="emp_name"
-              header="담당자"
-              :pt="{ columnHeaderContent: 'justify-center' }"
-            />
-            <DataCol field="remark" header="비고" :pt="{ columnHeaderContent: 'justify-center' }" />
-          </DataTable>
-        </div>
-      </template>
-    </Modal>
-
+    <PurModal v-model="isPurModalOpen" @close="handleCloseModal" />
     <!--발주자재 조회 모달-->
-
-    <Modal
-      v-if="isMatModalOpen"
-      :full-screen-backdrop="true"
-      title-align="left"
-      header-align="right"
-      title="발주자재 조회"
-      width="800px"
-      @close="handleCloseModal"
-    >
-      <template #modal-header>
-        <button type="button" class="btn-white btn-common">조회</button>
-        <button type="button" class="btn-color btn-common">등록</button>
-      </template>
-      <template #modal-body>
-        <div class="modal-container flex gap-2 mb-2">
-          <div class="w-1/3">
-            <label :class="labelStyle"> 자재명 </label>
-            <input type="text" :class="baseInputClass" style="width: 200px" />
-          </div>
-        </div>
-        <div class="modal-container flex gap-2 mb-2">
-          <DataTable
-            :value="modalMat"
-            show-gridlines
-            v-model:selection="selectModalMat"
-            datakey="mat_code"
-            @row-click="onRowClick"
-            style="width: 1200px"
-          >
-            <DataCol
-              selectionMode="multiple"
-              headerStyle="width: 37px"
-              bodyStyle="width: 37px"
-            ></DataCol>
-            <DataCol
-              field="mat_code"
-              header="자재코드"
-              :pt="{ columnHeaderContent: 'justify-center' }"
-            />
-            <DataCol
-              field="mat_name"
-              header="자재명"
-              :pt="{ columnHeaderContent: 'justify-center' }"
-            />
-            <DataCol
-              field="stock_qty"
-              header="재고"
-              style="text-align: right"
-              :pt="{ columnHeaderContent: 'justify-center' }"
-            />
-            <DataCol
-              field="safe_stock"
-              header="안전재고"
-              style="text-align: right"
-              :pt="{ columnHeaderContent: 'justify-center' }"
-            />
-            <DataCol
-              field="MAT_SPEC"
-              header="규격"
-              :pt="{ columnHeaderContent: 'justify-center' }"
-            />
-            <DataCol
-              field="MAT_UNIT"
-              header="단위"
-              :pt="{ columnHeaderContent: 'justify-center' }"
-            />
-          </DataTable>
-        </div>
-      </template>
-    </Modal>
-
+    <MatModal v-model="isMatModalOpen" @close="handleCloseModal" />
     <!-- 공급업체 조회 모달-->
-
-    <Modal
-      v-if="isBcncModalOpen"
-      :full-screen-backdrop="true"
-      title-align="left"
-      header-align="right"
-      title="공급업체 조회"
-      width="600px"
-      @close="handleCloseModal"
-    >
-      <template #modal-header>
-        <button type="button" class="btn-white btn-common">조회</button>
-        <button type="button" class="btn-color btn-common">등록</button>
-      </template>
-      <template #modal-body>
-        <div class="modal-container flex gap-2 mb-2">
-          <div class="w-1/3">
-            <label :class="labelStyle"> 공급업체명 </label>
-            <input type="text" :class="baseInputClass" style="width: 200px" />
-          </div>
-        </div>
-        <div class="modal-container flex gap-2 mb-2">
-          <DataTable
-            :value="modalBcnc"
-            show-gridlines
-            v-model:selection="selectModalBcnc"
-            datakey="bcnc_code"
-            @row-click="onRowClick"
-            style="width: 600px"
-          >
-            <DataCol
-              selectionMode="single"
-              headerStyle="width: 37px"
-              bodyStyle="width: 37px"
-            ></DataCol>
-            <DataCol
-              field="bcnc_code"
-              header="공급업체코드"
-              :pt="{ columnHeaderContent: 'justify-center' }"
-            />
-            <DataCol
-              field="bcnc_name"
-              header="공급업체명"
-              :pt="{ columnHeaderContent: 'justify-center' }"
-            />
-            <DataCol
-              field="bcnc_type"
-              header="업종"
-              :pt="{ columnHeaderContent: 'justify-center' }"
-            />
-          </DataTable>
-        </div>
-      </template>
-    </Modal>
+    <BcncModal v-model="isBcncModalOpen" @close="handleCloseModal" />
   </AdminLayout>
 </template>
 
-<style scoped>
-.modal-container {
-  padding: 10px 15px;
-  border: 1px solid #eee;
-  border-radius: 8px;
-}
-</style>
+<style scoped></style>
