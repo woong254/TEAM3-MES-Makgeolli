@@ -5,7 +5,7 @@ import ComponentCard from '@/components/common/ComponentCardOrder.vue'
 import DataTable from 'primevue/datatable' // datatable 컴포넌트 import
 import Column from 'primevue/column'
 // import InputText from 'primevue/inputtext' // PrimeVue InputText 컴포넌트 import
-import { defineProps, ref, computed, toRaw } from 'vue' // computed import 추가
+import { defineProps, ref, computed } from 'vue' // computed import 추가
 // flatPickr 달력
 import flatPickr from 'vue-flatpickr-component' // flatPickr 달력 컴포넌트 import
 import 'flatpickr/dist/flatpickr.css' // flatPickr 달력 css import
