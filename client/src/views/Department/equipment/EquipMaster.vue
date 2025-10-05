@@ -8,6 +8,9 @@ import DataCol from 'primevue/column'
 import flatPickr from 'vue-flatpickr-component'
 import 'flatpickr/dist/flatpickr.css'
 import { ref } from 'vue'
+import axios from 'axios'
+
+import equipSelectModal from './equipSelectModal.vue'
 
 const inputStyle =
   'dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-950 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
@@ -113,6 +116,7 @@ const equipMent = ref([
     insp_check: '30일',
   },
 ])
+
 const flatpickrConfig = {
   dateFormat: 'Y-m-d',
   altInput: true,
@@ -121,6 +125,15 @@ const flatpickrConfig = {
 }
 const orderStartDates = ref(null)
 const selectedbox = ref([])
+
+const isModalOpen = ref(false)
+const openModal = () => {
+  isModalOpen.value = true
+}
+const closeModal = () => {
+  isModalOpen.value = false
+}
+const uploadFile = () => {}
 </script>
 
 <template>
@@ -234,16 +247,15 @@ const selectedbox = ref([])
               <input type="text" :class="inputStyle" />
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4">
-              <div class="w-full">
+              <div>
                 <label :class="labelStyle">담당자</label>
-                <div>
-                  <input type="text" :class="inputStyle" />
-                </div>
+                <input type="text" :class="inputStyle" />
               </div>
-              <div class="w-full flex justify-center">
-                <button class="btn-common btn-color">조회</button>
+              <div class="flex justify-end">
+                <button type="button" class="btn-common btn-color" @click="openModal">조회</button>
               </div>
             </div>
+            <equipSelectModal :visible="isModalOpen" @close="closeModal" />
             <div>
               <label :class="labelStyle">제조사</label>
               <input type="text" :class="inputStyle" />
@@ -315,7 +327,7 @@ const selectedbox = ref([])
               </div>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-5">
-              <button class="btn-common btn-color">파일첨부</button>
+              <button class="btn-common btn-color" @click="uploadFile">파일첨부</button>
               <input type="text" :class="inputStyle" />
             </div>
             <div>
