@@ -2,7 +2,13 @@
 // const reference = require("./sqls/reference.js");
 
 // 영업
-const sales = require("./sqls/orderform.js");
+// require는 하나만 받을 수 있음
+const orderform = require("./sqls/orderform.js");
+const orderdetail = require("./sqls/orderdetail.js");
+const sales = {
+  ...orderform,
+  ...orderdetail,
+};
 
 // 생산
 const prodord = require("./sqls/prodord.js");

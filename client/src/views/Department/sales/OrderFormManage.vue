@@ -5,18 +5,18 @@ import ComponentCard from '@/components/common/ComponentCardOrder.vue'
 import DataTable from 'primevue/datatable' // datatable 컴포넌트 import
 import Column from 'primevue/column'
 // import InputText from 'primevue/inputtext' // PrimeVue InputText 컴포넌트 import
-import { defineProps, ref, onMounted, computed } from 'vue' // computed import 추가
+import { defineProps, ref, computed, toRaw } from 'vue' // computed import 추가
 // flatPickr 달력
 import flatPickr from 'vue-flatpickr-component' // flatPickr 달력 컴포넌트 import
 import 'flatpickr/dist/flatpickr.css' // flatPickr 달력 css import
 import { Korean } from 'flatpickr/dist/l10n/ko.js' // 달련 한글 import
-// 한솔누나 css import
-import '@/assets/common.css'
+import '@/assets/common.css' // 한솔누나 css import
 import BcncnameSelectmodal from './BcncnameSelectmodal.vue' // 거래처, 대표자 클릭시 조회 모달창
-// import html2pdf from 'html2pdf.js'
 import pdfDownload from './pdfDownload.vue' // pdf다운로드
 import ProductSelectmodal from './ProductSelectmodal.vue' // 제품선택
 import InputNumber from 'primevue/inputnumber' // 수량입력칸
+import axios from 'axios' // axios 노드쪽 연결
+import isEqual from 'lodash/isEqual'
 
 // 주문서관리 props 인터페이스
 interface Props {
@@ -34,7 +34,7 @@ interface SearchCondition {
 }
 // 주문제품 테이블 인터페이스 (Product 인터페이스를 대체)
 interface OrderItem {
-  id: string | number
+  no: string
   prod_code: string
   prod_name: string
   prod_spec: string
@@ -42,7 +42,7 @@ interface OrderItem {
   op_qty: number // 초기값 100에 맞춰 number 타입으로 설정
 }
 
-// 주문서관리-주문서정보 input 인터페이스
+// 주문서관리-주문서상세정보 input 인터페이스
 interface OrderInfoInterface {
   ord_id: string // 주문서번호
   ord_name: string // 주문서명
@@ -68,7 +68,7 @@ const search = ref<SearchCondition>({
   ord_start_date: '',
   ord_end_date: '',
 })
-// 주문서정보 iunput태그 데이터 초기화
+// 주문서상세정보 iunput태그 데이터 초기화
 const orderinfo = ref<OrderInfoInterface>({
   ord_id: '', // 주문서번호
   ord_name: '', // 주문서명
@@ -92,24 +92,24 @@ const BcncnameClosemodal = () => {
 // pdf모달창 열고 닫기
 const pdfModalOpen = ref(false)
 const pdfopenModal = () => {
+  if (!orderinfo.value.ord_id) {
+    alert('주문서 등록 후 PDF 내보내기 가능합니다.')
+    return
+  }
+  console.log('dbOrder :', dbOrderProducts.value, '/ products.value :  ', products.value)
+  if (!isEqual(dbOrderProducts.value, products.value)) {
+    alert('주문서 수정 저장 후 PDF 내보내기가 가능합니다.')
+    return
+  }
+  if (!isEqual(dbOrderDetailInfo.value, orderinfo.value)) {
+    alert('주문서 수정 저장 후 PDF 내보내기가 가능합니다.')
+    return
+  }
   pdfModalOpen.value = true
 }
 const pdfcloseModal = () => {
   pdfModalOpen.value = false
 }
-
-// 데이터 노드에서 가져오기
-// const getOrdersForms = async () => {
-//   const result = await axios
-//     .get<Product[]>('/api/ordFormView', { params: search.value })
-//     .catch((err) => console.log(err))
-
-//   products.value = result.data
-// }
-// 컴포넌트가 마운트될 때 주문서조회 데이터 가져오기
-onMounted(() => {
-  // getOrdersForms()
-})
 
 // 공통 날짜 설정
 const flatpickrConfig = {
@@ -160,19 +160,51 @@ const dueEndDateConfig = computed(() => ({
   locale: Korean,
 }))
 
-// 조회 함수
+// 주문서 조회 검색 버튼 누르면 실행하는 함수
 const submitSearchForm = () => {
   console.log(search.value)
+  // 컴포넌트가 마운트될 때 주문서조회 데이터 가져오기
+  getOrderFormSearch()
 }
+// 주문서 조회 검색해서 나온 데이터(초기값) 담은 전역변수
+const dbOrderDetailInfo = ref()
+const dbOrderProducts = ref([])
+// 주문서 조회 검색 버튼 눌렀을때 주문서정보 데이터를 노드에서 가져오는 함수
+const getOrderFormSearch = async () => {
+  try {
+    const result = await axios.get('/api/ordFormManageView', {
+      params: search.value,
+    })
+    const payload = result.data
+    if (!payload) {
+      alert('조회 결과가 없습니다.')
+      resetInfoForm()
+      return
+    }
+    dbOrderDetailInfo.value = result.data.list[0]
+    dbOrderProducts.value = result.data.list1
+    orderinfo.value = { ...result.data.list[0] }
+    products.value = [...result.data.list1]
+    console.log('db조회 주문서상세정보 결과:', dbOrderDetailInfo.value)
+    console.log('db조회 주문제품 결과:', dbOrderProducts.value)
+    console.log('products조회 결과:', products.value)
+    console.log('orderinfo조회 결과:', orderinfo.value)
+  } catch (err) {
+    console.error('조회 중 오류 발생', err)
+  }
+}
+
+// 주문서 정보 저장버튼 누르면 실행하는 함수
 const submitInfoForm = () => {
   if (!orderinfo.value.due_date) {
     alert('납기날짜를 선택해주세요.')
     return
   }
-  console.log(orderinfo.value)
-  console.log(products.value)
+  // console.log(orderinfo.value)
+  // console.log(products.value)
 }
-// 초기화 함수
+
+// 주문서 조회 검색에 있는 초기화 버튼 누르면 실행되는 함수
 const resetSearchForm = () => {
   search.value.ord_name = '' // v-model 값 초기화
   search.value.due_end_date = ''
@@ -180,7 +212,7 @@ const resetSearchForm = () => {
   search.value.ord_end_date = ''
   search.value.ord_start_date = ''
 }
-
+// 주문서관리-주문서상세정보-초기화버튼(초기화 버튼 누르면 아래체 있는 값들이 초기화 상태로 바뀜)
 const resetInfoForm = () => {
   orderinfo.value.bcnc_name = ''
   orderinfo.value.due_date = ''
@@ -190,6 +222,7 @@ const resetInfoForm = () => {
   orderinfo.value.ord_name = ''
   orderinfo.value.pic = ''
   products.value = []
+  selectedProducts.value = []
 }
 
 // 거래처 선택하면 데이터 넘어오는 함수실행
@@ -209,11 +242,11 @@ const Productclosemodal = () => {
 }
 // 제품 선택하면 데이터 넘어오는 함수실행
 const ProductSelect = (value: OrderItem[]) => {
-  console.log('선택된 제품:', value)
-
+  // console.log('선택된 제품:', value)
   value.forEach((item) => {
+    const newNo = `${new Date().getTime()}_${item.prod_code}`
     products.value.push({
-      id: Date.now() + Math.random(),
+      no: newNo,
       prod_code: item.prod_code,
       prod_name: item.prod_name,
       prod_spec: item.prod_spec,
@@ -221,17 +254,19 @@ const ProductSelect = (value: OrderItem[]) => {
       op_qty: item.op_qty || 1,
     })
   })
-
   console.log('추가 후 products:', products.value)
+  console.log('추가 후 db조회 주문서상세정보 결과:', dbOrderDetailInfo.value)
+  console.log('추가 후 db조회 주문제품 결과:', dbOrderProducts.value)
 }
-
-const deleteSelectedRows = () => {
-  if (selectedProducts.value.length === 0)
-    // products에서 선택된 행을 제외하고 재할당
-    products.value = products.value.filter((product) => !selectedProducts.value.includes(product))
-
-  // 선택 초기화
-  selectedProducts.value = []
+// 행삭제 하면 선택한 제품들 삭제
+const deleteSelectedRows = (sel: OrderItem[]) => {
+  console.log('행삭제 선택한 제품들', sel)
+  products.value = products.value.filter((item) => !sel.includes(item))
+  sel.length = 0
+  console.log('행 삭제 후 제품배열들', products.value)
+  console.log('행 삭제 후 선택한제품들', sel)
+  console.log('행 삭제 후 db조회 주문서상세정보 결과:', dbOrderDetailInfo.value)
+  console.log('행 삭제 후 db조회 주문제품 결과:', dbOrderProducts.value)
 }
 </script>
 <template>
@@ -239,7 +274,7 @@ const deleteSelectedRows = () => {
     <PageBreadcrumb :pageTitle="currentPageTitle" />
     <div class="space-y-5 sm:space-y-6">
       <form @submit.prevent="submitSearchForm" action="">
-        <ComponentCard title="주문서조회검색">
+        <ComponentCard title="주문서상세조회검색">
           <template #header-right>
             <div class="">
               <button type="button" class="btn-white btn-common" @click="resetSearchForm">
@@ -252,13 +287,14 @@ const deleteSelectedRows = () => {
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-400 mb-2">
-                  주문서명
+                  주문서명*
                 </label>
                 <input
                   type="text"
                   class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
                   placeholder="주문서이름을 입력해주세요"
                   v-model="search.ord_name"
+                  required
                 />
               </div>
               <div>
@@ -397,7 +433,7 @@ const deleteSelectedRows = () => {
     </div>
     <form action="" id="submitinfoform" @submit.prevent="submitInfoForm">
       <div class="space-y-5 sm:space-y-6 mt-2">
-        <ComponentCard title="주문서정보">
+        <ComponentCard title="주문서상세정보">
           <template #header-right>
             <div class="">
               <button
@@ -430,7 +466,7 @@ const deleteSelectedRows = () => {
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-400 mb-2">
-                  주문서명
+                  주문서명*
                 </label>
                 <input
                   type="text"
@@ -442,7 +478,7 @@ const deleteSelectedRows = () => {
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-400 mb-2">
-                  거래처명
+                  거래처명*
                 </label>
                 <input
                   type="text"
@@ -463,7 +499,7 @@ const deleteSelectedRows = () => {
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-400 mb-2">
-                  대표자
+                  대표자*
                 </label>
                 <input
                   type="text"
@@ -509,7 +545,7 @@ const deleteSelectedRows = () => {
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-400 mb-2">
-                  납기날짜
+                  납기날짜*
                 </label>
                 <div class="relative w-full">
                   <flat-pickr
@@ -572,7 +608,11 @@ const deleteSelectedRows = () => {
               <button type="button" class="btn-color btn-common" @focus="ProductOpenmodal">
                 행추가
               </button>
-              <button type="button" class="btn-white btn-common" @focus="deleteSelectedRows">
+              <button
+                type="button"
+                class="btn-white btn-common"
+                @click="() => deleteSelectedRows(selectedProducts)"
+              >
                 행삭제
               </button>
               <ProductSelectmodal
@@ -587,7 +627,7 @@ const deleteSelectedRows = () => {
               <DataTable
                 v-model:selection="selectedProducts"
                 :value="products"
-                dataKey="id"
+                dataKey="no"
                 tableStyle="max-width: 100%;"
                 class="fixed-data"
                 showGridlines
@@ -596,7 +636,7 @@ const deleteSelectedRows = () => {
                 editMode="cell"
                 size="small"
               >
-                <Column selectionMode="multiple" headerStyle="width: 1%" field="id"></Column>
+                <Column selectionMode="multiple" headerStyle="width: 1%" field="no"></Column>
 
                 <Column
                   field="prod_code"
