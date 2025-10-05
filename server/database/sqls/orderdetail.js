@@ -29,6 +29,8 @@ FROM   orderdetail od
        ON   od.prod_code = p.prod_code
 WHERE  1=1`;
 
+const insertinto
+
 module.exports = {
   selectOrderDetail,
   selectOrderDetailProducts,

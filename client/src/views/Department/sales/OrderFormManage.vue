@@ -195,13 +195,44 @@ const getOrderFormSearch = async () => {
 }
 
 // 주문서 정보 저장버튼 누르면 실행하는 함수
-const submitInfoForm = () => {
+const submitInfoForm = async () => {
   if (!orderinfo.value.due_date) {
     alert('납기날짜를 선택해주세요.')
     return
+  } else if (products.value.length < 1) {
+    alert('제품을 추가해주세요')
+    return
+  } else if (!orderinfo.value.bcnc_name) {
+    alert('거래처를 선택해주세요.')
+    return
   }
-  // console.log(orderinfo.value)
-  // console.log(products.value)
+  const obj = {
+    order: {
+      ord_name: orderinfo.value.ord_name,
+      bcnc_name: orderinfo.value.bcnc_name,
+      pic: orderinfo.value.pic,
+      due_date: orderinfo.value.due_date,
+    },
+    items: products.value.map((item, idx) => ({
+      no: idx + 1, // 1,2,3... 자동 증가
+      prod_code: item.prod_code,
+      op_qty: item.op_qty,
+    })),
+  }
+  try {
+    const result = await axios.post('/api/insertOrderFormProducts', obj)
+    const addRes = result.data
+    if (addRes.isSuccessed) {
+      alert('등록되었습니다.')
+    } else {
+      alert('등록되지 않았습니다. 데이터를 확인해보세요.')
+    }
+  } catch (err) {
+    console.error('추가 중 오류 발생', err)
+  }
+
+  console.log(orderinfo.value)
+  console.log(products.value)
 }
 
 // 주문서 조회 검색에 있는 초기화 버튼 누르면 실행되는 함수
@@ -486,7 +517,6 @@ const deleteSelectedRows = (sel: OrderItem[]) => {
                   placeholder="거래처명을 입력해주세요"
                   v-model="orderinfo.bcnc_name"
                   @focus="BcncnameOpenmodal"
-                  required
                   readonly
                 />
                 <!-- selectedBcncValue << 요게 모달창에서 보낸 함수이름 -->
@@ -507,7 +537,6 @@ const deleteSelectedRows = (sel: OrderItem[]) => {
                   placeholder="대표자를 입력해주세요"
                   v-model="orderinfo.pic"
                   @click="BcncnameOpenmodal"
-                  required
                   readonly
                 />
               </div>

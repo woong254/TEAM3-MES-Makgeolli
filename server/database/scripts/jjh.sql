@@ -69,6 +69,38 @@ FROM   orderdetail od
        ON   od.prod_code = p.prod_code
 WHERE  o.ord_name = '생막걸리예담주문';
 	   
+DECLARE
+    v_ord_id   VARCHAR2(20);
+BEGIN
+    -- 1) 주문서 마스터 등록
+    v_ord_id := '20251006-01';  -- 보통 시퀀스 또는 함수로 생성
+
+    INSERT INTO ORDERS
+      (ORD_ID, ORD_NAME, BCNC_NAME, PIC, DUE_DATE, REG_DATE)
+    VALUES
+      (v_ord_id, :ord_name, :bcnc_name, :pic, :due_date, SYSDATE);
+
+    -- 2) 주문 제품 목록 등록
+    FOR i IN 1 .. :product_count LOOP
+        INSERT INTO ORDER_PRODUCTS
+          (ORD_ID, NO, PROD_CODE, OP_QTY)
+        VALUES
+          (v_ord_id,
+           i,
+           :products(i).prod_code,
+           :products(i).op_qty);
+    END LOOP;
+
+    -- 모든 INSERT가 성공하면 커밋
+    COMMIT;
+
+EXCEPTION
+    WHEN OTHERS THEN
+        -- 중간에 에러 발생 시 롤백
+        ROLLBACK;
+        RAISE;
+END;
+       
 SELECT *
 FROM   orderform;
 SELECT *
