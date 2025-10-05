@@ -11,7 +11,7 @@ const prodord = require("./sqls/prodord.js");
 // const materials = require("./sqls/materials.js");
 
 // 품질
-// const quality = require("./sqls/quality.js");
+const quality = require("./sqls/qualityInsp.js");
 
 // 설비
 // const equipment = require("./sqls/equipment.js");
@@ -30,7 +30,7 @@ module.exports = {
   // ...materials,
 
   // 품질
-  // ...quality,
+  ...quality,
 
   // 설비
   // ...equipment,
