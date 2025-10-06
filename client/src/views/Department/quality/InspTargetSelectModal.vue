@@ -3,40 +3,62 @@ import { ref, watch } from 'vue'
 import '@/assets/common.css'
 import Modal from '@/components/ui/Modal.vue'
 import DataTable from 'primevue/datatable'
-import DataCol from 'primevue/column'
+import Column from 'primevue/column'
 import axios from 'axios'
 
 // 모달 제어
 const props = defineProps<{
   visible: boolean
 }>()
-const emit = defineEmits(['close'])
+const emit = defineEmits(['close', 'checked'])
 const closeModal = () => {
   emit('close')
 }
 
 // 검사대상 데이터
 const inspData = ref([])
+const checkedData = ref([])
 
 // 모달 열릴 때 데이터 조회
 watch(
-  () => props.visible,
+  () => props.visible, //부모가 내려주는 모달 열림 여부를 감시
   async (newVal) => {
     if (newVal) {
-      console.log('모달 열림 - 검사대상 데이터 조회')
-      await InspData()
+      // 모달이 열리면
+      await findinspData() // 실제 데이터 호출
+      checkedData.value = [] // 다시 열릴 때 선택 초기화
     }
   },
 )
-const InspData = async () => {
+
+/*
+[ watch 사용법 ]
+watch(source, (newValue, oldValue) => {
+  ....
+});
+
+- 첫번째 인자 : 감시하려는 소스
+- 두번째 인자(함수) : 콜백함수로 감시하려는 소스가 변경될 때마다 실행
+
+https://velog.io/@yeoonnii/Vue.js-watch-%EC%86%8D%EC%84%B1
+*/
+
+// 실제 데이터 호출 함수
+const findinspData = async () => {
   try {
-    const { data } = await axios.get('/api/inspTarget')
-    console.log('조회결과:', data) //확인용
+    const { data } = await axios.get('/api/inspTarget') //구조분해할당(res.data)
+    // console.log('조회결과:', data) //확인용
     inspData.value = data
   } catch (err) {
     console.error('데이터 조회 오류:', err)
     inspData.value = []
   }
+}
+
+// 확인버튼 -> 부모로 선택값 전달
+const confirmData = () => {
+  emit('checked', checkedData.value)
+  emit('close')
 }
 
 // style
@@ -104,6 +126,8 @@ const selectStyle =
         <div class="modal-container">
           <DataTable
             :value="inspData"
+            v-model:selection="checkedData"
+            dataKey="t_id"
             showGridlines
             scrollable
             size="small"
@@ -111,39 +135,39 @@ const selectStyle =
             paginator
             :rows="8"
           >
-            <DataCol
-              field="t_check"
+            <Column
               header=""
               :pt="{ columnHeaderContent: 'justify-center' }"
               selectionMode="multiple"
+              :showSelectAll="false"
               style="width: 10px"
             />
-            <DataCol
+            <Column
               field="t_id"
               header="자재/제품ID"
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
-            <DataCol
+            <Column
               field="t_name"
               header="자재/제품명"
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
-            <DataCol
+            <Column
               field="t_category"
               header="구분"
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
-            <DataCol
+            <Column
               field="t_type_name"
               header="품목구분"
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
-            <DataCol field="t_spec" header="규격" :pt="{ columnHeaderContent: 'justify-center' }" />
-            <DataCol field="t_unit" header="단위" :pt="{ columnHeaderContent: 'justify-center' }" />
+            <Column field="t_spec" header="규격" :pt="{ columnHeaderContent: 'justify-center' }" />
+            <Column field="t_unit" header="단위" :pt="{ columnHeaderContent: 'justify-center' }" />
           </DataTable>
         </div>
         <div class="flex justify-center mt-3">
-          <button class="btn-common btn-white" @click="closeModal">확인</button>
+          <button class="btn-common btn-white" @click="confirmData">확인</button>
           <button class="btn-common btn-color" @click="closeModal">취소</button>
         </div>
       </template>
