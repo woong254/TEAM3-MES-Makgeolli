@@ -1,8 +1,6 @@
 // 품질 라우팅 설정
 const express = require('express');
-
 const router = express.Router();
-
 const qualityService = require('../services/quality_service.js');
 
 // 모달: 검사대상 조회
@@ -13,8 +11,7 @@ router.get('/inspTarget', async(req, res)=> {
 
   let inspTargetList = await qualityService
     .findInspTarget()
-    .catch(err => console.error(err));
-    
+    .catch(err => console.error(err));    
   res.send(inspTargetList);
 });
 

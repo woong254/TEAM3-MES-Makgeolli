@@ -1,21 +1,42 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import '@/assets/common.css'
 import Modal from '@/components/ui/Modal.vue'
 import DataTable from 'primevue/datatable'
 import DataCol from 'primevue/column'
+import axios from 'axios'
 
-// 1. 부모로부터 'visible' prop을 받습니다.
+// 모달 제어
 const props = defineProps<{
   visible: boolean
 }>()
-
-// 2. 부모에게 알릴 'close' 이벤트를 정의합니다.
 const emit = defineEmits(['close'])
-
-// 모달 내부에서 닫기 동작 시 호출될 함수
 const closeModal = () => {
-  emit('close') // 'close' 이벤트를 부모에게 발생시켜 닫아달라고 요청합니다.
+  emit('close')
+}
+
+// 검사대상 데이터
+const inspData = ref([])
+
+// 모달 열릴 때 데이터 조회
+watch(
+  () => props.visible,
+  async (newVal) => {
+    if (newVal) {
+      console.log('모달 열림 - 검사대상 데이터 조회')
+      await InspData()
+    }
+  },
+)
+const InspData = async () => {
+  try {
+    const { data } = await axios.get('/api/inspTarget')
+    console.log('조회결과:', data) //확인용
+    inspData.value = data
+  } catch (err) {
+    console.error('데이터 조회 오류:', err)
+    inspData.value = []
+  }
 }
 
 // style
@@ -24,93 +45,17 @@ const inputStyle =
 const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400'
 const selectStyle =
   'dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-950 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
-
-// table data
-const inspData = ref([
-  {
-    inspCode: 'QC0001',
-    inspName: '쌀 외관검사',
-    inspTarget: '쌀20kg(원재료)',
-    inspUsing: 'Y',
-  },
-  {
-    inspCode: 'QC0002',
-    inspName: '알코올 도수 검사',
-    inspTarget: '막걸리(반제품)',
-    inspUsing: 'Y',
-  },
-  {
-    inspCode: 'QC0003',
-    inspName: '대장균 검사',
-    inspTarget: '막걸리(반제품)',
-    inspUsing: 'Y',
-  },
-  {
-    inspCode: '-',
-    inspName: '-',
-    inspTarget: '-',
-    inspUsing: '-',
-  },
-  {
-    inspCode: '-',
-    inspName: '-',
-    inspTarget: '-',
-    inspUsing: '-',
-  },
-  {
-    inspCode: '-',
-    inspName: '-',
-    inspTarget: '-',
-    inspUsing: '-',
-  },
-  {
-    inspCode: '-',
-    inspName: '-',
-    inspTarget: '-',
-    inspUsing: '-',
-  },
-  {
-    inspCode: '-',
-    inspName: '-',
-    inspTarget: '-',
-    inspUsing: '-',
-  },
-  {
-    inspCode: '-',
-    inspName: '-',
-    inspTarget: '-',
-    inspUsing: '-',
-  },
-  {
-    inspCode: '-',
-    inspName: '-',
-    inspTarget: '-',
-    inspUsing: '-',
-  },
-  {
-    inspCode: '-',
-    inspName: '-',
-    inspTarget: '-',
-    inspUsing: '-',
-  },
-  {
-    inspCode: '-',
-    inspName: '-',
-    inspTarget: '-',
-    inspUsing: '-',
-  },
-  {
-    inspCode: '-',
-    inspName: '-',
-    inspTarget: '-',
-    inspUsing: '-',
-  },
-])
 </script>
 
 <template>
   <div v-if="props.visible">
-    <Modal title="검사대상" :fullScreenBackdrop="true" title-align="left" header-align="right">
+    <Modal
+      title="검사대상"
+      :fullScreenBackdrop="true"
+      title-align="left"
+      header-align="right"
+      width="900px"
+    >
       <template #modal-header>
         <div class="flex justify-end">
           <button type="button" class="btn-common-modal btn-white">초기화</button>
@@ -167,48 +112,34 @@ const inspData = ref([
             :rows="8"
           >
             <DataCol
-              field="inspCheck"
+              field="t_check"
               header=""
               :pt="{ columnHeaderContent: 'justify-center' }"
               selectionMode="multiple"
               style="width: 10px"
             />
             <DataCol
-              field="inspCode"
-              header="검사항목ID"
-              :pt="{ columnHeaderContent: 'justify-center' }"
-              bodyStyle="text-align: center"
-            />
-            <DataCol
-              field="inspName"
+              field="t_id"
               header="자재/제품ID"
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
             <DataCol
-              field="inspTarget"
+              field="t_name"
               header="자재/제품명"
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
             <DataCol
-              field="inspUsing"
+              field="t_category"
               header="구분"
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
             <DataCol
-              field="inspUsing"
+              field="t_type_name"
               header="품목구분"
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
-            <DataCol
-              field="inspUsing"
-              header="규격"
-              :pt="{ columnHeaderContent: 'justify-center' }"
-            />
-            <DataCol
-              field="inspUsing"
-              header="단위"
-              :pt="{ columnHeaderContent: 'justify-center' }"
-            />
+            <DataCol field="t_spec" header="규격" :pt="{ columnHeaderContent: 'justify-center' }" />
+            <DataCol field="t_unit" header="단위" :pt="{ columnHeaderContent: 'justify-center' }" />
           </DataTable>
         </div>
         <div class="flex justify-center mt-3">
