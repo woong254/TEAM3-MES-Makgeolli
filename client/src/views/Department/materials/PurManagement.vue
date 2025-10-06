@@ -21,40 +21,6 @@ const isMatModalOpen = ref(false)
 const isBcncModalOpen = ref(false)
 const selectMat = ref([])
 
-const resetBtn = () => {
-  purChaseMat.value = []
-  purChase.value = [
-    {
-      pur_code: '',
-      pur_name: '',
-      bcnc_name: '',
-      pur_date: sysdate().format('YYYY-MM-DD'),
-      receipt_date: '',
-      mat_name: '',
-      remark: '',
-    },
-  ]
-  selectMat.value = []
-}
-
-const flatpickrConfig = {
-  dateFormat: 'Y-m-d',
-  altInput: true,
-  altFormat: 'Y-m-d',
-  altInputClass: baseInputClass,
-}
-
-const deleteSelectedRows = () => {
-  purChaseMat.value = purChaseMat.value.filter((item) => !selectMat.value.includes(item))
-  selectMat.value = []
-}
-
-const handleCloseModal = () => {
-  isPurModalOpen.value = false
-  isMatModalOpen.value = false
-  isBcncModalOpen.value = false
-}
-
 const purChase = ref([
   {
     pur_code: 'BAL-001',
@@ -87,6 +53,41 @@ const purChaseMat = ref([
     MAT_UNIT: '포대',
   },
 ])
+
+const resetBtn = () => {
+  purChaseMat.value = []
+  purChase.value = [
+    {
+      pur_code: '',
+      pur_name: '',
+      bcnc_name: '',
+      pur_date: sysdate().format('YYYY-MM-DD'),
+      receipt_date: '',
+      mat_name: '',
+      remark: '',
+    },
+  ]
+  selectMat.value = []
+}
+
+const flatpickrConfig = {
+  dateFormat: 'Y-m-d',
+  altInput: true,
+  altFormat: 'Y-m-d',
+  altInputClass: baseInputClass,
+  minDate: purChase.value[0].pur_date,
+}
+
+const deleteSelectedRows = () => {
+  purChaseMat.value = purChaseMat.value.filter((item) => !selectMat.value.includes(item))
+  selectMat.value = []
+}
+
+const handleCloseModal = () => {
+  isPurModalOpen.value = false
+  isMatModalOpen.value = false
+  isBcncModalOpen.value = false
+}
 </script>
 
 <!--발주서 컴포넌트-->

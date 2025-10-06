@@ -5,9 +5,9 @@ import DataCol from 'primevue/column'
 import { watch, ref } from 'vue'
 
 const props = defineProps({ modelValue: Boolean })
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits(['close'])
 const selectModalMat = ref([])
-const close = () => emit('update:modelValue', false)
+const close = () => emit('close')
 
 const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400'
 const baseInputClass =
