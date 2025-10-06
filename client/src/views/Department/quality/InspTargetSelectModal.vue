@@ -66,6 +66,13 @@ const onSearch = async () => {
   }
 }
 
+// 초기화버튼
+const resetSearch = () => {
+  searchName.value = ''
+  searchType.value = ''
+  inspData.value = [...allInspData.value]
+}
+
 // 확인버튼 -> 부모로 선택값 전달
 const checkedData = ref<any[]>([])
 const confirmData = () => {
@@ -89,20 +96,11 @@ const selectStyle =
       title-align="left"
       header-align="right"
       width="900px"
+      @close="closeModal"
     >
       <template #modal-header>
         <div class="flex justify-end">
-          <button
-            type="button"
-            class="btn-common-modal btn-white"
-            @click="
-              () => {
-                searchName.value = ''
-                searchType.value = ''
-                inspData.value = allInspData.value
-              }
-            "
-          >
+          <button type="button" class="btn-common-modal btn-white" @click="resetSearch">
             초기화
           </button>
           <button type="button" class="btn-common-modal btn-color" @click="onSearch">조회</button>
@@ -201,7 +199,6 @@ const selectStyle =
         </div>
         <div class="flex justify-center mt-3">
           <button class="btn-common btn-white" @click="confirmData">확인</button>
-          <button class="btn-common btn-color" @click="closeModal">취소</button>
         </div>
       </template>
     </Modal>

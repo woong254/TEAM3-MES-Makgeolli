@@ -129,6 +129,8 @@ const selectStyle =
 const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400'
 const textareaStyle =
   'dark:bg-dark-900 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-950 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 overflow-y-auto'
+const fileStyle =
+  'focus:border-ring-brand-300 h-11 w-full overflow-hidden rounded-lg border border-gray-300 bg-transparent text-sm text-gray-500 shadow-theme-xs transition-colors file:mr-5 file:border-collapse file:cursor-pointer file:rounded-l-lg file:border-0 file:border-r file:border-solid file:border-gray-200 file:bg-gray-50 file:py-3 file:pl-3.5 file:pr-3 file:text-sm file:text-gray-700 placeholder:text-gray-400 hover:file:bg-gray-100 focus:outline-hidden focus:file:ring-brand-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400 dark:text-white/90 dark:file:border-gray-800 dark:file:bg-white/[0.03] dark:file:text-gray-400 dark:placeholder:text-gray-400'
 </script>
 
 <template>
@@ -288,7 +290,7 @@ const textareaStyle =
                 <input type="radio" name="insp-using" class="checkboxStyle" />관능
               </label>
             </div>
-            <div class="flex mb-4">
+            <div class="flex mb-2">
               <label :class="labelStyle" class="w-[140px]"> 검사방법 </label>
               <textarea
                 placeholder="검사방법에 대해서 작성하세요"
@@ -296,6 +298,10 @@ const textareaStyle =
                 :class="textareaStyle"
                 class="w-4/5"
               ></textarea>
+            </div>
+            <div class="flex mb-4">
+              <label :class="labelStyle" class="w-[140px]">파일첨부 </label>
+              <input type="file" :class="fileStyle" />
             </div>
             <hr class="" />
             <div class="flex justify-between items-center mt-4 mb-4">
