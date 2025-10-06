@@ -1,29 +1,26 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import '@/assets/common.css'
-
 import ComponentCard from '@/components/common/ComponentCardButton.vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
-
 import DataTable from 'primevue/datatable'
 import DataCol from 'primevue/column'
 import Column from 'primevue/column'
 import 'primeicons/primeicons.css'
 import Button from 'primevue/button'
-
 import InspTargetSelectModal from './InspTargetSelectModal.vue' // import the modal component (검사대상조회)
 
 const currentPageTitle = ref('품질검사 기준관리')
 
-// style
-const inputStyle =
-  'dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-950 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
-const selectStyle =
-  'dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-950 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
-const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400'
-const textareaStyle =
-  'dark:bg-dark-900 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-950 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 overflow-y-auto'
+// 타입스크립트 -> 명시해주지 않으면 오류뜸
+interface InspRow {
+  t_id: string
+  t_name: string
+  t_type: string
+  t_spec: string
+  t_unit: string
+}
 
 // table data
 const inspData = ref([
@@ -95,15 +92,22 @@ const inspData = ref([
   },
 ])
 
-const inspTarget = ref([
-  {
-    proID: 'QC0001',
-    proName: '쌀 외관검사',
-    proType: '쌀20kg(원재료)',
-    proStrand: 'Y',
-    proUnit: 'Y',
-  },
-])
+// 검사대상
+const inspTarget = ref<InspRow[]>([])
+
+// 모달에서 선택한 검사대상(데이터)
+const onInspChecked = (rows: any[]) => {
+  // 여러 건 추가
+  const merged = [...inspTarget.value, ...rows] //기존데이터(inspTarget.value) + 넘어온데이터(rows)
+  // 중복 제거(de-duplicate)
+  const dedup = Array.from(new Map(merged.map((r) => [r.t_id, r])).values())
+  inspTarget.value = dedup
+}
+
+// 검사대상 삭제 (휴지통 버튼 클릭시)
+const targetDel = (id: string) => {
+  inspTarget.value = inspTarget.value.filter((row) => row.t_id !== id)
+}
 
 // table radio button
 const selectedInspData = ref(null)
@@ -116,6 +120,17 @@ const openModal = () => {
 const closeModal = () => {
   isModalOpen.value = false
 }
+
+// style
+const inputStyle =
+  'dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-950 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
+const selectStyle =
+  'dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-950 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
+const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400'
+const textareaStyle =
+  'dark:bg-dark-900 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-950 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 overflow-y-auto'
+const fileStyle =
+  'focus:border-ring-brand-300 h-11 w-full overflow-hidden rounded-lg border border-gray-300 bg-transparent text-sm text-gray-500 shadow-theme-xs transition-colors file:mr-5 file:border-collapse file:cursor-pointer file:rounded-l-lg file:border-0 file:border-r file:border-solid file:border-gray-200 file:bg-gray-50 file:py-3 file:pl-3.5 file:pr-3 file:text-sm file:text-gray-700 placeholder:text-gray-400 hover:file:bg-gray-100 focus:outline-hidden focus:file:ring-brand-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400 dark:text-white/90 dark:file:border-gray-800 dark:file:bg-white/[0.03] dark:file:text-gray-400 dark:placeholder:text-gray-400'
 </script>
 
 <template>
@@ -275,7 +290,7 @@ const closeModal = () => {
                 <input type="radio" name="insp-using" class="checkboxStyle" />관능
               </label>
             </div>
-            <div class="flex mb-4">
+            <div class="flex mb-2">
               <label :class="labelStyle" class="w-[140px]"> 검사방법 </label>
               <textarea
                 placeholder="검사방법에 대해서 작성하세요"
@@ -283,6 +298,10 @@ const closeModal = () => {
                 :class="textareaStyle"
                 class="w-4/5"
               ></textarea>
+            </div>
+            <div class="flex mb-4">
+              <label :class="labelStyle" class="w-[140px]">파일첨부 </label>
+              <input type="file" :class="fileStyle" />
             </div>
             <hr class="" />
             <div class="flex justify-between items-center mt-4 mb-4">
@@ -295,49 +314,63 @@ const closeModal = () => {
                 검사대상조회
               </button>
             </div>
-            <InspTargetSelectModal :visible="isModalOpen" @close="closeModal" />
+            <InspTargetSelectModal
+              :visible="isModalOpen"
+              @close="closeModal"
+              @checked="onInspChecked"
+            />
             <DataTable
               :value="inspTarget"
+              datakey="t_id"
               showGridlines
               scrollable
               size="small"
-              :rows="1"
+              :rows="5"
               class="text-sm mb-4"
             >
+              <!-- 데이터가 없을 때 나타낼 방법 #empty슬롯 -->
+              <template #empty>
+                <div class="text-center">추가된 검사대상이 없습니다.</div>
+              </template>
               <Column
-                field="proID"
+                field="t_id"
                 header="자재/제품ID"
                 :pt="{ columnHeaderContent: 'justify-center' }"
                 bodyStyle="text-align: center"
               />
               <Column
-                field="proName"
+                field="t_name"
                 header="자재/제품명"
                 :pt="{ columnHeaderContent: 'justify-center' }"
               />
               <Column
-                field="proType"
+                field="t_type_name"
                 header="품목구분"
                 :pt="{ columnHeaderContent: 'justify-center' }"
               />
               <Column
-                field="proStrand"
+                field="t_spec"
                 header="규격"
                 :pt="{ columnHeaderContent: 'justify-center' }"
               />
               <Column
-                field="proUnit"
+                field="t_unit"
                 header="단위"
                 :pt="{ columnHeaderContent: 'justify-center' }"
               />
-              <Column field="proDel" header="삭제" :pt="{ columnHeaderContent: 'justify-center' }">
-                <template #body>
+              <Column field="t_del" header="삭제" :pt="{ columnHeaderContent: 'justify-center' }">
+                <!-- 스코프드 슬롯(scoped slot)
+                  <template #body="slotProps"> slotProps.data로 접근
+                  Destructuring -> { data } 
+                -->
+                <template #body="{ data }">
                   <div class="flex justify-center">
                     <Button
                       icon="pi pi-trash"
                       variant="outlined"
                       class="p-button-text p-button-danger p-button-sm"
                       style="width: 20px; height: 15px; text-align: center"
+                      @click="targetDel(data.t_id)"
                     />
                   </div>
                 </template>
