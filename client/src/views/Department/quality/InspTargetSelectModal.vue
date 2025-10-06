@@ -16,46 +16,58 @@ const closeModal = () => {
 }
 
 // 검사대상 데이터
-const inspData = ref([])
-const checkedData = ref([])
+const allInspData = ref<any[]>([]) // 서버에서 받아온 원본
+const inspData = ref<any[]>([]) // 테이블에 바인딩하는 데이터
+
+// 검색
+const searchName = ref('')
+const searchType = ref('')
 
 // 모달 열릴 때 데이터 조회
 watch(
   () => props.visible, //부모가 내려주는 모달 열림 여부를 감시
   async (newVal) => {
     if (newVal) {
-      // 모달이 열리면
+      // 초기상태(검색값/체크선택) 리셋
+      searchName.value = ''
+      searchType.value = ''
+      checkedData.value = []
       await findinspData() // 실제 데이터 호출
-      checkedData.value = [] // 다시 열릴 때 선택 초기화
+      inspData.value = allInspData.value
     }
   },
 )
-
-/*
-[ watch 사용법 ]
-watch(source, (newValue, oldValue) => {
-  ....
-});
-
-- 첫번째 인자 : 감시하려는 소스
-- 두번째 인자(함수) : 콜백함수로 감시하려는 소스가 변경될 때마다 실행
-
-https://velog.io/@yeoonnii/Vue.js-watch-%EC%86%8D%EC%84%B1
-*/
 
 // 실제 데이터 호출 함수
 const findinspData = async () => {
   try {
     const { data } = await axios.get('/api/inspTarget') //구조분해할당(res.data)
     // console.log('조회결과:', data) //확인용
-    inspData.value = data
+    allInspData.value = data
   } catch (err) {
     console.error('데이터 조회 오류:', err)
+    allInspData.value = []
+  }
+}
+
+// 조회버튼 클릭시(검색)
+const onSearch = async () => {
+  try {
+    const { data } = await axios.get('/api/inspTargetSearch', {
+      params: {
+        name: searchName.value,
+        type: searchType.value,
+      },
+    })
+    inspData.value = data
+  } catch (err) {
+    console.error('검색 오류:', err)
     inspData.value = []
   }
 }
 
 // 확인버튼 -> 부모로 선택값 전달
+const checkedData = ref<any[]>([])
 const confirmData = () => {
   emit('checked', checkedData.value)
   emit('close')
@@ -80,25 +92,43 @@ const selectStyle =
     >
       <template #modal-header>
         <div class="flex justify-end">
-          <button type="button" class="btn-common-modal btn-white">초기화</button>
-          <button type="button" class="btn-common-modal btn-color">조회</button>
+          <button
+            type="button"
+            class="btn-common-modal btn-white"
+            @click="
+              () => {
+                searchName.value = ''
+                searchType.value = ''
+                inspData.value = allInspData.value
+              }
+            "
+          >
+            초기화
+          </button>
+          <button type="button" class="btn-common-modal btn-color" @click="onSearch">조회</button>
         </div>
       </template>
       <template #modal-body>
         <div class="modal-container flex gap-2 mb-2">
           <div class="w-1/3">
             <label :class="labelStyle" for="insp-name"> 자재/제품명 </label>
-            <input type="text" id="insp-name" :class="inputStyle" />
+            <input
+              type="text"
+              id="insp-name"
+              :class="inputStyle"
+              v-model="searchName"
+              @keyup.enter="onSearch"
+            />
           </div>
           <div class="w-1/3">
             <label :class="labelStyle" for="insp-type"> 품목구분 </label>
             <div class="relative z-20 bg-transparent">
-              <select id="insp-type" :class="selectStyle">
-                <option value="">원자재</option>
-                <option value="marketing">부자재</option>
-                <option value="template">재공품</option>
-                <option value="development">반제품</option>
-                <option value="development">완제품</option>
+              <select id="insp-type" :class="selectStyle" v-model="searchType">
+                <option value="a1">주자재</option>
+                <option value="a2">부자재</option>
+                <option value="a3">재공품</option>
+                <option value="a4">반제품</option>
+                <option value="a5">완제품</option>
               </select>
               <span
                 class="absolute z-30 text-gray-500 -translate-y-1/2 pointer-events-none right-4 top-1/2 dark:text-gray-400"
@@ -135,6 +165,9 @@ const selectStyle =
             paginator
             :rows="8"
           >
+            <template #empty>
+              <div class="text-center">검색 결과가 없습니다.</div>
+            </template>
             <Column
               header=""
               :pt="{ columnHeaderContent: 'justify-center' }"
