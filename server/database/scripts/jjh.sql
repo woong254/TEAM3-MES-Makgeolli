@@ -76,7 +76,7 @@ SELECT CONCAT('ORD', CONCAT(DATE_FORMAT(NOW(), '%y%m'),LPAD(IFNULL(MAX(SUBSTR(or
 FROM orderform
 WHERE SUBSTR(ord_id, 4, 4) = DATE_FORMAT(NOW(), '%y%m')
 FOR UPDATE;
-       
+ 
 -- 주문서관리-주문서상세정보-저장버튼
 DELIMITER $$
 CREATE PROCEDURE add_form( 
@@ -84,8 +84,10 @@ CREATE PROCEDURE add_form(
     IN p_emp_name  VARCHAR(100),
     IN p_bcnc_name VARCHAR(100),
     IN p_due_date  DATE,
-    IN p_ord_date  DATE,
-    IN p_ord_knd   VARCHAR(30)
+    IN p_ord_knd   VARCHAR(30),
+    IN p_no		   INT(2),
+    IN p_prod_code VARCHAR(100),
+    IN p_op_qty    DECIMAL(9,2)
 )
 BEGIN
 	SELECT CONCAT('ORD', CONCAT(DATE_FORMAT(NOW(), '%y%m'),LPAD(IFNULL(MAX(SUBSTR(ord_id, -3)),0) + 1, 3, '0'))) 
@@ -94,13 +96,12 @@ BEGIN
 	WHERE  SUBSTR(ord_id, 4, 4) = DATE_FORMAT(NOW(), '%y%m')
 	FOR UPDATE;
      
-	INSERT INTO order_form(
+	INSERT INTO orderform(
 		ord_id,
 		ord_name,
         emp_id,
         bcnc_code,        
 		due_date,        		
-		ord_date,
 		ord_knd)
 	VALUES(
 		@new_ord_id,
@@ -112,14 +113,56 @@ BEGIN
 		 FROM   bcnc_master
          WHERE  bcnc_name = p_bcnc_name),
         p_due_date,
-        p_ord_date,
         p_ord_knd);
+        
+	INSERT INTO orderdetail (
+		ord_id,
+        no,
+        prod_code,
+        op_qty)
+	VALUES (
+		@new_ord_id,
+        p_no,
+        p_prod_code,
+        p_op_qty);
+    
 END $$
 DELIMITER ;
+-- 제품 등록 프로시저 실행
+CALL add_form('testOne','장준현','예담','2025-10-30','생막걸리(750ml*20병)외3건',1,'MAK_001',1);
+-- add_form 삭제       
+DROP PROCEDURE IF EXISTS add_form;      
 
-CALL add_form('test','한빛테크(주)','
+-- 주문서관리-주문서상세정보-거래처명-조회
+SELECT bcnc_name,
+	   pic,
+       brn
+FROM   bcnc_master
+WHERE  1=1;
+-- AND    bcnc_name LIKE '예담'; 
 
-	
+-- 제품 조회 프로시저
+DELIMITER $$
+CREATE PROCEDURE search_products(
+    IN p_name VARCHAR(50),
+    IN p_spec VARCHAR(50),
+    IN p_unit VARCHAR(20)
+)
+BEGIN
+    SELECT prod_code,
+		   prod_name,
+           prod_spec,
+           prod_unit           
+    FROM   prod_master
+    WHERE (p_name IS NULL OR prod_name LIKE CONCAT('%', p_name, '%'))
+      AND (p_spec IS NULL OR prod_spec LIKE CONCAT('%', p_spec, '%'))
+      AND (p_unit IS NULL OR prod_unit = p_unit);
+END $$
+DELIMITER ;
+-- 제품 조회 프로시저 실행
+CALL search_products(null,null,null);
+-- add_form 삭제       
+DROP PROCEDURE IF EXISTS search_products;      
        
 SELECT *
 FROM   orderform;
@@ -151,6 +194,8 @@ DESC equip_downtime;
 DESC equip_repair;
 DESC equip_inspection;
 DESC emp_master;
+DESC qc_master;
+DESC proc_insp;
 
 -- 거래처기준관리, 거래처 데이터 삽입
 INSERT INTO bcnc_master(bcnc_code, bcnc_name, bcnc_type, brn, pic, biz_type, bcnc_category, bcnc_tel, writer, write_date)
@@ -170,4 +215,5 @@ INSERT INTO orderdetail(ord_id, no, prod_code, op_qty, ofd_st)
 INSERT INTO orderform(ord_id, ord_name, due_date, bcnc_code, emp_id, ord_date, ord_knd, order_status)
 			   VALUES('20251002-01', '생막걸리예담주문', '2025-10-10','1','EMP-20250616-0001', '2025-10-02','생막걸리(750ml*20병)외2건','주문완료');
                         
-                        
+DELETE FROM orderform
+WHERE  ord_id = 'ORD2510001';

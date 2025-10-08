@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import '@/assets/common.css'
 import Modal from '@/components/ui/Modal.vue'
-// import jsPDF from 'jspdf'
-// import html2canvas from 'html2canvas'
 import { defineProps, defineEmits } from 'vue'
 
 // 1. 부모로부터 'visible' prop을 받습니다.

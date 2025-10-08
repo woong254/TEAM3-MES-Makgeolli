@@ -29,11 +29,12 @@ FROM   orderdetail od
        ON   od.prod_code = p.prod_code
 WHERE  1=1`;
 
-const insertintoz = `
-
+const insertOrdDetail = `
+CALL add_form(?,?,?,?,?,?,?,?);
 `;
 
 module.exports = {
   selectOrderDetail,
   selectOrderDetailProducts,
+  insertOrdDetail,
 };

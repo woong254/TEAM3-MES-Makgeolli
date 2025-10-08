@@ -19,6 +19,7 @@ router.get("/ordFormView", async (req, res) => {
   res.send(prodOrdList);
 });
 
+// 주문서관리 주문서상세정보 조회
 router.get("/ordFormManageView", async (req, res) => {
   const {
     ord_name,
@@ -39,6 +40,33 @@ router.get("/ordFormManageView", async (req, res) => {
     })
     .catch((err) => console.error(err));
   res.send(ordFormInfo);
+});
+
+// 영업-주문서관리-주문서상세정보-저장버튼
+router.post("/insertOrderFormProducts", async (req, res) => {
+  const orderform = req.body;
+  console.log("받은 데이터: ", orderform);
+
+  const ordDetail = await salesService
+    .ordDetail(orderform)
+    .catch((err) => console.error(err));
+  res.send(ordDetail);
+});
+
+// 거래처선택 모달창에서 거래처 조회
+router.get("/bcncView", async (req, res) => {
+  const bcncInfo = await salesService
+    .bcncInfoView(req.query)
+    .catch((err) => console.error(err));
+  res.send(bcncInfo);
+});
+
+// 행추가 모달창에서 제품 조회
+router.get("/productsView", async (req, res) => {
+  const prodInfo = await salesService
+    .productsView(req.query)
+    .catch((err) => console.error(err));
+  res.send(prodInfo);
 });
 
 module.exports = router;

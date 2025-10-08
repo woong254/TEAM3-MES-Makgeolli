@@ -167,8 +167,8 @@ const submitSearchForm = () => {
   getOrderFormSearch()
 }
 // 주문서 조회 검색해서 나온 데이터(초기값) 담은 전역변수
-const dbOrderDetailInfo = ref()
-const dbOrderProducts = ref([])
+const dbOrderDetailInfo = ref() // 주문서정보
+const dbOrderProducts = ref([]) // 주문서제품정보
 // 주문서 조회 검색 버튼 눌렀을때 주문서정보 데이터를 노드에서 가져오는 함수
 const getOrderFormSearch = async () => {
   try {
@@ -206,20 +206,18 @@ const submitInfoForm = async () => {
     alert('거래처를 선택해주세요.')
     return
   }
-  const obj = {
-    order: {
-      ord_name: orderinfo.value.ord_name,
-      bcnc_name: orderinfo.value.bcnc_name,
-      pic: orderinfo.value.pic,
-      due_date: orderinfo.value.due_date,
-      ord_knd: products.value[0] + '외' + products.value.length + '건',
-    },
-    items: products.value.map((item, idx) => ({
-      no: idx + 1, // 1,2,3... 자동 증가
-      prod_code: item.prod_code,
-      op_qty: item.op_qty,
-    })),
-  }
+  const obj = [
+    orderinfo.value.ord_name,
+    '장준현',
+    orderinfo.value.bcnc_name,
+    orderinfo.value.due_date,
+    products.value[0].prod_name + '외' + products.value.length + '건',
+    products.value.map((item, idx) => [
+      idx + 1, // 1,2,3... 자동 증가
+      String(item.prod_code),
+      item.op_qty,
+    ]),
+  ]
   try {
     const result = await axios.post('/api/insertOrderFormProducts', obj)
     const addRes = result.data
@@ -526,7 +524,6 @@ const deleteSelectedRows = (sel: OrderItem[]) => {
                   :visible="BcncnameModal"
                   @close="BcncnameClosemodal"
                 />
-                <!-- 거래처, 대표자 고르는 모달창 -->
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-400 mb-2">
