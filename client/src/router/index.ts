@@ -57,11 +57,6 @@ const router = createRouter({
       component: () => import('../views/Chart/BarChart/BarChart.vue'),
     },
     {
-      path: '/PurManagement',
-      name: 'PurManagement',
-      component: () => import('../views/Department/materials/PurManagement.vue'),
-    },
-    {
       path: '/alerts',
       name: 'Alerts',
       component: () => import('../views/UiElements/Alerts.vue'),
@@ -207,6 +202,22 @@ const router = createRouter({
     },
 
     // 자재
+    {
+      path: '/PurManagement',
+      name: 'PurManagement',
+      component: () => import('../views/Department/materials/PurManagement.vue'),
+      meta: {
+        title: '발주관리',
+      },
+    },
+    {
+      path: '/BcncModal',
+      name: 'BcncModal',
+      component: () => import('../views/Department/materials/MatModal/BcncModal.vue'),
+      meta: {
+        title: '매입처조회',
+      },
+    },
 
     // 품질
     {

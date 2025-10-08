@@ -1,6 +1,6 @@
 // Table : orderform
 
-const selectOrderForm = `
+const selectOrdersForm = `
 SELECT o.ord_id,
 	     o.ord_name,
        e.emp_name,
@@ -25,5 +25,5 @@ FROM   orderform o
        ON   od.prod_code = p.prod_code`;
 
 module.exports = {
-  selectOrderForm,
+  selectOrdersForm,
 };

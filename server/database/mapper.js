@@ -23,7 +23,7 @@ const query = async (alias, values) => {
   let conn = null;
   try {
     conn = await connectionPool.getConnection();
-    const sql = sqlList[alias];
+    const sql = sqlList[alias] || alias;
     const result = await conn.query(sql, values);
     return result;
   } finally {
@@ -31,8 +31,8 @@ const query = async (alias, values) => {
   }
 };
 
-// const getConnection = async ()=>{
+// const getConnection = async () => {
 //   return await connectionPool.getConnection();
-// }
+// };
 // module.exports = { query, getConnection };
 module.exports = { query };

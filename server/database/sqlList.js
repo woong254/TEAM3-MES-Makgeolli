@@ -2,19 +2,29 @@
 // const reference = require("./sqls/reference.js");
 
 // 영업
-const sales = require("./sqls/orderform.js");
+// require는 하나만 받을 수 있음
+const orderform = require("./sqls/orderform.js");
+const orderdetail = require("./sqls/orderdetail.js");
+const bcncMaster = require("./sqls/bcncMaster.js");
+const prodMaster = require("./sqls/prodMaster.js");
+const sales = {
+  ...orderform,
+  ...orderdetail,
+  ...bcncMaster,
+  ...prodMaster,
+};
 
 // 생산
 const prodord = require("./sqls/prodord.js");
 
 // 자재
-// const materials = require("./sqls/materials.js");
+const materials = require("./sqls/materials.js");
 
 // 품질
 const quality = require("./sqls/qualityInsp.js");
 
 // 설비
-// const equipment = require("./sqls/equipment.js");
+const equipment = require("./sqls/equipform.js");
 
 module.exports = {
   // 기준 정보
@@ -27,11 +37,11 @@ module.exports = {
   ...prodord, // 생산지시
 
   // 자재
-  // ...materials,
+  ...materials,
 
   // 품질
   ...quality,
 
   // 설비
-  // ...equipment,
+  ...equipment,
 };

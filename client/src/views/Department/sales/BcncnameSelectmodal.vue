@@ -4,6 +4,7 @@ import '@/assets/common.css'
 import Modal from '@/components/ui/Modal.vue'
 import DataTable from 'primevue/datatable'
 import DataCol from 'primevue/column'
+import axios from 'axios'
 // 모달창 관련
 // 1. 부모로부터 'visible' prop을 받습니다.
 const props = defineProps<{
@@ -23,35 +24,12 @@ const inputStyle =
 const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400'
 
 // table data
-const bcnc = ref([
-  {
-    id: 1,
-    bcnc_name: '한빛테크㈜',
-    pic: '김하늘',
-    bcnc_tel: '010-2483-5917',
-  },
-  {
-    id: 2,
-    bcnc_name: '미래솔루션',
-    pic: '이서윤',
-    bcnc_tel: '010-7631-8245',
-  },
-  {
-    id: 3,
-    bcnc_name: '동서엔지니어링',
-    pic: '박준호',
-    bcnc_tel: '010-9137-4572',
-  },
-])
+const bcnc = ref([])
 // 검색창 초기 변수
 const search = ref({
   bcnc_name: '',
   pic: '',
 })
-// 조회 버튼 누르면 실행되는 함수
-const submitSearchForm = () => {
-  console.log('11')
-}
 // 초기화 버튼 누르면 실행회는 함수
 const resetSearchForm = () => {
   search.value.bcnc_name = '' // v-model 값 초기화
@@ -71,12 +49,31 @@ function selectedBcncValue() {
     emit('close')
   }
 }
+// 조회 버튼 누르면 실행되는 함수
+const submitSearchForm = async () => {
+  try {
+    const result = await axios.get('/api/bcncView', {
+      params: search.value,
+    })
+    console.log('result.data조회 결과:', result.data)
+    console.log('result조회 결과:', result)
+
+    if (result.data.length === 0) {
+      alert('조회 결과가 없습니다.')
+      resetSearchForm()
+    }
+    bcnc.value = result.data
+    console.log('bcnc.value조회 결과:', bcnc.value)
+  } catch (err) {
+    console.error('조회 중 오류 발생', err)
+  }
+}
 </script>
 
 <template>
   <div v-if="props.visible">
     <form @submit.prevent="submitSearchForm" action="">
-      <Modal title="거래처선택" :fullScreenBackdrop="true">
+      <Modal title="거래처선택" :fullScreenBackdrop="true" @close="closeModal">
         <template #modal-header>
           <div class="flex justify-end">
             <button type="button" class="btn-common-modal btn-white" @click="resetSearchForm">
@@ -125,7 +122,7 @@ function selectedBcncValue() {
                 :pt="{ columnHeaderContent: 'justify-center' }"
               />
               <DataCol
-                field="bcnc_tel"
+                field="brn"
                 header="전화번호"
                 :pt="{ columnHeaderContent: 'justify-center' }"
               />
