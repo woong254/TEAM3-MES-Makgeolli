@@ -1,5 +1,4 @@
 const mariadb = require("mariadb");
-
 const sqlList = require("./sqlList.js");
 
 const connectionPool = mariadb.createPool({
