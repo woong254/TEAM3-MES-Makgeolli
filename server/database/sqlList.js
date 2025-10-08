@@ -14,7 +14,7 @@ const sales = {
 const prodord = require("./sqls/prodord.js");
 
 // 자재
-// const materials = require("./sqls/materials.js");
+const materials = require("./sqls/materials.js");
 
 // 품질
 const quality = require("./sqls/qualityInsp.js");
@@ -33,7 +33,7 @@ module.exports = {
   ...prodord, // 생산지시
 
   // 자재
-  // ...materials,
+  ...materials,
 
   // 품질
   ...quality,

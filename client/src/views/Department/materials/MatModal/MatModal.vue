@@ -70,12 +70,28 @@ const modalMat = ref([
           style="width: 1200px"
         >
           <DataCol selectionMode="multiple" headerStyle="width: 37px" bodyStyle="width: 37px" />
-          <DataCol field="mat_code" header="자재코드" />
-          <DataCol field="mat_name" header="자재명" />
-          <DataCol field="stock_qty" header="재고" />
-          <DataCol field="safe_stock" header="안전재고" />
-          <DataCol field="MAT_SPEC" header="규격" />
-          <DataCol field="MAT_UNIT" header="단위" />
+          <DataCol
+            field="mat_code"
+            header="자재코드"
+            :pt="{ columnHeaderContent: 'justify-center' }"
+          />
+          <DataCol
+            field="mat_name"
+            header="자재명"
+            :pt="{ columnHeaderContent: 'justify-center' }"
+          />
+          <DataCol
+            field="stock_qty"
+            header="재고"
+            :pt="{ columnHeaderContent: 'justify-center' }"
+          />
+          <DataCol
+            field="safe_stock"
+            header="안전재고"
+            :pt="{ columnHeaderContent: 'justify-center' }"
+          />
+          <DataCol field="MAT_SPEC" header="규격" :pt="{ columnHeaderContent: 'justify-center' }" />
+          <DataCol field="MAT_UNIT" header="단위" :pt="{ columnHeaderContent: 'justify-center' }" />
         </DataTable>
       </div>
     </template>

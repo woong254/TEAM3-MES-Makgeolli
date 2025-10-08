@@ -9,6 +9,7 @@ import MatModal from './MatModal/MatModal.vue'
 import PurModal from './MatModal/PurModal.vue'
 import BcncModal from './MatModal/BcncModal.vue'
 import sysdate from 'moment'
+import axios from 'axios'
 import 'flatpickr/dist/flatpickr.css'
 import '@/assets/common.css'
 import { ref } from 'vue'
@@ -21,9 +22,26 @@ const isMatModalOpen = ref(false)
 const isBcncModalOpen = ref(false)
 const selectMat = ref([])
 
+const onSelectBcnc = (selectedBcnc) => {
+  purChase.value[0].bcnc_name = selectedBcnc.bcnc_name
+}
+
+const getPurCode = async () => {
+  try {
+    const response = await axios.get('api/purManagement')
+    if (response.data && response.data.length > 0) {
+      purChase.value[0].pur_code = response.data[0].pur_code
+    } else {
+      purChase.value[0].pur_code = 'PUR-001' // 기본값 설정
+    }
+  } catch (error) {
+    console.error('Error fetching purchase code:', error)
+  }
+}
+
 const purChase = ref([
   {
-    pur_code: 'BAL-001',
+    pur_code: getPurCode(),
     pur_name: '20250930쌀발주',
     bcnc_name: '농협',
     pur_date: sysdate().format('YYYY-MM-DD'),
@@ -55,14 +73,19 @@ const purChaseMat = ref([
 ])
 
 const resetBtn = () => {
+  const currentPurCode = purChase.value[0].pur_code
+  const currentPurDate = purChase.value[0].pur_date
+  const currentEmpName = purChase.value[0].emp_name
+
   purChaseMat.value = []
   purChase.value = [
     {
-      pur_code: '',
+      pur_code: currentPurCode,
       pur_name: '',
       bcnc_name: '',
-      pur_date: sysdate().format('YYYY-MM-DD'),
+      pur_date: currentPurDate,
       receipt_date: '',
+      emp_name: currentEmpName,
       mat_name: '',
       remark: '',
     },
@@ -140,7 +163,7 @@ const handleCloseModal = () => {
             </DataCol>
             <DataCol
               field="bcnc_name"
-              header="공급업체명"
+              header="매입처명"
               :pt="{ columnHeaderContent: 'justify-center' }"
               style="width: 200px"
             >
@@ -150,6 +173,7 @@ const handleCloseModal = () => {
                     v-model="data[field]"
                     type="text"
                     readonly
+                    placeholder="매입처를 선택해주세요."
                     @click="isBcncModalOpen = true"
                     :class="[baseInputClass, 'pr-10']"
                   />
@@ -183,7 +207,7 @@ const handleCloseModal = () => {
             />
             <DataCol
               field="receipt_date"
-              header="입고일자"
+              header="입고요청일자"
               style="width: 200px; padding: 8px"
               :pt="{ columnHeaderContent: 'justify-center' }"
             >
@@ -271,7 +295,7 @@ const handleCloseModal = () => {
             <DataCol
               field="mat_name"
               header="자재명"
-              style="width: 300px"
+              style="width: 200px"
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
             <DataCol
@@ -315,6 +339,21 @@ const handleCloseModal = () => {
               style="width: 140px"
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
+            <DataCol
+              field="remark"
+              header="비고"
+              :pt="{ columnHeaderContent: 'justify-center' }"
+              style="width: 300px; padding: 8px"
+            >
+              <template #body="{ data, field }">
+                <input
+                  v-model="data[field]"
+                  type="text"
+                  :class="baseInputClass"
+                  placeholder="내용을 입력해주세요."
+                />
+              </template>
+            </DataCol>
           </DataTable>
         </template>
       </ComponentCard>
@@ -325,7 +364,7 @@ const handleCloseModal = () => {
     <!--발주자재 조회 모달-->
     <MatModal v-model="isMatModalOpen" @close="handleCloseModal" />
     <!-- 공급업체 조회 모달-->
-    <BcncModal v-model="isBcncModalOpen" @close="handleCloseModal" />
+    <BcncModal v-model="isBcncModalOpen" @close="handleCloseModal" @select="onSelectBcnc" />
   </AdminLayout>
 </template>
 
