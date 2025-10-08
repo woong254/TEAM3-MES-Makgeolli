@@ -9,34 +9,53 @@ import '@/assets/common.css';
 import 'flatpickr/dist/flatpickr.css';
 import data from '@/data/sampleProd.vue';
 
-// import ProductData from './ProductData.vue';
+import { ref, computed } from 'vue';
 
-import { ref, onMounted } from 'vue';
-// import { ProductService } from '@/service/ProductService';
+interface makeInfoInterface {
+  make_name: string,
+  make_start_date: string,
+}
 
 const currentPageTitle = ref('생산지시관리');
 
-const makeStartDates = ref(null)
-const makeEndDates = ref(null)
+const makeStartDates = ref(null);
+const makeEndDates = ref(null);
 
-const flatpickrConfig = {
+// 생산 시작일 설정
+const makeStartDateConfig = computed(() => ({
   dateFormat: 'Y-m-d',
   altInput: true,
   altFormat: 'Y-m-d',
   wrap: true,
-}
+}));
+
+// 생산 시작일 설정
+const makeEndDateConfig = computed(() => ({
+  dateFormat: 'Y-m-d',
+  altInput: true,
+  altFormat: 'Y-m-d',
+  wrap: true,
+}));
 
 const selectedbox = ref([]);
 
+// 입력 정보 템플릿 스타일
 const inputStyle = "dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+const inputBlackStyle = "dark:bg-dark-900 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:shadow-focus-ring focus:outline-hidden focus:ring-0 disabled:border-gray-100 disabled:bg-gray-50 disabled:placeholder:text-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 dark:disabled:border-gray-800 dark:disabled:bg-white/[0.03] dark:disabled:placeholder:text-white/15";
 const labelStyle = "block text-sm font-medium text-gray-700 dark:text-gray-400 mb-2";
 
-// onMounted(() => {
-//     ProductService.getProductsMini().then((data) => (products.value = data));
-// });
-// const products = ref();
-// const selectedProducts = ref();
-// const metaKey = ref(true);
+// 생산 지시 초기화
+// const makeInfo = ref<
+
+// 생산 지시 상세 - 상품 추가 모달
+const productModal = ref(false);
+const productModalOpen = () => {
+  productModal.value = true;
+}
+const productModalClose= () => {
+  productModal.value = false;
+}
+
 
 </script>
 
@@ -46,11 +65,12 @@ const labelStyle = "block text-sm font-medium text-gray-700 dark:text-gray-400 m
 
     <div class="space-y-5 sm:space-y-6">
       <ComponentCard
-        title="기본사항"
-        :class="[
-          'shadow-md rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]',
-        ]"
+      title="기본사항"
+      :class="[
+        'shadow-md rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]',
+      ]"
       >
+        <!-- 생산 지시 기본 정보 -->
         <template #header-right>
           <div class="flex justify-end">
             <button type="button" class="btn-white btn-common" style="width: auto;">계획서 불러오기</button>
@@ -68,9 +88,9 @@ const labelStyle = "block text-sm font-medium text-gray-700 dark:text-gray-400 m
               </label>
               <input
                 type="text"
-                :class="inputStyle"
-                placeholder=""
-                readonly
+                disabled
+                :class="inputBlackStyle"
+                required
               />
             </div>
             <div class="flex-1">
@@ -104,7 +124,7 @@ const labelStyle = "block text-sm font-medium text-gray-700 dark:text-gray-400 m
                 <div class="relative w-45">
                   <flat-pickr
                     v-model="makeStartDates"
-                    :config="flatpickrConfig"
+                    :config="makeStartDateConfig"
                     class="dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pl-4 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
                     placeholder="시작일"
                   />
@@ -132,7 +152,7 @@ const labelStyle = "block text-sm font-medium text-gray-700 dark:text-gray-400 m
                 <div class="relative w-45">
                   <flat-pickr
                     v-model="makeEndDates"
-                    :config="flatpickrConfig"
+                    :config="makeEndDateConfig"
                     class="dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pl-4 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
                     placeholder="종료일"
                   />
@@ -177,9 +197,10 @@ const labelStyle = "block text-sm font-medium text-gray-700 dark:text-gray-400 m
           'shadow-md rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]',
         ]"
       >
+        <!-- 생산 지시 상세정보 -->
         <template #header-right>
           <div class="flex justify-end">
-            <button type="button" class="btn-color btn-common">제품추가</button>
+            <button type="button" class="btn-color btn-common" @focus="productModalOpen">제품추가</button>
             <button type="button" class="btn-white btn-common">제품삭제</button>
           </div>
         </template>

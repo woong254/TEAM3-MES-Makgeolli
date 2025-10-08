@@ -7,7 +7,7 @@ import DataTable from 'primevue/datatable'
 import DataCol from 'primevue/column'
 import flatPickr from 'vue-flatpickr-component'
 import 'flatpickr/dist/flatpickr.css'
-import { ref } from 'vue'
+import { ref, onBeforeMount, shallowRef, computed } from 'vue'
 import axios from 'axios'
 
 import equipSelectModal from './equipSelectModal.vue'
@@ -18,104 +18,20 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
 
 const currentPageTitle = ref('설비 기준정보 관리')
 
-const equipMent = ref([
-  {
-    equip_code: 'MG-003',
-    equip_name: '발효기 A',
-    equip_type: '발효기',
-    manager: '신과장',
-    equip_status: '가동중',
-    insp_check: '30일',
-  },
-  {
-    equip_code: 'MG-002',
-    equip_name: '발효기 B',
-    equip_type: '발효기',
-    manager: '이사원',
-    equip_status: '비가동',
-    insp_check: '30일',
-  },
-  {
-    equip_code: 'MG-001',
-    equip_name: '발효기 C',
-    equip_type: '발효기',
-    manager: '김대리',
-    equip_status: '비가동',
-    insp_check: '30일',
-  },
-  {
-    equip_code: 'MG-001',
-    equip_name: '발효기 C',
-    equip_type: '발효기',
-    manager: '김대리',
-    equip_status: '비가동',
-    insp_check: '30일',
-  },
-  {
-    equip_code: 'MG-001',
-    equip_name: '발효기 C',
-    equip_type: '발효기',
-    manager: '김대리',
-    equip_status: '비가동',
-    insp_check: '30일',
-  },
-  {
-    equip_code: 'MG-001',
-    equip_name: '발효기 C',
-    equip_type: '발효기',
-    manager: '김대리',
-    equip_status: '비가동',
-    insp_check: '30일',
-  },
-  {
-    equip_code: 'MG-001',
-    equip_name: '발효기 C',
-    equip_type: '발효기',
-    manager: '김대리',
-    equip_status: '비가동',
-    insp_check: '30일',
-  },
-  {
-    equip_code: 'MG-001',
-    equip_name: '발효기 C',
-    equip_type: '발효기',
-    manager: '김대리',
-    equip_status: '비가동',
-    insp_check: '30일',
-  },
-  {
-    equip_code: 'MG-001',
-    equip_name: '발효기 C',
-    equip_type: '발효기',
-    manager: '김대리',
-    equip_status: '비가동',
-    insp_check: '30일',
-  },
-  {
-    equip_code: 'MG-001',
-    equip_name: '발효기 C',
-    equip_type: '발효기',
-    manager: '김대리',
-    equip_status: '비가동',
-    insp_check: '30일',
-  },
-  {
-    equip_code: 'MG-001',
-    equip_name: '발효기 C',
-    equip_type: '발효기',
-    manager: '김대리',
-    equip_status: '비가동',
-    insp_check: '30일',
-  },
-  {
-    equip_code: 'MG-001',
-    equip_name: '발효기 C',
-    equip_type: '발효기',
-    manager: '김대리',
-    equip_status: '비가동',
-    insp_check: '30일',
-  },
-])
+interface EquipItem {
+  equipCode: string // 설비코드
+  equipName: string // 설비명
+  equipType: string // 설비유형
+  manager: string // 담당자
+  equipStatus: string // 설비상태
+  inspCycle: number // 점검주기 (예: 일수 or 주기 단위)
+}
+const searchForm = ref({
+  equipCode: '',
+  equipName: '',
+  equipType: '',
+  equipStatus: '',
+})
 
 const flatpickrConfig = {
   dateFormat: 'Y-m-d',
@@ -133,7 +49,32 @@ const openModal = () => {
 const closeModal = () => {
   isModalOpen.value = false
 }
-const uploadFile = () => {}
+// const uploadFile = () => {
+
+// }
+
+const equipList = shallowRef<EquipItem[]>([])
+
+const count = computed(
+  () =>
+    // ref 기반의 반응형 객체이므로 실제 값에 접근할 떄는 value 필드 사용
+    // 동시에 Composition API에선 객체로 선언하지 않으므로 this로 접근 불가
+    equipList.value.length,
+)
+const getEquipList = async () => {
+  try {
+    const result = await axios.get<EquipItem[]>('/api/equipment', {
+      params: searchForm.value,
+    })
+    equipList.value = result.data
+  } catch (err) {
+    console.error(err)
+    equipList.value = [] // 실패 시 기본값
+  }
+}
+onBeforeMount(() => {
+  getEquipList()
+})
 </script>
 
 <template>
@@ -143,22 +84,22 @@ const uploadFile = () => {}
       <template #header-right>
         <div class="flex justify-end">
           <button class="btn-common btn-color">초기화</button>
-          <button class="btn-common btn-white">조회</button>
+          <button @click="getEquipList" class="btn-common btn-white">조회</button>
         </div>
       </template>
       <template #body-content>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
             <label :class="labelStyle">설비코드</label>
-            <input type="text" :class="inputStyle" />
+            <input v-model="searchForm.equipCode" type="text" :class="inputStyle" />
           </div>
           <div>
             <label :class="labelStyle">설비명</label>
-            <input type="text" :class="inputStyle" />
+            <input v-model="searchForm.equipName" type="text" :class="inputStyle" />
           </div>
           <div>
             <label :class="labelStyle">설비유형</label>
-            <input type="text" :class="inputStyle" />
+            <input v-model="searchForm.equipType" type="text" :class="inputStyle" />
           </div>
           <div class="flex items-center gap-17 mb-2">
             <div :class="labelStyle">설비상태</div>
@@ -184,10 +125,10 @@ const uploadFile = () => {}
         </template>
         <template #body-content>
           <DataTable
-            :value="equipMent"
+            :value="equipList"
             showGridlines
             v-model:selection="selectedbox"
-            dataKey="mat_code"
+            dataKey="equip_code"
             scrollable
             scrollHeight="500px"
           >
@@ -251,7 +192,7 @@ const uploadFile = () => {}
                 <label :class="labelStyle">담당자</label>
                 <input type="text" :class="inputStyle" />
               </div>
-              <div class="flex justify-end">
+              <div>
                 <button type="button" class="btn-common btn-color" @click="openModal">조회</button>
               </div>
             </div>
@@ -326,7 +267,7 @@ const uploadFile = () => {}
                 </span>
               </div>
             </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-5">
+            <div class="">
               <button class="btn-common btn-color" @click="uploadFile">파일첨부</button>
               <input type="text" :class="inputStyle" />
             </div>

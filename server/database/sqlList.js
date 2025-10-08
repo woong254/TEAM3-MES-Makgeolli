@@ -18,13 +18,13 @@ const sales = {
 const prodord = require("./sqls/prodord.js");
 
 // 자재
-// const materials = require("./sqls/materials.js");
+const materials = require("./sqls/materials.js");
 
 // 품질
 const quality = require("./sqls/qualityInsp.js");
 
 // 설비
-// const equipment = require("./sqls/equipment.js");
+const equipment = require("./sqls/equipform.js");
 
 module.exports = {
   // 기준 정보
@@ -37,11 +37,11 @@ module.exports = {
   ...prodord, // 생산지시
 
   // 자재
-  // ...materials,
+  ...materials,
 
   // 품질
   ...quality,
 
   // 설비
-  // ...equipment,
+  ...equipment,
 };

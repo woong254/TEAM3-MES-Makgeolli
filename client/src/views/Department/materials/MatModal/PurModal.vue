@@ -70,17 +70,42 @@ const modalPur = ref([
           show-gridlines
           v-model:selection="selectPur"
           datakey="pur_code"
-          selection-mode="single"
           style="width: 1200px"
         >
           <DataCol selectionMode="single" headerStyle="width: 37px" bodyStyle="width: 37px" />
-          <DataCol field="pur_code" header="발주코드" />
-          <DataCol field="pur_name" header="발주서명" />
-          <DataCol field="bcnc_name" header="공급업체명" />
-          <DataCol field="pur_date" header="발주일자" style="text-align: center" />
-          <DataCol field="receipt_date" header="입고일자" style="text-align: center" />
-          <DataCol field="emp_name" header="담당자" />
-          <DataCol field="remark" header="비고" />
+          <DataCol
+            field="pur_code"
+            header="발주코드"
+            :pt="{ columnHeaderContent: 'justify-center' }"
+          />
+          <DataCol
+            field="pur_name"
+            header="발주서명"
+            :pt="{ columnHeaderContent: 'justify-center' }"
+          />
+          <DataCol
+            field="bcnc_name"
+            header="공급업체명"
+            :pt="{ columnHeaderContent: 'justify-center' }"
+          />
+          <DataCol
+            field="pur_date"
+            header="발주일자"
+            style="text-align: center"
+            :pt="{ columnHeaderContent: 'justify-center' }"
+          />
+          <DataCol
+            field="receipt_date"
+            header="입고요청일자"
+            style="text-align: center"
+            :pt="{ columnHeaderContent: 'justify-center' }"
+          />
+          <DataCol
+            field="emp_name"
+            header="담당자"
+            :pt="{ columnHeaderContent: 'justify-center' }"
+          />
+          <DataCol field="remark" header="비고" :pt="{ columnHeaderContent: 'justify-center' }" />
         </DataTable>
       </div>
     </template>
