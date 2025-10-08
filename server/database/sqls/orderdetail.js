@@ -2,14 +2,14 @@
 
 const selectOrderDetail = `
 SELECT o.ord_id,
-	     o.ord_name,
+	o.ord_name,
        b.bcnc_name,
        b.pic,
        o.ord_date,
        o.due_date,
        e.emp_name
 FROM   orderform o
-	     JOIN bcnc_master b
+	JOIN bcnc_master b
        ON   o.bcnc_code = b.bcnc_code
        JOIN emp_master e
        ON   o.emp_id = e.emp_id
@@ -23,13 +23,15 @@ SELECT od.no,
        p.prod_unit,
        od.op_qty
 FROM   orderdetail od
-  	   JOIN orderform o
+       JOIN orderform o
        ON   od.ord_id = o.ord_id
        JOIN prod_master p
        ON   od.prod_code = p.prod_code
 WHERE  1=1`;
 
-const insertinto
+const insertintoz = `
+
+`;
 
 module.exports = {
   selectOrderDetail,

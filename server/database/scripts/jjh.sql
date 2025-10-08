@@ -69,37 +69,57 @@ FROM   orderdetail od
        ON   od.prod_code = p.prod_code
 WHERE  o.ord_name = '생막걸리예담주문';
 	   
-DECLARE
-    v_ord_id   VARCHAR2(20);
+-- ord_id자동생성
+SELECT  CONCAT(DATE_FORMAT(NOW(), '%y%m'),LPAD(IFNULL(MIN(SUBSTR(ord_id, -3)),0) + 1, 3, '0')) FROM orderform;
+-- ord_id자동생성
+SELECT CONCAT('ORD', CONCAT(DATE_FORMAT(NOW(), '%y%m'),LPAD(IFNULL(MAX(SUBSTR(ord_id, -3)),0) + 1, 3, '0'))) 
+FROM orderform
+WHERE SUBSTR(ord_id, 4, 4) = DATE_FORMAT(NOW(), '%y%m')
+FOR UPDATE;
+       
+-- 주문서관리-주문서상세정보-저장버튼
+DELIMITER $$
+CREATE PROCEDURE add_form( 
+	IN p_ord_name  VARCHAR(10),
+    IN p_emp_name  VARCHAR(100),
+    IN p_bcnc_name VARCHAR(100),
+    IN p_due_date  DATE,
+    IN p_ord_date  DATE,
+    IN p_ord_knd   VARCHAR(30)
+)
 BEGIN
-    -- 1) 주문서 마스터 등록
-    v_ord_id := '20251006-01';  -- 보통 시퀀스 또는 함수로 생성
+	SELECT CONCAT('ORD', CONCAT(DATE_FORMAT(NOW(), '%y%m'),LPAD(IFNULL(MAX(SUBSTR(ord_id, -3)),0) + 1, 3, '0'))) 
+    INTO   @new_ord_id
+	FROM   orderform
+	WHERE  SUBSTR(ord_id, 4, 4) = DATE_FORMAT(NOW(), '%y%m')
+	FOR UPDATE;
+     
+	INSERT INTO order_form(
+		ord_id,
+		ord_name,
+        emp_id,
+        bcnc_code,        
+		due_date,        		
+		ord_date,
+		ord_knd)
+	VALUES(
+		@new_ord_id,
+        p_ord_name,
+        (SELECT emp_id
+		 FROM   emp_master
+         WHERE  emp_name = p_emp_name),
+        (SELECT bcnc_code
+		 FROM   bcnc_master
+         WHERE  bcnc_name = p_bcnc_name),
+        p_due_date,
+        p_ord_date,
+        p_ord_knd);
+END $$
+DELIMITER ;
 
-    INSERT INTO ORDERS
-      (ORD_ID, ORD_NAME, BCNC_NAME, PIC, DUE_DATE, REG_DATE)
-    VALUES
-      (v_ord_id, :ord_name, :bcnc_name, :pic, :due_date, SYSDATE);
+CALL add_form('test','한빛테크(주)','
 
-    -- 2) 주문 제품 목록 등록
-    FOR i IN 1 .. :product_count LOOP
-        INSERT INTO ORDER_PRODUCTS
-          (ORD_ID, NO, PROD_CODE, OP_QTY)
-        VALUES
-          (v_ord_id,
-           i,
-           :products(i).prod_code,
-           :products(i).op_qty);
-    END LOOP;
-
-    -- 모든 INSERT가 성공하면 커밋
-    COMMIT;
-
-EXCEPTION
-    WHEN OTHERS THEN
-        -- 중간에 에러 발생 시 롤백
-        ROLLBACK;
-        RAISE;
-END;
+	
        
 SELECT *
 FROM   orderform;
@@ -130,6 +150,7 @@ DESC bcnc_master;
 DESC equip_downtime;
 DESC equip_repair;
 DESC equip_inspection;
+DESC emp_master;
 
 -- 거래처기준관리, 거래처 데이터 삽입
 INSERT INTO bcnc_master(bcnc_code, bcnc_name, bcnc_type, brn, pic, biz_type, bcnc_category, bcnc_tel, writer, write_date)

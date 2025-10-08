@@ -212,6 +212,7 @@ const submitInfoForm = async () => {
       bcnc_name: orderinfo.value.bcnc_name,
       pic: orderinfo.value.pic,
       due_date: orderinfo.value.due_date,
+      ord_knd: products.value[0] + '외' + products.value.length + '건',
     },
     items: products.value.map((item, idx) => ({
       no: idx + 1, // 1,2,3... 자동 증가
