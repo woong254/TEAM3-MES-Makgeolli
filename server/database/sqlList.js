@@ -5,9 +5,13 @@
 // require는 하나만 받을 수 있음
 const orderform = require("./sqls/orderform.js");
 const orderdetail = require("./sqls/orderdetail.js");
+const bcncMaster = require("./sqls/bcncMaster.js");
+const prodMaster = require("./sqls/prodMaster.js");
 const sales = {
   ...orderform,
   ...orderdetail,
+  ...bcncMaster,
+  ...prodMaster,
 };
 
 // 생산

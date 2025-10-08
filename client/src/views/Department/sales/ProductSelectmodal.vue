@@ -4,6 +4,7 @@ import '@/assets/common.css'
 import Modal from '@/components/ui/Modal.vue'
 import DataTable from 'primevue/datatable'
 import DataCol from 'primevue/column'
+import axios from 'axios'
 // 모달창 관련
 // 1. 부모로부터 'visible' prop을 받습니다.
 const props = defineProps<{
@@ -24,62 +25,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
 const selectStyle =
   'dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-950 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
 // table data
-const bcnc = ref([
-  {
-    prod_code: 'P001',
-    prod_name: '생막걸리1',
-    prod_spec: '1500ml',
-    prod_unit: 'P-BOX',
-  },
-  {
-    prod_code: 'P002',
-    prod_name: '생막걸리2',
-    prod_spec: '750ml',
-    prod_unit: 'BOX',
-  },
-  {
-    prod_code: 'P003',
-    prod_name: '생막걸리3',
-    prod_spec: '1500ml',
-    prod_unit: 'P-BOX',
-  },
-  {
-    prod_code: 'P004',
-    prod_name: '생막걸리3',
-    prod_spec: '1500ml',
-    prod_unit: 'P-BOX',
-  },
-  {
-    prod_code: 'P005',
-    prod_name: '생막걸리3',
-    prod_spec: '1500ml',
-    prod_unit: 'P-BOX',
-  },
-  {
-    prod_code: 'P006',
-    prod_name: '생막걸리3',
-    prod_spec: '1500ml',
-    prod_unit: 'P-BOX',
-  },
-  {
-    prod_code: 'P007',
-    prod_name: '생막걸리3',
-    prod_spec: '1500ml',
-    prod_unit: 'P-BOX',
-  },
-  {
-    prod_code: 'P008',
-    prod_name: '생막걸리3',
-    prod_spec: '1500ml',
-    prod_unit: 'P-BOX',
-  },
-  {
-    prod_code: 'P009',
-    prod_name: '생막걸리3',
-    prod_spec: '1500ml',
-    prod_unit: 'P-BOX',
-  },
-])
+const prod = ref([])
 // 검색창 초기 변수
 const search = ref({
   prod_name: '',
@@ -87,8 +33,23 @@ const search = ref({
   prod_unit: '',
 })
 // 조회 버튼 누르면 실행되는 함수
-const submitSearchForm = () => {
-  console.log('11')
+const submitSearchForm = async () => {
+  try {
+    const result = await axios.get('/api/productsView', {
+      params: search.value,
+    })
+    console.log('result.data조회 결과:', result.data)
+    console.log('result조회 결과:', result)
+
+    if (result.data.length === 0) {
+      alert('조회 결과가 없습니다.')
+      resetSearchForm()
+    }
+    prod.value = result.data
+    console.log('prod.value조회 결과:', prod.value)
+  } catch (err) {
+    console.error('조회 중 오류 발생', err)
+  }
 }
 // 초기화 버튼 누르면 실행회는 함수
 const resetSearchForm = () => {
@@ -117,7 +78,7 @@ function selectedProductValue() {
 <template>
   <div v-if="props.visible">
     <form @submit.prevent="submitSearchForm" action="">
-      <Modal title="제품선택" :fullScreenBackdrop="true">
+      <Modal title="제품선택" :fullScreenBackdrop="true" @close="closeModal">
         <template #modal-header>
           <div class="flex justify-end">
             <button type="button" class="btn-common-modal btn-white" @click="resetSearchForm">
@@ -171,7 +132,7 @@ function selectedProductValue() {
             <DataTable
               v-model:selection="selectedProducts"
               datakey="prod_code"
-              :value="bcnc"
+              :value="prod"
               showGridlines
               scrollable
               size="small"

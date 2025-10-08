@@ -1,9 +1,12 @@
 // 영업 서비스
 const mariadb = require("../database/mapper.js");
-const {
-  selectOrderDetail,
-  selectOrderDetailProducts,
-} = require("../database/sqls/orderdetail.js");
+const sqlList = require("../database/sqlList.js");
+
+const selectOrderDetail = sqlList.selectOrderDetail;
+const selectOrderDetailProducts = sqlList.selectOrderDetailProducts;
+const selectBcnc = sqlList.selectBcnc;
+const selectProd = sqlList.selectProd;
+const insertOrdDetail = sqlList.insertOrdDetail;
 
 // const testService = ()=>{
 //   let conn = null;
@@ -56,16 +59,6 @@ const viewList = async () => {
 };
 
 // 주문서관리-주문서조회검색-조회버튼
-// const ordFormInfoView = async (filters) => {
-//   const params = filters.ord_name;
-//   try {
-//     const list = await mariadb.query("selectOrderDetail", params);
-//     return list;
-//   } catch (err) {
-//     console.error("DB조회 오류", err);
-//     return [];
-//   }
-// };
 const ordFormInfoView = async (filters) => {
   const {
     ord_name,
@@ -112,7 +105,7 @@ const ordFormInfoView = async (filters) => {
 
     const list = await mariadb.query(sql, params);
     const list1 = await mariadb.query(sql1, params);
-    const formattedList = list.map((item) => {
+    list.map((item) => {
       const dateFieldName = "due_date";
       if (item[dateFieldName]) {
         // Node.js가 DB에서 가져온 Date 객체를 포맷팅
@@ -124,8 +117,9 @@ const ordFormInfoView = async (filters) => {
       }
       return item;
     });
-    console.log(list);
-    console.log(list1);
+
+    console.log("list1조회 : ", list1);
+    console.log("list조회 : ", list);
 
     return { list, list1 };
   } catch (err) {
@@ -134,8 +128,75 @@ const ordFormInfoView = async (filters) => {
   }
 };
 
+// 주문서상세정보 및 주문제품 저장버튼 기능
+const ordDetail = async (ordDetail) => {
+  try {
+    const list = await mariadb.query(insertOrdDetail, ordDetail);
+    console.log("ordDetail : ", ordDetail);
+
+    let data = null;
+    if (list.insertId > 0) {
+      data = {
+        isSuccessed: true,
+      };
+    } else {
+      data = {
+        isSuccessed: false,
+      };
+    }
+    return data;
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+// 주문서관리-주문서상세정보-거래처명-거래처선택 조회
+const bcncInfoView = async (bcncData) => {
+  const { bcnc_name, pic } = bcncData;
+  let sql = selectBcnc;
+  let params = [];
+
+  if (bcnc_name) {
+    sql += ` AND bcnc_name LIKE ?`;
+    params.push(`%${bcnc_name}%`);
+  }
+  if (pic) {
+    sql += ` AND pic LIKE ?`;
+    params.push(`%${pic}%`);
+  }
+  try {
+    const list = await mariadb.query(sql, params);
+    return list;
+  } catch (err) {
+    console.error(err);
+    return [];
+  }
+};
+
+// 주문서관리-주문서상세정보-주문제품-행추가-제품조회
+const productsView = async (prodData) => {
+  const { prod_name, prod_spec, prod_unit } = prodData;
+  console.log("prodData: ", prodData);
+
+  let sql = selectProd;
+  let params = [prod_name || null, prod_spec || null, prod_unit || null];
+
+  try {
+    const result = await mariadb.query(sql, params);
+    const list = result[0];
+    console.log(list);
+    return list;
+  } catch (err) {
+    console.error(err);
+    return [];
+  }
+};
+
 // export
 module.exports = {
   viewList,
   ordFormInfoView,
+  ordDetail,
+  bcncInfoView,
+  productsView,
 };
