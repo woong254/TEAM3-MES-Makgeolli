@@ -1,0 +1,282 @@
+use mes;
+
+select *
+from bcnc_master;
+
+INSERT INTO bcnc_master 
+(bcnc_code, bcnc_name, bcnc_type, brn, pic, biz_type, bcnc_category, email, bcnc_tel, fax, remark, writer, write_date)
+VALUES
+(2, '은하상사', '매출처', '234-56-78901', '조은하', '유통업', '식자재 도매상', 'eunha@wholesale.com', '010-8888-9999', '02-999-8888', '주류 납품 거래처', '장준현', '2025-10-08'),
+(3, '한강막걸리집', '매출처', '345-67-89012', '오한결', '요식업', '주점/식당', 'hangang@bar.co.kr', '010-7777-5555', '02-222-1111', '정기 납품처', '장준현', '2025-10-08'),
+(4, '전통유통', '매출처', '456-78-90123', '정우석', '도매업', '전통주 전문 도매상', 'jeontong@tradewine.co.kr', '010-3333-2222', '02-555-6666', '지방권 납품처', '장준현', '2025-10-08'),
+(5, '마실마켓', '매출처', '567-89-01234', '이한빛', '온라인판매', '전통주 전문몰', 'masil@market.co.kr', '010-4444-3333', '02-444-3333', '온라인 납품처', '장준현', '2025-10-08'),
+
+-- 매입처 (writer: 정지웅)
+(6, '농협', '매입처', '234-56-78910', '박지은', '농업', '농산물 협동조합', 'nh@nonghyup.co.kr', '010-2222-3333', '02-987-6543', '쌀 및 곡물 공급', '정지웅', '2025-10-08'),
+(7, '청솔패키지', '매입처', '678-90-12345', '김태호', '제조업', '병 및 포장재 납품', 'chspkg@naver.com', '010-4444-5555', '02-333-2222', '막걸리 병 공급', '정지웅', '2025-10-08'),
+(8, '참누룩', '매입처', '789-01-23456', '윤지성', '식품원재료', '누룩 제조업체', 'cham@nuruk.co.kr', '010-6666-7777', '02-777-6666', '전통누룩 공급', '정지웅', '2025-10-08'),
+(9, '그린라벨', '매입처', '890-12-34567', '최미나', '인쇄업', '라벨 인쇄업체', 'greenlabel@print.co.kr', '010-9999-0000', '02-333-4444', '라벨 디자인 공급', '정지웅', '2025-10-08'),
+(10, '우리농산', '매입처', '901-23-45678', '김유진', '농업', '쌀 납품업체', 'woorifarm@farm.co.kr', '010-1010-2020', '055-777-8888', '신규 쌀 공급처', '정지웅', '2025-10-08');
+
+SELECT CONCAT('BAL-', LPAD(
+  IFNULL(MAX(CAST(SUBSTRING(pur_code, 5) AS UNSIGNED)), 0) + 1,
+  3,
+  '0'
+)) AS pur_code
+FROM pur_form
+WHERE pur_code LIKE 'BAL-%';
+
+
+
+ALTER TABLE pur_mat
+ADD CONSTRAINT FK_PUR_CODE
+FOREIGN KEY (PUR_CODE)
+REFERENCES pur_form(PUR_CODE)
+ON DELETE CASCADE;
+
+ALTER TABLE pur_form
+ALTER COLUMN pur_status SET DEFAULT '입고대기';
+
+INSERT INTO pur_form (pur_code, emp_id, bcnc_code, pur_name, pur_date, receipt_date, pur_status, remark) VALUES
+('PUR-001', 'EMP-20250616-0003', 6,  '250925농협발주',      '2025-09-25', '2025-09-28', '입고대기', '맵쌀(농협) 발주'),
+('PUR-002', 'EMP-20250616-0003', 6,  '250815농협발주',      '2025-08-15', '2025-08-20', '입고완료', '맵쌀(농협) 추가 발주'),
+('PUR-003', 'EMP-20250616-0003', 10, '250920우리농산발주',  '2025-09-20', '2025-09-22', '부분입고', '찹쌀(우리농산) 일부 입고'),
+('PUR-004', 'EMP-20250616-0003', 10, '250710우리농산발주',  '2025-07-10', '2025-07-15', '입고대기', '찹쌀(우리농산) 요청'),
+('PUR-005', 'EMP-20250616-0003', 8,  '250512삼누룩발주',    '2025-05-12', '2025-05-15', '입고완료', '전통누룩(삼누룩) 납품완료'),
+('PUR-006', 'EMP-20250616-0003', 8,  '250420삼누룩발주',    '2025-04-20', '2025-04-25', '입고대기', '전통누룩(삼누룩) 발주'),
+('PUR-007', 'EMP-20250616-0003', 2,  '250910은하상사발주',  '2025-09-10', '2025-09-12', '입고완료', '건조효모(은하상사) 납품완료'),
+('PUR-008', 'EMP-20250616-0003', 2,  '250605은하상사발주',  '2025-06-05', '2025-06-07', '부분입고', '건조효모(은하상사) 일부입고'),
+('PUR-009', 'EMP-20250616-0003', 9,  '250310그린라벨발주',  '2025-03-10', '2025-03-12', '부분입고', '정제설탕(그린라벨) 일부입고'),
+('PUR-010', 'EMP-20250616-0003', 9,  '250214그린라벨발주',  '2025-02-14', '2025-02-18', '입고완료', '정제설탕(그린라벨) 납품완료');
+
+INSERT INTO pur_form (pur_code, emp_id, bcnc_code, pur_name, pur_date, receipt_date, pur_status, remark) VALUES
+('PUR-001', 'EMP-20250616-0003', 10, '251007우리농산발주', '2025-10-07', '2025-10-08', '입고대기', NULL),
+('PUR-002', 'EMP-20250616-0003', 10, '251005우리농산발주', '2025-10-05', '2025-10-06', '입고완료', '긴급 발주'),
+
+('PUR-003', 'EMP-20250616-0003', 6, '251006농협발주', '2025-10-06', '2025-10-07', '부분입고', NULL),
+('PUR-004', 'EMP-20250616-0003', 6, '251004농협발주', '2025-10-04', '2025-10-05', '입고완료', NULL),
+
+('PUR-005', 'EMP-20250616-0003', 7, '251003청솔패키지발주', '2025-10-03', '2025-10-04', '입고대기', '샘플 발주건'),
+('PUR-006', 'EMP-20250616-0003', 7, '251002청솔패키지발주', '2025-10-02', '2025-10-03', '입고완료', NULL),
+
+('PUR-007', 'EMP-20250616-0003', 8, '251001참누룩발주', '2025-10-01', '2025-10-02', '부분입고', NULL),
+('PUR-008', 'EMP-20250616-0003', 8, '250930참누룩발주', '2025-09-30', '2025-10-01', '입고대기', NULL),
+
+('PUR-009', 'EMP-20250616-0003', 9, '250929그린라벨발주', '2025-09-29', '2025-09-30', '입고완료', '디자인 변경 요청 포함'),
+('PUR-010', 'EMP-20250616-0003', 9, '250928그린라벨발주', '2025-09-28', '2025-09-29', '입고대기', NULL);
+
+
+-- 먼저 컬럼이 이미 있다면 삭제 (에러 무시해도 됨)
+ALTER TABLE pur_mat DROP COLUMN unreceipt_qty;
+
+-- 자동 계산 컬럼 다시 생성
+ALTER TABLE pur_mat
+ADD COLUMN unreceipt_qty DECIMAL(10,2)
+    GENERATED ALWAYS AS (pur_qty - receipt_qty) STORED;
+    
+
+DELIMITER $$
+
+CREATE TRIGGER trg_set_receipt_status_before_insert
+BEFORE INSERT ON pur_mat
+FOR EACH ROW
+BEGIN
+    IF NEW.receipt_qty = 0 THEN
+        SET NEW.receipt_status = '입고대기';
+    ELSEIF NEW.receipt_qty < NEW.pur_qty THEN
+        SET NEW.receipt_status = '부분입고';
+    ELSE
+        SET NEW.receipt_status = '입고완료';
+    END IF;
+END$$
+
+CREATE TRIGGER trg_set_receipt_status_before_update
+BEFORE UPDATE ON pur_mat
+FOR EACH ROW
+BEGIN
+    IF NEW.receipt_qty = 0 THEN
+        SET NEW.receipt_status = '입고대기';
+    ELSEIF NEW.receipt_qty < NEW.pur_qty THEN
+        SET NEW.receipt_status = '부분입고';
+    ELSE
+        SET NEW.receipt_status = '입고완료';
+    END IF;
+END$$
+
+DELIMITER ;
+
+DELIMITER $$
+
+CREATE PROCEDURE update_pur_form_status(IN p_pur_code VARCHAR(100))
+BEGIN
+    DECLARE total INT;
+    DECLARE complete INT;
+    DECLARE waiting INT;
+
+    SELECT COUNT(*) INTO total
+    FROM pur_mat
+    WHERE pur_code = p_pur_code;
+
+    SELECT COUNT(*) INTO complete
+    FROM pur_mat
+    WHERE pur_code = p_pur_code AND receipt_status = '입고완료';
+
+    SELECT COUNT(*) INTO waiting
+    FROM pur_mat
+    WHERE pur_code = p_pur_code AND receipt_status = '입고대기';
+
+    IF complete = total THEN
+        UPDATE pur_form SET pur_status = '입고완료' WHERE pur_code = p_pur_code;
+    ELSEIF waiting = total THEN
+        UPDATE pur_form SET pur_status = '입고대기' WHERE pur_code = p_pur_code;
+    ELSE
+        UPDATE pur_form SET pur_status = '부분입고' WHERE pur_code = p_pur_code;
+    END IF;
+END$$
+
+DELIMITER ;
+
+DELIMITER $$
+
+CREATE TRIGGER trg_update_pur_form_status_after_insert
+AFTER INSERT ON pur_mat
+FOR EACH ROW
+BEGIN
+    CALL update_pur_form_status(NEW.pur_code);
+END$$
+
+CREATE TRIGGER trg_update_pur_form_status_after_update
+AFTER UPDATE ON pur_mat
+FOR EACH ROW
+BEGIN
+    CALL update_pur_form_status(NEW.pur_code);
+END$$
+
+DELIMITER ;
+
+ALTER TABLE pur_mat
+MODIFY COLUMN pur_mat_id INT NOT NULL AUTO_INCREMENT;
+
+-- PUR-001 발주서: 멥쌀 1000개 발주, 0개 입고 (입고대기)
+INSERT INTO pur_mat (pur_code, mat_code, pur_qty, receipt_qty, remark)
+VALUES ('PUR-001', 'M-20250201-001', 1000, 0, '긴급 발주');
+
+-- PUR-001 발주서: 정제설탕 300개 발주, 150개 입고 (부분입고)
+INSERT INTO pur_mat (pur_code, mat_code, pur_qty, receipt_qty)
+VALUES ('PUR-001', 'M-20250317-001', 300, 150);
+
+-- PUR-002: 찹쌀 500개 발주, 500개 입고 (입고완료)
+INSERT INTO pur_mat (pur_code, mat_code, pur_qty, receipt_qty)
+VALUES ('PUR-002', 'M-20250202-001', 500, 500);
+
+-- PUR-003: 전통누룩 400개 발주, 200개 입고 (부분입고)
+INSERT INTO pur_mat (pur_code, mat_code, pur_qty, receipt_qty, remark)
+VALUES ('PUR-003', 'M-20250315-001', 400, 200, '품질 확인 필요');
+
+-- PUR-003: 건조효모 300개 발주, 300개 입고 (입고완료)
+INSERT INTO pur_mat (pur_code, mat_code, pur_qty, receipt_qty)
+VALUES ('PUR-003', 'M-20250315-002', 300, 300);
+
+-- PUR-004: 멥쌀 800개 발주, 0개 입고 (입고대기)
+INSERT INTO pur_mat (pur_code, mat_code, pur_qty, receipt_qty)
+VALUES ('PUR-004', 'M-20250201-001', 800, 0);
+
+-- PUR-005: 찹쌀 600개 발주, 100개 입고 (부분입고)
+INSERT INTO pur_mat (pur_code, mat_code, pur_qty, receipt_qty)
+VALUES ('PUR-005', 'M-20250202-001', 600, 100);
+
+-- PUR-006: 전통누룩 700개 발주, 700개 입고 (입고완료)
+INSERT INTO pur_mat (pur_code, mat_code, pur_qty, receipt_qty)
+VALUES ('PUR-006', 'M-20250315-001', 700, 700);
+
+-- PUR-007: 건조효모 200개 발주, 0개 입고 (입고대기)
+INSERT INTO pur_mat (pur_code, mat_code, pur_qty, receipt_qty)
+VALUES ('PUR-007', 'M-20250315-002', 200, 0);
+
+-- PUR-008: 정제설탕 400개 발주, 400개 입고 (입고완료)
+INSERT INTO pur_mat (pur_code, mat_code, pur_qty, receipt_qty)
+VALUES ('PUR-008', 'M-20250317-001', 400, 400);
+
+UPDATE pur_mat SET receipt_qty = receipt_qty WHERE pur_code = 'PUR-003';
+
+DELIMITER $$
+
+DROP PROCEDURE IF EXISTS update_pur_form_status$$
+
+CREATE PROCEDURE update_pur_form_status(IN p_pur_code VARCHAR(20))
+BEGIN
+    DECLARE total INT DEFAULT 0;
+    DECLARE complete INT DEFAULT 0;
+    DECLARE waiting INT DEFAULT 0;
+
+    SELECT COUNT(*) INTO total
+    FROM pur_mat
+    WHERE pur_code = p_pur_code;
+
+    SELECT COUNT(*) INTO complete
+    FROM pur_mat
+    WHERE pur_code = p_pur_code AND receipt_status = '입고완료';
+
+    SELECT COUNT(*) INTO waiting
+    FROM pur_mat
+    WHERE pur_code = p_pur_code AND receipt_status = '입고대기';
+
+    IF complete = total THEN
+        UPDATE pur_form SET pur_status = '입고완료' WHERE pur_code = p_pur_code;
+    ELSEIF waiting = total THEN
+        UPDATE pur_form SET pur_status = '입고대기' WHERE pur_code = p_pur_code;
+    ELSE
+        UPDATE pur_form SET pur_status = '부분입고' WHERE pur_code = p_pur_code;
+    END IF;
+END$$
+
+DELIMITER ;
+
+-- PUR-001: 멥쌀 1000 발주, 입고 0 → 입고대기
+INSERT INTO pur_mat (pur_code, mat_code, pur_qty, receipt_qty, remark)
+VALUES ('PUR-001', 'M-20250201-001', 1000, 0, '긴급 요청');
+
+-- PUR-002: 찹쌀 500 발주, 입고 0 → 입고대기
+INSERT INTO pur_mat (pur_code, mat_code, pur_qty, receipt_qty)
+VALUES ('PUR-002', 'M-20250202-001', 500, 0);
+
+-- PUR-003: 전통누룩 400 발주, 입고 200 → 부분입고
+INSERT INTO pur_mat (pur_code, mat_code, pur_qty, receipt_qty, remark)
+VALUES ('PUR-003', 'M-20250315-001', 400, 200, '검수 중');
+
+-- PUR-003: 정제설탕 300 발주, 입고 300 → 입고완료
+INSERT INTO pur_mat (pur_code, mat_code, pur_qty, receipt_qty)
+VALUES ('PUR-003', 'M-20250317-001', 300, 300);
+
+-- PUR-004: 찹쌀 600 발주, 입고 600 → 입고완료
+INSERT INTO pur_mat (pur_code, mat_code, pur_qty, receipt_qty)
+VALUES ('PUR-004', 'M-20250202-001', 600, 600);
+
+-- PUR-005: 건조효모 300 발주, 입고 300 → 입고완료
+INSERT INTO pur_mat (pur_code, mat_code, pur_qty, receipt_qty)
+VALUES ('PUR-005', 'M-20250315-002', 300, 300);
+
+-- PUR-006: 멥쌀 700 발주, 입고 0 → 입고대기
+INSERT INTO pur_mat (pur_code, mat_code, pur_qty, receipt_qty, remark)
+VALUES ('PUR-006', 'M-20250201-001', 700, 0, '재고 없음');
+
+-- PUR-007: 찹쌀 400 발주, 입고 200 → 부분입고
+INSERT INTO pur_mat (pur_code, mat_code, pur_qty, receipt_qty)
+VALUES ('PUR-007', 'M-20250202-001', 400, 200);
+
+-- PUR-008: 전통누룩 800 발주, 입고 800 → 입고완료
+INSERT INTO pur_mat (pur_code, mat_code, pur_qty, receipt_qty)
+VALUES ('PUR-008', 'M-20250315-001', 800, 800);
+
+-- PUR-009: 정제설탕 500 발주, 입고 500 → 입고완료
+INSERT INTO pur_mat (pur_code, mat_code, pur_qty, receipt_qty)
+VALUES ('PUR-009', 'M-20250317-001', 500, 500);
+
+INSERT INTO pur_mat (pur_code, mat_code, pur_qty, receipt_qty, remark)
+VALUES ('PUR-010', 'M-20250315-002', 600, 0, '검수 전');
+
+SELECT *
+FROM pur_form;
+
+SELECT *
+FROM pur_mat;
