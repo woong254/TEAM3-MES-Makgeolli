@@ -1,3 +1,5 @@
+<!-- 품질기준관리 -->
+
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import '@/assets/common.css'

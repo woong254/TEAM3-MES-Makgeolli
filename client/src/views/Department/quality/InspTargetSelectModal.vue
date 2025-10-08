@@ -1,3 +1,4 @@
+<!-- 모달 : 품질기준관리 검사대상 조회 -->
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import '@/assets/common.css'

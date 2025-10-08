@@ -217,6 +217,62 @@ const router = createRouter({
         title: '품질검사 기준관리',
       },
     },
+    {
+      path: '/matinsplist',
+      name: 'MatInspList',
+      component: () => import('../views/Department/quality/MatInspList.vue'),
+      meta: {
+        title: '자재입고검사 조회',
+      },
+    },
+    {
+      path: '/matinspmanage',
+      name: 'MatInsManage',
+      component: () => import('../views/Department/quality/MatInsManage.vue'),
+      meta: {
+        title: '자재입고검사 관리',
+      },
+    },
+    {
+      path: '/procinsplist',
+      name: 'ProcInspList',
+      component: () => import('../views/Department/quality/ProcInspList.vue'),
+      meta: {
+        title: '공정검사 조회',
+      },
+    },
+    {
+      path: '/procinspmanage',
+      name: 'ProcInspManage',
+      component: () => import('../views/Department/quality/ProcInspManage.vue'),
+      meta: {
+        title: '공정검사 관리',
+      },
+    },
+    {
+      path: '/prodinsplist',
+      name: 'ProdInspList',
+      component: () => import('../views/Department/quality/ProdInspList.vue'),
+      meta: {
+        title: '완제품검사 조회',
+      },
+    },
+    {
+      path: '/prodinspmanage',
+      name: 'ProdInspManage',
+      component: () => import('../views/Department/quality/ProdInspManage.vue'),
+      meta: {
+        title: '완제품검사 관리',
+      },
+    },
+    {
+      path: '/defectmaster',
+      name: 'DefectMaster',
+      component: () => import('../views/Department/quality/DefectMaster.vue'),
+      meta: {
+        title: '불량기준관리',
+      },
+    },
 
     // 설비
     {
