@@ -80,7 +80,7 @@ onBeforeMount(() => {
 <template>
   <AdminLayout>
     <PageBreadcrumb :pageTitle="currentPageTitle"> </PageBreadcrumb>
-    <ComponentCard title="조회">
+    <ComponentCard title="조회" className="shadow-sm">
       <template #header-right>
         <div class="flex justify-end">
           <button class="btn-common btn-color">초기화</button>
@@ -116,8 +116,8 @@ onBeforeMount(() => {
       </template>
     </ComponentCard>
 
-    <div class="flex gap-2 mt-2 width-full">
-      <ComponentCard title="목록" className="shadow-sm w-1/2 overflow-y-auto">
+    <div class="flex gap-2 mt-2 width-full" style="height: 500px">
+      <ComponentCard title="목록" className="shadow-sm w-1/2">
         <template #header-right>
           <div class="flex justify-end">
             <button class="btn-common btn-color">삭제</button>
