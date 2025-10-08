@@ -33,105 +33,6 @@ const searchForm = ref({
   equipStatus: '',
 })
 
-const equipMent = ref([
-  {
-    equip_code: 'MG-003',
-    equip_name: '발효기 A',
-    equip_type: '발효기',
-    manager: '신과장',
-    equip_status: '가동중',
-    insp_check: '30일',
-  },
-  {
-    equip_code: 'MG-002',
-    equip_name: '발효기 B',
-    equip_type: '발효기',
-    manager: '이사원',
-    equip_status: '비가동',
-    insp_check: '30일',
-  },
-  {
-    equip_code: 'MG-001',
-    equip_name: '발효기 C',
-    equip_type: '발효기',
-    manager: '김대리',
-    equip_status: '비가동',
-    insp_check: '30일',
-  },
-  {
-    equip_code: 'MG-001',
-    equip_name: '발효기 C',
-    equip_type: '발효기',
-    manager: '김대리',
-    equip_status: '비가동',
-    insp_check: '30일',
-  },
-  {
-    equip_code: 'MG-001',
-    equip_name: '발효기 C',
-    equip_type: '발효기',
-    manager: '김대리',
-    equip_status: '비가동',
-    insp_check: '30일',
-  },
-  {
-    equip_code: 'MG-001',
-    equip_name: '발효기 C',
-    equip_type: '발효기',
-    manager: '김대리',
-    equip_status: '비가동',
-    insp_check: '30일',
-  },
-  {
-    equip_code: 'MG-001',
-    equip_name: '발효기 C',
-    equip_type: '발효기',
-    manager: '김대리',
-    equip_status: '비가동',
-    insp_check: '30일',
-  },
-  {
-    equip_code: 'MG-001',
-    equip_name: '발효기 C',
-    equip_type: '발효기',
-    manager: '김대리',
-    equip_status: '비가동',
-    insp_check: '30일',
-  },
-  {
-    equip_code: 'MG-001',
-    equip_name: '발효기 C',
-    equip_type: '발효기',
-    manager: '김대리',
-    equip_status: '비가동',
-    insp_check: '30일',
-  },
-  {
-    equip_code: 'MG-001',
-    equip_name: '발효기 C',
-    equip_type: '발효기',
-    manager: '김대리',
-    equip_status: '비가동',
-    insp_check: '30일',
-  },
-  {
-    equip_code: 'MG-001',
-    equip_name: '발효기 C',
-    equip_type: '발효기',
-    manager: '김대리',
-    equip_status: '비가동',
-    insp_check: '30일',
-  },
-  {
-    equip_code: 'MG-001',
-    equip_name: '발효기 C',
-    equip_type: '발효기',
-    manager: '김대리',
-    equip_status: '비가동',
-    insp_check: '30일',
-  },
-])
-
 const flatpickrConfig = {
   dateFormat: 'Y-m-d',
   altInput: true,
@@ -182,8 +83,8 @@ onBeforeMount(() => {
     <ComponentCard title="조회">
       <template #header-right>
         <div class="flex justify-end">
-          <button @click="getEquipList" class="btn-common btn-color">초기화</button>
-          <button class="btn-common btn-white">조회</button>
+          <button class="btn-common btn-color">초기화</button>
+          <button @click="getEquipList" class="btn-common btn-white">조회</button>
         </div>
       </template>
       <template #body-content>
@@ -224,10 +125,10 @@ onBeforeMount(() => {
         </template>
         <template #body-content>
           <DataTable
-            :value="equipMent"
+            :value="equipList"
             showGridlines
             v-model:selection="selectedbox"
-            dataKey="mat_code"
+            dataKey="equip_code"
             scrollable
             scrollHeight="500px"
           >

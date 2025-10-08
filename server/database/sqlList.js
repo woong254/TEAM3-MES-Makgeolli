@@ -20,7 +20,7 @@ const prodord = require("./sqls/prodord.js");
 const quality = require("./sqls/qualityInsp.js");
 
 // 설비
-// const equipment = require("./sqls/equipment.js");
+const equipment = require("./sqls/equipform.js");
 
 module.exports = {
   // 기준 정보
@@ -39,5 +39,5 @@ module.exports = {
   ...quality,
 
   // 설비
-  // ...equipment,
+  ...equipment,
 };
