@@ -78,7 +78,13 @@ function selectedProductValue() {
 <template>
   <div v-if="props.visible">
     <form @submit.prevent="submitSearchForm" action="">
-      <Modal title="제품선택" :fullScreenBackdrop="true" @close="closeModal">
+      <Modal
+        title="제품선택"
+        :fullScreenBackdrop="true"
+        @close="closeModal"
+        title-align="left"
+        header-align="right"
+      >
         <template #modal-header>
           <div class="flex justify-end">
             <button type="button" class="btn-common-modal btn-white" @click="resetSearchForm">

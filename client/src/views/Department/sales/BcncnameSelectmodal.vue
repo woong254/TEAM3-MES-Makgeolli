@@ -73,7 +73,13 @@ const submitSearchForm = async () => {
 <template>
   <div v-if="props.visible">
     <form @submit.prevent="submitSearchForm" action="">
-      <Modal title="거래처선택" :fullScreenBackdrop="true" @close="closeModal">
+      <Modal
+        title="거래처선택"
+        :fullScreenBackdrop="true"
+        @close="closeModal"
+        header-align="right"
+        title-align="left"
+      >
         <template #modal-header>
           <div class="flex justify-end">
             <button type="button" class="btn-common-modal btn-white" @click="resetSearchForm">
