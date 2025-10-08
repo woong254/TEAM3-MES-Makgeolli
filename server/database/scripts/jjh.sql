@@ -18,7 +18,7 @@ SELECT INDEX_SCHEMA -- 데이터베이스명
  ORDER BY INDEX_SCHEMA
         , INDEX_NAME;
 
--- 주문서 조회 페이지 쿼리문
+-- 주문서조회-주문서조회검색-조회버튼
 SELECT o.ord_id,
 	   o.ord_name,
        e.emp_name,
@@ -40,9 +40,87 @@ FROM   orderform o
        JOIN orderdetail od
        ON   o.ord_id = od.ord_id
        JOIN prod_master p
-       ON   od.prod_code = p.prod_code
-WHERE  o.ord_name LIKE '%막걸리%';
+       ON   od.prod_code = p.prod_code;
 
+-- 주문서관리-주문서상세조회검색-조회버튼-주문서상세정보
+SELECT o.ord_id,
+	   o.ord_name,
+       b.bcnc_name,
+       b.pic,
+       o.ord_date,
+       o.due_date,
+       e.emp_name
+FROM   orderform o
+	   JOIN bcnc_master b
+       ON   o.bcnc_code = b.bcnc_code
+       JOIN emp_master e
+       ON   o.emp_id = e.emp_id;
+       
+-- 주문서관리-주문서상세조회검색-조회버튼-주문제품
+SELECT od.prod_code,
+       p.prod_name,
+       p.prod_spec,
+       p.prod_unit,
+       od.op_qty
+FROM   orderdetail od
+	   JOIN orderform o
+       ON   od.ord_id = o.ord_id
+       JOIN prod_master p
+       ON   od.prod_code = p.prod_code
+WHERE  o.ord_name = '생막걸리예담주문';
+	   
+-- ord_id자동생성
+SELECT  CONCAT(DATE_FORMAT(NOW(), '%y%m'),LPAD(IFNULL(MIN(SUBSTR(ord_id, -3)),0) + 1, 3, '0')) FROM orderform;
+-- ord_id자동생성
+SELECT CONCAT('ORD', CONCAT(DATE_FORMAT(NOW(), '%y%m'),LPAD(IFNULL(MAX(SUBSTR(ord_id, -3)),0) + 1, 3, '0'))) 
+FROM orderform
+WHERE SUBSTR(ord_id, 4, 4) = DATE_FORMAT(NOW(), '%y%m')
+FOR UPDATE;
+       
+-- 주문서관리-주문서상세정보-저장버튼
+DELIMITER $$
+CREATE PROCEDURE add_form( 
+	IN p_ord_name  VARCHAR(10),
+    IN p_emp_name  VARCHAR(100),
+    IN p_bcnc_name VARCHAR(100),
+    IN p_due_date  DATE,
+    IN p_ord_date  DATE,
+    IN p_ord_knd   VARCHAR(30)
+)
+BEGIN
+	SELECT CONCAT('ORD', CONCAT(DATE_FORMAT(NOW(), '%y%m'),LPAD(IFNULL(MAX(SUBSTR(ord_id, -3)),0) + 1, 3, '0'))) 
+    INTO   @new_ord_id
+	FROM   orderform
+	WHERE  SUBSTR(ord_id, 4, 4) = DATE_FORMAT(NOW(), '%y%m')
+	FOR UPDATE;
+     
+	INSERT INTO order_form(
+		ord_id,
+		ord_name,
+        emp_id,
+        bcnc_code,        
+		due_date,        		
+		ord_date,
+		ord_knd)
+	VALUES(
+		@new_ord_id,
+        p_ord_name,
+        (SELECT emp_id
+		 FROM   emp_master
+         WHERE  emp_name = p_emp_name),
+        (SELECT bcnc_code
+		 FROM   bcnc_master
+         WHERE  bcnc_name = p_bcnc_name),
+        p_due_date,
+        p_ord_date,
+        p_ord_knd);
+END $$
+DELIMITER ;
+
+CALL add_form('test','한빛테크(주)','
+
+	
+       
 SELECT *
 FROM   orderform;
 SELECT *
@@ -72,6 +150,7 @@ DESC bcnc_master;
 DESC equip_downtime;
 DESC equip_repair;
 DESC equip_inspection;
+DESC emp_master;
 
 -- 거래처기준관리, 거래처 데이터 삽입
 INSERT INTO bcnc_master(bcnc_code, bcnc_name, bcnc_type, brn, pic, biz_type, bcnc_category, bcnc_tel, writer, write_date)
@@ -84,6 +163,8 @@ INSERT INTO prod_master(prod_code, prod_name, prod_type, prod_spec, prod_unit, e
 -- 주문서상세, 주문서상세 제품 데이터 삽입                
 INSERT INTO orderdetail(ord_id, no, prod_code, op_qty, ofd_st)
 				VALUES ('20251002-01',1,'MAK_001',20,'주문완료');
+INSERT INTO orderdetail(ord_id, no, prod_code, op_qty, ofd_st)
+				VALUES ('20251002-01',2,'MAK_001',20,'주문완료');
                 
 -- 주문서조회, 주문서 데이터 삽입
 INSERT INTO orderform(ord_id, ord_name, due_date, bcnc_code, emp_id, ord_date, ord_knd, order_status)

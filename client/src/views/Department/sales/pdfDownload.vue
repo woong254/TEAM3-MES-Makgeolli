@@ -199,7 +199,7 @@ const exportPDF = async () => {
 <template>
   <div v-if="props.visible">
     <!-- ⚠️ NOTE: 백엔드 API 호출 방식에서는 CDN 스크립트가 필요 없습니다. ⚠️ -->
-    <Modal title="주문서 미리보기" :fullScreenBackdrop="true">
+    <Modal title="주문서 미리보기" :fullScreenBackdrop="true" @close="closeModal">
       <template #modal-header>
         <div class="flex justify-end">
           <!-- 버튼 클릭 시 API 호출 -->
@@ -418,7 +418,7 @@ const exportPDF = async () => {
                   <th
                     style="
                       border: 1px solid #000;
-                      width: 20%;
+                      width: 10%;
                       text-align: center;
                       background-color: #f2f2f2;
                       font-size: 0.7rem;
@@ -429,7 +429,7 @@ const exportPDF = async () => {
                   <th
                     style="
                       border: 1px solid #000;
-                      width: 20%;
+                      width: 30%;
                       text-align: center;
                       background-color: #f2f2f2;
                       font-size: 0.7rem;
