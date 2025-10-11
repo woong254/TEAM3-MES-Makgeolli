@@ -4,48 +4,77 @@ import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue';
 import ComponentCard from '@/components/common/ComponentCardButton.vue';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
-import flatPickr from 'vue-flatpickr-component';
 import '@/assets/common.css';
-import 'flatpickr/dist/flatpickr.css';
-import data from '@/data/sampleProd.vue';
-
 import { ref, computed } from 'vue';
 
-interface makeInfoInterface {
-  make_name: string,
-  make_start_date: string,
-}
+// 달력 import
+import flatPickr from 'vue-flatpickr-component';
+import 'flatpickr/dist/flatpickr.css';
+import { Korean } from 'flatpickr/dist/l10n/ko.js';
 
-const currentPageTitle = ref('생산지시관리');
+import ProductSelectmodal from '../sales/ProductSelectmodal.vue' // 제품선택
 
-const makeStartDates = ref(null);
-const makeEndDates = ref(null);
+// props 인터페이스
+interface Props {
+  title: string
+  className?: string
+  desc?: string
+};
+
+// 지시서-기본정보
+interface MakeInfo {
+  make_code: string       // 지시코드
+  make_name: string       // 생산지시명
+  emp_name: string        // 지시담당자
+  make_start_date: string // 생산 시작일
+  make_end_date: string   // 생산 종료일
+  remake: string          // 비고
+};
+
+//지시서-상세정보(상품)
+interface MakeItem {
+  no: string            // 등록순서
+  prod_code: string     // 제품코드
+  prod_name: string     // 제품명
+  prod_spec: string     // 제품규격
+  prod_unit: string     // 관리단위
+  make_qty: number      // 생산 수량, 초기값 100에 맞춰 number 타입으로 설정
+  make_priority: number // 우선순위
+  remark: string        // 비고
+};
+
+defineProps<Props>();
+
+const selectProducts = ref<MakeItem[]>([]);
+const products = ref<MakeItem[]>([]);
+
+// 지시서 기본정보 초기화
+const makeInfo = ref<MakeInfo>({
+  make_code: '',
+  make_name: '',
+  emp_name: '',
+  make_start_date: '', 
+  make_end_date: '',
+  remake: '',
+});
 
 // 생산 시작일 설정
 const makeStartDateConfig = computed(() => ({
   dateFormat: 'Y-m-d',
-  altInput: true,
-  altFormat: 'Y-m-d',
+  altInput: false,
   wrap: true,
+  maxDate: makeInfo.value.make_end_date,
+  locale: Korean,
 }));
 
-// 생산 시작일 설정
+// 생산 종료일 설정
 const makeEndDateConfig = computed(() => ({
   dateFormat: 'Y-m-d',
-  altInput: true,
-  altFormat: 'Y-m-d',
+  altInput: false,
   wrap: true,
+  minDate: makeInfo.value.make_start_date ,
+  locale: Korean,
 }));
-
-const selectedbox = ref([]);
-
-// 입력 정보 템플릿 스타일
-const inputStyle = "dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-const inputBlackStyle = "dark:bg-dark-900 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:shadow-focus-ring focus:outline-hidden focus:ring-0 disabled:border-gray-100 disabled:bg-gray-50 disabled:placeholder:text-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 dark:disabled:border-gray-800 dark:disabled:bg-white/[0.03] dark:disabled:placeholder:text-white/15";
-const labelStyle = "block text-sm font-medium text-gray-700 dark:text-gray-400 mb-2";
-
-// 생산 지시 초기화
-// const makeInfo = ref<
 
 // 생산 지시 상세 - 상품 추가 모달
 const productModal = ref(false);
@@ -57,12 +86,64 @@ const productModalClose= () => {
 }
 
 
+// 제품 선택하면 데이터 넘어오는 함수실행
+const ProductSelect = (value: MakeItem[]) => {
+  // console.log('선택된 제품:', value)
+  value.forEach((item) => {
+    const newNo = `${new Date().getTime()}_${item.prod_code}`
+    products.value.push({
+      no: newNo,
+      prod_code: item.prod_code,
+      prod_name: item.prod_name,
+      prod_spec: item.prod_spec,
+      prod_unit: item.prod_unit,
+      make_qty: item.make_qty || 1,
+      make_priority: item.make_priority,
+      remark: item.remark ?? '',
+    })
+  })
+  productModal.value = false;
+  console.log('추가 후 products:', products.value)
+  // console.log('추가 후 db조회 주문서상세정보 결과:', dbOrderDetailInfo.value)
+  // console.log('추가 후 db조회 주문제품 결과:', dbOrderProducts.value)
+}
+
+// 행삭제 하면 선택한 제품들 삭제
+const deleteSelectedRows = (prod: MakeItem[]) => {
+  console.log('행삭제 선택한 제품들', prod)
+  products.value = products.value.filter((item) => !prod.includes(item))  
+  prod.length = 0
+  console.log('행 삭제 후 제품배열들', products.value)
+  console.log('행 삭제 후 선택한제품들', prod)
+  // console.log('행 삭제 후 db조회 주문서상세정보 결과:', dbOrderDetailInfo.value)
+  // console.log('행 삭제 후 db조회 주문제품 결과:', dbOrderProducts.value)
+}
+
+// 초기화
+const resetInfo = () => {
+  makeInfo.value.make_code = ''
+  makeInfo.value.make_name = ''
+  makeInfo.value.emp_name = ''
+  makeInfo.value.make_start_date = ''
+  makeInfo.value.make_end_date = ''
+  makeInfo.value.remake = ''
+  products.value = []
+  selectProducts.value = []
+}
+
+const currentPageTitle = ref('생산지시관리');
+
+// 입력 정보 템플릿 스타일
+const inputStyle = "dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+const inputBlackStyle = "dark:bg-dark-900 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:shadow-focus-ring focus:outline-hidden focus:ring-0 disabled:border-gray-100 disabled:bg-gray-50 disabled:placeholder:text-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 dark:disabled:border-gray-800 dark:disabled:bg-white/[0.03] dark:disabled:placeholder:text-white/15";
+const labelStyle = "block text-sm font-medium text-gray-700 dark:text-gray-400 mb-2";
+const baseInputClass = "dark:bg-dark-900 h-8 w-full rounded-lg border border-gray-300 bg-transparent pl-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800";
 </script>
 
 <template>
   <AdminLayout>
     <PageBreadcrumb :pageTitle="currentPageTitle" />
-
+    
     <div class="space-y-5 sm:space-y-6">
       <ComponentCard
       title="기본사항"
@@ -70,70 +151,72 @@ const productModalClose= () => {
         'shadow-md rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]',
       ]"
       >
-        <!-- 생산 지시 기본 정보 -->
-        <template #header-right>
-          <div class="flex justify-end">
-            <button type="button" class="btn-white btn-common" style="width: auto;">계획서 불러오기</button>
-            <button type="button" class="btn-white btn-common">지시 목록</button>
-            <button type="button" class="btn-white btn-common">초기화</button>
-            <button type="button" class="btn-color btn-common">등록/수정</button>
-            <button type="button" class="btn-white btn-common">삭제</button>
+      <!-- 생산 지시 기본 정보 -->
+      <template #header-right>
+        <div class="flex justify-end">
+          <button type="button" class="btn-white btn-common" style="width: auto;">계획서 불러오기</button>
+          <button type="button" class="btn-white btn-common">지시 목록</button>
+          <button type="button" class="btn-white btn-common" @click="resetInfo">초기화</button>
+          <button type="button" class="btn-color btn-common">등록/수정</button>
+          <button type="button" class="btn-white btn-common">삭제</button>
+        </div>
+      </template>
+      <template #body-content>
+        <div class="flex gap-4 mb-1.5">
+          <div class="flex-1">
+            <label :class="labelStyle">
+              생산지시코드
+            </label>
+            <input
+            type="text"
+            disabled
+            :class="inputBlackStyle"
+            v-model="makeInfo.make_code"
+            required
+            />
           </div>
-        </template>
-        <template #body-content>
-          <div class="flex gap-4 mb-1.5">
-            <div class="flex-1">
-              <label :class="labelStyle">
-                생산지시코드
-              </label>
-              <input
-                type="text"
-                disabled
-                :class="inputBlackStyle"
-                required
-              />
-            </div>
-            <div class="flex-1">
-              <label :class="labelStyle">
-                생산지시명
-              </label>
-              <input
-                type="text"
-                :class="inputStyle"
-                placeholder=""
-              />
-            </div>
-            <div class="flex-1">
-              <label :class="labelStyle">
-                지시담당자
-              </label>
-              <input
-                type="text"
-                :class="inputStyle"
-                placeholder=""
-                readonly
-              />
-            </div>
+          <div class="flex-1">
+            <label :class="labelStyle">
+              생산지시명
+            </label>
+            <input
+            type="text"
+            :class="inputStyle"
+            v-model="makeInfo.make_name"
+            />
           </div>
-          <div class="flex items-center gap-4">
-            <div class="relative" style="min-width:260px;">
-              <label :class="labelStyle">
-                생산일자
-              </label>
-              <div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
-                <div class="relative w-45">
-                  <flat-pickr
-                    v-model="makeStartDates"
-                    :config="makeStartDateConfig"
-                    class="dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pl-4 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                    placeholder="시작일"
-                  />
-                  <span
-                    class="absolute text-gray-500 -translate-y-1/2 pointer-events-none right-3 top-1/2 dark:text-gray-400"
-                  >
-                    <svg
-                      class="fill-current"
-                      width="20"
+          <div class="flex-1">
+            <label :class="labelStyle">
+              지시담당자
+            </label>
+            <input
+            type="text"
+            disabled
+            :class="inputBlackStyle"
+            v-model="makeInfo.emp_name"
+            required
+            />
+          </div>
+        </div>
+        <div class="flex items-center gap-4">
+          <div class="relative" style="min-width:260px;">
+            <label :class="labelStyle">
+              생산일자
+            </label>
+            <div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+              <div class="relative w-45">
+                <flat-pickr
+                v-model="makeInfo.make_start_date"
+                :config="makeStartDateConfig"
+                class="dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pl-4 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+                placeholder="시작일"
+                />
+                <span
+                class="absolute text-gray-500 -translate-y-1/2 pointer-events-none right-3 top-1/2 dark:text-gray-400"
+                >
+                <svg
+                class="fill-current"
+                width="20"
                       height="20"
                       viewBox="0 0 20 20"
                       fill="none"
@@ -151,7 +234,7 @@ const productModalClose= () => {
                 <span>ㅡ</span>
                 <div class="relative w-45">
                   <flat-pickr
-                    v-model="makeEndDates"
+                    v-model="makeInfo.make_end_date"
                     :config="makeEndDateConfig"
                     class="dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pl-4 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
                     placeholder="종료일"
@@ -185,72 +268,117 @@ const productModalClose= () => {
               <input
                 type="text"
                 :class="inputStyle"
-                placeholder=""
+                v-model="makeInfo.remake"
               />
             </div>
           </div>
         </template>
       </ComponentCard>
-      <ComponentCard
-        title="지시할 제품"
-        :class="[
-          'shadow-md rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]',
-        ]"
-      >
-        <!-- 생산 지시 상세정보 -->
-        <template #header-right>
-          <div class="flex justify-end">
-            <button type="button" class="btn-color btn-common" @focus="productModalOpen">제품추가</button>
-            <button type="button" class="btn-white btn-common">제품삭제</button>
-          </div>
-        </template>
-        <template #body-content>
-          <div class="card">
-            <DataTable 
-              :value="data.sampleProd"
-              v-model:selection="selectedbox"
-              data-key="make_code"
+      <div class="space-y-5 sm:space-y-6 mt-2">
+        <ComponentCard
+          title="지시할 제품"
+          :class="[
+            'shadow-md rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]',
+          ]"
+        >
+          <!-- 생산 지시 상세정보 -->
+          <template #header-right>
+            <div class="flex justify-end">
+              <button type="button" class="btn-color btn-common" @focus="productModalOpen">제품추가</button>
+              <button type="button" class="btn-white btn-common" @click="() => deleteSelectedRows(selectProducts)">제품삭제</button>
+              <ProductSelectmodal
+                @selectedProductValue="ProductSelect"
+                :visible="productModal"
+                @close="productModalClose"
+              />
+            </div>
+          </template>
+          <template #body-content>
+            <div class="card h-100 ">
+              <DataTable 
+                :value="products"
+                v-model:selection="selectProducts"
+                data-key="no"
+                showGridlines
+                scrollable
+                scrollHeight="390px"
+                size="small"
+                :rows="10"
               >
-              <Column selectionMode="multiple" headerStyle="width: 37px" />
-              <Column 
-                field="prod_code" 
-                header="제품코드" 
-                :pt="{ columnHeaderContent: 'justify-center' }"
-              />
-              <Column 
-                field="prod_name" 
-                header="제품명" 
-                :pt="{ columnHeaderContent: 'justify-center' }"
-              />
-              <Column 
-                field="prod_spec" 
-                header="규격" 
-                :pt="{ columnHeaderContent: 'justify-center' }"
-              />
-              <Column 
-                field="prod_unit" 
-                header="관리단위" 
-                :pt="{ columnHeaderContent: 'justify-cent er' }"
-              />
-              <Column 
-                field="make_qty" 
-                header="생산수량" 
-                :pt="{ columnHeaderContent: 'justify-center' }"
-              />
-              <Column 
-                field="make_priority" 
-                header="우선순위" 
-                :pt="{ columnHeaderContent: 'justify-center' }"
-              />
-              <Column 
-                field="remark" 
-                header="비고" 
-                :pt="{ columnHeaderContent: 'justify-center' }"
-              />
-            </DataTable>
-          </div>
-        </template>
-      </ComponentCard>
+                <Column selectionMode="multiple" headerStyle="width: 37px" />
+                <Column 
+                  field="prod_code" 
+                  header="제품코드" 
+                  :pt="{ columnHeaderContent: 'justify-center' }"
+                />
+                <Column 
+                  field="prod_name" 
+                  header="제품명" 
+                  :pt="{ columnHeaderContent: 'justify-center' }"
+                />
+                <Column 
+                  field="prod_spec" 
+                  header="규격"
+                  style="text-align: right;"
+                  :pt="{ columnHeaderContent: 'justify-center' }"
+                />
+                <Column 
+                  field="prod_unit" 
+                  header="관리단위"
+                  style="text-align: left;"
+                  :pt="{ columnHeaderContent: 'justify-center' }"
+                />
+                <Column
+                  field="make_qty" 
+                  header="생산수량" 
+                  :pt="{ columnHeaderContent: 'justify-center' }"
+                >
+                  <template #body="{ data }">
+                    <input
+                      v-model="data.make_qty"
+                      type="number"
+                      min="1"
+                      style="text-align: right"
+                      :class="baseInputClass"
+                      placeholder="생산수량"
+                    />
+                  </template>
+                </Column>
+                <Column 
+                  field="make_priority" 
+                  header="우선순위" 
+                  :pt="{ columnHeaderContent: 'justify-center' }"
+                >
+                  <template #body="{ data }">
+                    <input
+                      v-model="data.make_priority"
+                      type="number"
+                      min="1"
+                      style="text-align: right"
+                      :class="baseInputClass"
+                      placeholder="우선순위"
+                    />
+                  </template>
+                </Column>
+                <Column 
+                  field="remark" 
+                  header="비고" 
+                  :pt="{ columnHeaderContent: 'justify-center' }"
+                >
+                  <template #body="{ data }">
+                    <input
+                      v-model="data.remark"
+                      type="text"
+                      :class="baseInputClass"
+                      placeholder="내용을 입력해주세요."
+                    />
+                  </template>
+                </Column>
+              </DataTable>
+            </div>
+          </template>
+        </ComponentCard>
+      </div>
     </div>
     
   </AdminLayout>
