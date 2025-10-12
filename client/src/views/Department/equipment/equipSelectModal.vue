@@ -110,7 +110,7 @@ const equipData = ref([
 
 <template>
   <div v-if="props.visible">
-    <Modal title="검사대상" :fullScreenBackdrop="true">
+    <Modal title="담당자" :fullScreenBackdrop="true">
       <template #modal-header>
         <div class="Modal">
           <button type="button" class="btn-common-modal btn-white">초기화</button>
