@@ -275,8 +275,70 @@ VALUES ('PUR-009', 'M-20250317-001', 500, 500);
 INSERT INTO pur_mat (pur_code, mat_code, pur_qty, receipt_qty, remark)
 VALUES ('PUR-010', 'M-20250315-002', 600, 0, '검수 전');
 
-SELECT *
-FROM pur_form;
+ALTER TABLE lot_mat
+  MODIFY stock_qty DECIMAL(10,2) AS (receipt_qty - release_qty) STORED;
+
+DELIMITER $$
+
+CREATE TRIGGER trg_lot_mat_bi
+BEFORE INSERT ON lot_mat
+FOR EACH ROW
+BEGIN
+  SET NEW.stock_qty = NEW.receipt_qty - NEW.release_qty;
+END$$
+
+CREATE TRIGGER trg_lot_mat_bu
+BEFORE UPDATE ON lot_mat
+FOR EACH ROW
+BEGIN
+  SET NEW.stock_qty = NEW.receipt_qty - NEW.release_qty;
+END$$
+
+DELIMITER ;
 
 SELECT *
-FROM pur_mat;
+FROM mat_master;
+
+insert into lot_mat
+  (mat_lot, mat_code, exp_date, prod_date, receipt_qty, release_qty, remark)
+values
+('wr-260210','m-20250201-001','2026-02-10','2025-02-10',400.00,0.00,'멥쌀 20kg 포대 20개'),
+('wr-260401','m-20250201-001','2026-04-01','2025-04-01',200.00,0.00,'멥쌀 20kg 포대 10개'),
+('gr-260205','m-20250202-001','2026-02-05','2025-02-05',200.00,0.00,'찹쌀 20kg 포대 10개'),
+('gr-260501','m-20250202-001','2026-05-01','2025-05-01',100.00,0.00,'찹쌀 20kg 포대 5개'),
+('nr-250916','m-20250315-001','2025-09-16','2025-03-16',100.00,0.00,'전통누룩 10kg 포대 10개'),
+('ym-270312','m-20250315-002','2027-03-12','2025-03-12',25.00,0.00,'건조효모 5kg 팩 5개'),
+('sg-270318','m-20250317-001','2027-03-18','2025-03-18',400.00,0.00,'정제설탕 20kg 봉지 20개');
+
+  SELECT
+  m.mat_code,
+  m.mat_name,
+  COALESCE(SUM(l.receipt_qty - l.release_qty), 0) AS stock,  -- LOT 합계
+  m.safe_stock,
+  m.mat_spec,
+  m.mat_unit
+FROM mat_master m
+LEFT JOIN lot_mat l
+  ON l.mat_code = m.mat_code
+GROUP BY m.mat_code, m.mat_name, m.safe_stock, m.mat_spec, m.mat_unit
+ORDER BY m.mat_code;
+
+ALTER TABLE pur_form
+  ADD UNIQUE KEY uk_pur_code (pur_code);
+
+ALTER TABLE pur_mat
+  ADD UNIQUE KEY uk_pur_mat (pur_code, mat_code);
+  
+ALTER TABLE pur_mat
+  MODIFY pur_mat_id INT NOT NULL AUTO_INCREMENT;
+  
+DELETE 
+FROM pur_form
+WHERE pur_code = 'PUR-012';
+
+ALTER TABLE pur_mat
+  MODIFY receipt_qty    DECIMAL(10,2) NOT NULL DEFAULT 0,
+  MODIFY unreceipt_qty  DECIMAL(10,2) NOT NULL DEFAULT 0,
+  MODIFY receipt_status VARCHAR(100)  NOT NULL DEFAULT '입고대기';
+
+  

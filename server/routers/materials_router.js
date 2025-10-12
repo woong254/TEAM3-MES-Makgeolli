@@ -1,20 +1,71 @@
-// 자재 라우팅 설정
 const express = require("express");
-
 const router = express.Router();
-
 const materialsService = require("../services/materials_service.js");
 
-// 매입처 조회
+// ----- 목록/검색 -----
+router.get("/purList", async (req, res) => {
+  let purList = await materialsService
+    .findPurList()
+    .catch((err) => console.error(err));
+  res.send(purList);
+});
+router.get("/purTarget", async (req, res) => {
+  let pur_name = req.query.pur_name;
+  let purList = await materialsService
+    .findPurTarget(pur_name)
+    .catch((err) => console.error(err));
+  res.send(purList);
+});
+
+// ----- 단건 조회 (모달 선택 시 사용) -----
+router.get("/pur/header", async (req, res) => {
+  const pur_code = req.query.pur_code;
+  if (!pur_code)
+    return res.status(400).send({ ok: false, message: "NO_PUR_CODE" });
+  const header = await materialsService
+    .findPurHeaderByCode(pur_code)
+    .catch((err) => {
+      console.error(err);
+      return null;
+    });
+  res.send(header || null);
+});
+
+router.get("/pur/lines", async (req, res) => {
+  const pur_code = req.query.pur_code;
+  if (!pur_code)
+    return res.status(400).send({ ok: false, message: "NO_PUR_CODE" });
+  const lines = await materialsService
+    .findPurLinesByCode(pur_code)
+    .catch((err) => {
+      console.error(err);
+      return [];
+    });
+  res.send(lines || []);
+});
+
+// ----- 자재 목록/검색 -----
+router.get("/purMatList", async (req, res) => {
+  let matList = await materialsService
+    .findPurMatList()
+    .catch((err) => console.error(err));
+  res.send(matList);
+});
+router.get("/purMatTarget", async (req, res) => {
+  let mat_name = req.query.mat_name;
+  let matList = await materialsService
+    .findPurMatTarget(mat_name)
+    .catch((err) => console.error(err));
+  res.send(matList);
+});
+
+// ----- 매입처 목록/검색 -----
 router.get("/bcncList", async (req, res) => {
   let bcncList = await materialsService
     .findBcncList()
     .catch((err) => console.error(err));
-
   res.send(bcncList);
 });
-
-// 매입처 이름으로 검색
 router.get("/bcncTarget", async (req, res) => {
   let bcnc_name = req.query.bcnc_name;
   let bcncList = await materialsService
@@ -23,13 +74,40 @@ router.get("/bcncTarget", async (req, res) => {
   res.send(bcncList);
 });
 
-// 발주서코드 생성
+// ----- 발주서코드 생성 -----
 router.get("/purManagement", async (req, res) => {
   let pur_code = await materialsService.makePurCode().catch((err) => {
     console.error(err);
     return null;
   });
   res.send({ pur_code });
+});
+
+// ----- 저장 (헤더+라인 동기화) -----
+router.post("/pur/save", async (req, res) => {
+  const { header, lines } = req.body || {};
+  if (!header?.pur_code) {
+    return res.status(400).send({ ok: false, message: "NO_PUR_CODE" });
+  }
+  const result = await materialsService
+    .savePurchase(header, lines)
+    .catch((e) => {
+      console.error(e);
+      return { ok: false };
+    });
+  res.send(result);
+});
+
+//발주서 삭제
+router.post("/pur/delete", async (req, res) => {
+  const { pur_code } = req.body || {};
+  if (!pur_code) return res.status(400).send({ ok: false });
+
+  const out = await materialsService
+    .deletePurList(pur_code)
+    .catch((err) => (console.error(err), { ok: false }));
+
+  res.send(out);
 });
 
 module.exports = router;
