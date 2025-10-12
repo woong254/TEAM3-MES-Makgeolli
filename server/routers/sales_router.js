@@ -29,7 +29,7 @@ router.get("/ordFormManageView", async (req, res) => {
     ord_end_date,
   } = req.query;
 
-  console.log("검색 조건:", req.query); // 확인용 로그
+  console.log("검색 조건:", req.query); // 확인용
   const ordFormInfo = await salesService
     .ordFormInfoView({
       ord_name,
@@ -67,6 +67,12 @@ router.get("/productsView", async (req, res) => {
     .productsView(req.query)
     .catch((err) => console.error(err));
   res.send(prodInfo);
+});
+// 주문서삭제 -- 미완성
+router.delete("/removeOrder/:ord_id", async (req, res) => {
+  const { ord_id } = req.params;
+  const result = await salesService.removeOrder(ord_id);
+  res.json(result);
 });
 
 module.exports = router;

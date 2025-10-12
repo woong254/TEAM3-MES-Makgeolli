@@ -14,10 +14,13 @@ import '@/assets/common.css' // 한솔누나 css import
 import BcncnameSelectmodal from './BcncnameSelectmodal.vue' // 거래처, 대표자 클릭시 조회 모달창
 import pdfDownload from './pdfDownload.vue' // pdf다운로드
 import ProductSelectmodal from './ProductSelectmodal.vue' // 제품선택
-import InputNumber from 'primevue/inputnumber' // 수량입력칸
+
 import axios from 'axios' // axios 노드쪽 연결
 import isEqual from 'lodash/isEqual'
+import OrderSelectmodal from './OrderSelectmodal.vue' // 모달import
 
+const baseInputClass =
+  'dark:bg-dark-900 h-8 w-full rounded-lg border border-gray-300 bg-transparent pl-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
 // 주문서관리 props 인터페이스
 interface Props {
   title: string
@@ -39,7 +42,8 @@ interface OrderItem {
   prod_name: string
   prod_spec: string
   prod_unit: string
-  op_qty: number // 초기값 100에 맞춰 number 타입으로 설정
+  op_qty: number
+  remark: string // 비고
 }
 
 // 주문서관리-주문서상세정보 input 인터페이스
@@ -51,6 +55,25 @@ interface OrderInfoInterface {
   ord_date: string // 주문일자
   due_date: string // 납기일자
   emp_name: string // 사원이름, 주문서작성담당자
+  remark: string // 비고
+}
+
+// 주문서 저장할때 사용하는 타입
+interface OrderProduct {
+  no: number
+  prod_code: string
+  op_qty: number
+  remark: string
+}
+interface OrderRequest {
+  ord_id: string | null
+  ord_name: string
+  user_id: string
+  bcnc_name: string
+  due_date: string
+  ord_knd: string
+  remark: string
+  products: OrderProduct[]
 }
 
 // props 정의
@@ -77,6 +100,7 @@ const orderinfo = ref<OrderInfoInterface>({
   ord_date: '', // 주문일자
   due_date: '', // 납기일자
   emp_name: '', // 사원이름, 주문서작성담당자
+  remark: '', // 비고
 })
 
 // 페이지 타이틀
@@ -96,7 +120,7 @@ const pdfopenModal = () => {
     alert('주문서 등록 후 PDF 내보내기 가능합니다.')
     return
   }
-  console.log('dbOrder :', dbOrderProducts.value, '/ products.value :  ', products.value)
+  console.log('PDF dbOrder :', dbOrderProducts.value, '/ PDF products.value :  ', products.value)
   if (!isEqual(dbOrderProducts.value, products.value)) {
     alert('주문서 수정 저장 후 PDF 내보내기가 가능합니다.')
     return
@@ -105,6 +129,7 @@ const pdfopenModal = () => {
     alert('주문서 수정 저장 후 PDF 내보내기가 가능합니다.')
     return
   }
+
   pdfModalOpen.value = true
 }
 const pdfcloseModal = () => {
@@ -169,6 +194,17 @@ const submitSearchForm = () => {
 // 주문서 조회 검색해서 나온 데이터(초기값) 담은 전역변수
 const dbOrderDetailInfo = ref() // 주문서정보
 const dbOrderProducts = ref([]) // 주문서제품정보
+
+// 주문서조회 모달창 열고 닫을 수 있음
+const showOrderSelectModal = ref(false)
+const showOrderOpenModal = () => {
+  showOrderSelectModal.value = true
+}
+const showOrderCloseModal = () => {
+  showOrderSelectModal.value = false
+}
+const matchedOrders = ref([]) // 여러 주문서 결과 저장
+
 // 주문서 조회 검색 버튼 눌렀을때 주문서정보 데이터를 노드에서 가져오는 함수
 const getOrderFormSearch = async () => {
   try {
@@ -176,19 +212,32 @@ const getOrderFormSearch = async () => {
       params: search.value,
     })
     const payload = result.data
-    if (!payload) {
+    if (!payload || payload.list.length == 0) {
       alert('조회 결과가 없습니다.')
       resetInfoForm()
       return
     }
+
+    if (payload.list.length > 1) {
+      matchedOrders.value = payload.list
+      showOrderOpenModal()
+    }
+
     dbOrderDetailInfo.value = result.data.list[0]
-    dbOrderProducts.value = result.data.list1
     orderinfo.value = { ...result.data.list[0] }
-    products.value = [...result.data.list1]
+
     console.log('db조회 주문서상세정보 결과:', dbOrderDetailInfo.value)
+    console.log('orderinfo조회 결과:', orderinfo.value)
+    // 주문 제품 리스트 숫자 변환
+    const convertedList = result.data.list1.map((item: OrderItem) => ({
+      ...item,
+      op_qty: Number(item.op_qty), // 문자열 -> 숫자
+    }))
+
+    dbOrderProducts.value = structuredClone(convertedList)
+    products.value = structuredClone(convertedList)
     console.log('db조회 주문제품 결과:', dbOrderProducts.value)
     console.log('products조회 결과:', products.value)
-    console.log('orderinfo조회 결과:', orderinfo.value)
   } catch (err) {
     console.error('조회 중 오류 발생', err)
   }
@@ -196,6 +245,10 @@ const getOrderFormSearch = async () => {
 
 // 주문서 정보 저장버튼 누르면 실행하는 함수
 const submitInfoForm = async () => {
+  const isUpdate = !!orderinfo.value.ord_id // ord_id가 있으면 수정, 없으면 신규 등록
+
+  console.log('dbOrderProducts:', dbOrderProducts.value)
+  console.log('products:', products.value)
   if (!orderinfo.value.due_date) {
     alert('납기날짜를 선택해주세요.')
     return
@@ -206,28 +259,61 @@ const submitInfoForm = async () => {
     alert('거래처를 선택해주세요.')
     return
   }
-  const obj = [
-    orderinfo.value.ord_name,
-    '장준현',
-    orderinfo.value.bcnc_name,
-    orderinfo.value.due_date,
-    products.value[0].prod_name + '외' + products.value.length + '건',
-    products.value.map((item, idx) => [
-      idx + 1, // 1,2,3... 자동 증가
-      String(item.prod_code),
-      item.op_qty,
-    ]),
-  ]
+  // 화면 데이터와 DB 데이터 비교
+  let needSave = true // 실제로 저장이 필요한지
+  if (isUpdate) {
+    const productsChanged = !isEqual(dbOrderProducts.value, products.value)
+    const orderInfoChanged = !isEqual(dbOrderDetailInfo.value, orderinfo.value)
+
+    if (!productsChanged && !orderInfoChanged) {
+      alert('변경된 내용이 없습니다.')
+      needSave = false
+    } else {
+      const save = window.confirm('화면 데이터가 전과 다릅니다. 수정하시겠습니까?')
+      if (!save) return
+    }
+  } else {
+    const confirmed = window.confirm('신규 주문서를 등록하시겠습니까?')
+    if (!confirmed) return
+  }
+
+  if (!needSave) return // 변경 없으면 저장 안함
+
+  const obj: OrderRequest = {
+    ord_id: orderinfo.value.ord_id || null, // 기존 주문이면 ord_id 포함
+    ord_name: orderinfo.value.ord_name,
+    user_id: '장준현', // TODO: 실제 로그인 세션 값으로 교체
+    bcnc_name: orderinfo.value.bcnc_name,
+    due_date: orderinfo.value.due_date,
+    ord_knd: `${products.value[0].prod_name}외${products.value.length - 1}건`,
+    remark: orderinfo.value.remark,
+    products: products.value.map((item, idx) => ({
+      no: idx + 1,
+      prod_code: String(item.prod_code),
+      op_qty: Number(item.op_qty),
+      remark: item.remark || '',
+    })),
+  }
   try {
+    // 저장 조회를 한 번에
     const result = await axios.post('/api/insertOrderFormProducts', obj)
     const addRes = result.data
-    if (addRes.isSuccessed) {
-      alert('등록되었습니다.')
-    } else {
+
+    if (!addRes.isSuccessed) {
       alert('등록되지 않았습니다. 데이터를 확인해보세요.')
+      return
     }
+
+    // 프로시저에서 바로 반환된 데이터 사용
+    const { ord_id, orderinfo: savedOrderInfo, products: savedProducts } = addRes
+    alert(`${isUpdate ? '수정' : '등록'}되었습니다. 주문서 ID: ${ord_id}`)
+
+    // 화면에 렌더링
+    orderinfo.value = { ...orderinfo.value, ...savedOrderInfo }
+    products.value = savedProducts
   } catch (err) {
     console.error('추가 중 오류 발생', err)
+    alert('서버 요청 중 오류가 발생했습니다.')
   }
 
   console.log(orderinfo.value)
@@ -251,6 +337,7 @@ const resetInfoForm = () => {
   orderinfo.value.ord_id = ''
   orderinfo.value.ord_name = ''
   orderinfo.value.pic = ''
+  orderinfo.value.remark = ''
   products.value = []
   selectedProducts.value = []
 }
@@ -282,6 +369,7 @@ const ProductSelect = (value: OrderItem[]) => {
       prod_spec: item.prod_spec,
       prod_unit: item.prod_unit,
       op_qty: item.op_qty || 1,
+      remark: item.remark,
     })
   })
   console.log('추가 후 products:', products.value)
@@ -298,6 +386,30 @@ const deleteSelectedRows = (sel: OrderItem[]) => {
   console.log('행 삭제 후 db조회 주문서상세정보 결과:', dbOrderDetailInfo.value)
   console.log('행 삭제 후 db조회 주문제품 결과:', dbOrderProducts.value)
 }
+// 주문서삭제 버튼
+const deleteOrder = async () => {
+  const orderId = orderinfo.value.ord_id
+
+  if (!orderId) {
+    alert('삭제할 주문서가 선택되지 않았습니다.')
+    return
+  }
+
+  if (!confirm(`정말 주문서 [${orderId}]를 삭제하시겠습니까?`)) return
+
+  try {
+    const result = await axios.delete(`/api/removeOrder/${orderId}`)
+    if (result.data.isSuccessed) {
+      alert('주문서가 삭제되었습니다.')
+      resetInfoForm() // 폼 초기화
+    } else {
+      alert('삭제 실패: ' + (result.data.message || '서버에서 실패했습니다.'))
+    }
+  } catch (err) {
+    console.error('삭제 중 오류 발생:', err)
+    alert('삭제 중 오류가 발생했습니다.')
+  }
+}
 </script>
 <template>
   <AdminLayout>
@@ -310,7 +422,16 @@ const deleteSelectedRows = (sel: OrderItem[]) => {
               <button type="button" class="btn-white btn-common" @click="resetSearchForm">
                 초기화
               </button>
-              <button type="submit" class="btn-color btn-common">조회</button>
+              <button type="button" class="btn-color btn-common" @click="submitSearchForm">
+                조회
+              </button>
+              <!-- 모달 (필요할 때만 표시됨) -->
+              <OrderSelectmodal
+                v-if="showOrderSelectModal"
+                :orders="matchedOrders"
+                @select="selectOrderFromModal"
+                @close="showOrderCloseModal"
+              />
             </div>
           </template>
           <template #body-content>
@@ -477,7 +598,7 @@ const deleteSelectedRows = (sel: OrderItem[]) => {
                 초기화
               </button>
               <button type="submit" class="btn-color btn-common" form="submitinfoform">저장</button>
-              <button type="button" class="btn-white btn-common">삭제</button>
+              <button type="button" class="btn-white btn-common" @click="deleteOrder">삭제</button>
             </div>
           </template>
           <template #body-content>
@@ -616,6 +737,18 @@ const deleteSelectedRows = (sel: OrderItem[]) => {
                 />
                 <!-- db에 넣을때 주문서작성담당자는 로그인 되어있는 사람이름으로 -->
               </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-400 mb-2">
+                  비고
+                </label>
+                <input
+                  type="text"
+                  class="dark:bg-dark-900 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:shadow-focus-ring focus:outline-hidden focus:ring-0 disabled:border-gray-100 disabled:bg-gray-50 disabled:placeholder:text-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 dark:disabled:border-gray-800 dark:disabled:bg-white/[0.03] dark:disabled:placeholder:text-white/15"
+                  placeholder="비고를 입력해주세요"
+                  v-model="orderinfo.remark"
+                />
+                <!-- db에 넣을때 주문서작성담당자는 로그인 되어있는 사람이름으로 -->
+              </div>
             </div>
 
             <pdfDownload
@@ -669,7 +802,7 @@ const deleteSelectedRows = (sel: OrderItem[]) => {
                   field="prod_code"
                   header="제품코드"
                   :pt="{ columnHeaderContent: 'justify-center' }"
-                  headerStyle="width: 20%"
+                  headerStyle="width: 10%"
                 ></Column>
                 <Column
                   field="prod_name"
@@ -682,27 +815,46 @@ const deleteSelectedRows = (sel: OrderItem[]) => {
                   header="규격"
                   :pt="{ columnHeaderContent: 'justify-center' }"
                   style="text-align: right"
-                  headerStyle="width: 20%"
+                  headerStyle="width: 5%"
                 ></Column>
                 <Column
                   field="prod_unit"
                   header="단위"
                   :pt="{ columnHeaderContent: 'justify-center' }"
-                  headerStyle="width: 20%"
+                  headerStyle="width: 5%"
                 ></Column>
                 <Column
                   field="op_qty"
                   header="수량"
                   style="text-align: right"
                   :pt="{ columnHeaderContent: 'justify-center' }"
-                  headerStyle="width: 15%"
+                  headerStyle="width: 5%"
                 >
                   <template #body="{ data }">
-                    <InputNumber
-                      v-model="data.op_qty"
+                    <input
+                      v-model.number="data.op_qty"
                       :min="1"
-                      size="small"
-                      :inputStyle="{ textAlign: 'right' }"
+                      type="number"
+                      :style="{ textAlign: 'right' }"
+                      :class="baseInputClass"
+                      style="height: 2rem"
+                      step="0.01"
+                    />
+                  </template>
+                </Column>
+                <Column
+                  field="remark"
+                  header="비고"
+                  style="text-align: left"
+                  :pt="{ columnHeaderContent: 'justify-center' }"
+                  headerStyle="width: 30%"
+                >
+                  <template #body="{ data }">
+                    <input
+                      v-model="data.remark"
+                      type="text"
+                      :class="baseInputClass"
+                      style="height: 2rem"
                     />
                   </template>
                 </Column>

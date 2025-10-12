@@ -7,7 +7,8 @@ SELECT o.ord_id,
        b.pic,
        o.ord_date,
        o.due_date,
-       e.emp_name
+       e.emp_name,
+       o.remark
 FROM   orderform o
 	JOIN bcnc_master b
        ON   o.bcnc_code = b.bcnc_code
@@ -21,7 +22,8 @@ SELECT od.no,
        p.prod_name,
        p.prod_spec,
        p.prod_unit,
-       od.op_qty
+       od.op_qty,
+       od.remark
 FROM   orderdetail od
        JOIN orderform o
        ON   od.ord_id = o.ord_id
@@ -29,12 +31,13 @@ FROM   orderdetail od
        ON   od.prod_code = p.prod_code
 WHERE  1=1`;
 
-const insertOrdDetail = `
-CALL add_form(?,?,?,?,?,?,?,?);
-`;
+const insertOrd = `CALL add_form(?,?,?,?,?,?,?,?)`;
+
+const deleteDetail = `DELETE FROM orderdetail WHERE ord_id = ?`;
 
 module.exports = {
   selectOrderDetail,
   selectOrderDetailProducts,
-  insertOrdDetail,
+  insertOrd,
+  deleteDetail,
 };

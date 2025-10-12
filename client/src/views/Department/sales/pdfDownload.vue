@@ -13,8 +13,15 @@ const props = defineProps<{
     pic: string
     ord_date: string
     due_date: string
+    remark: string
   }
-  products: Array<{ prod_name: string; prod_spec: string; prod_unit: string; op_qty: number }>
+  products: Array<{
+    prod_name: string
+    prod_spec: string
+    prod_unit: string
+    op_qty: number
+    remark: string
+  }>
 }>()
 
 // 2. 부모에게 알릴 'close' 이벤트를 정의합니다.
@@ -197,7 +204,13 @@ const exportPDF = async () => {
 <template>
   <div v-if="props.visible">
     <!-- ⚠️ NOTE: 백엔드 API 호출 방식에서는 CDN 스크립트가 필요 없습니다. ⚠️ -->
-    <Modal title="주문서 미리보기" :fullScreenBackdrop="true" @close="closeModal">
+    <Modal
+      title="주문서 미리보기"
+      :fullScreenBackdrop="true"
+      @close="closeModal"
+      header-align="right"
+      title-align="left"
+    >
       <template #modal-header>
         <div class="flex justify-end">
           <!-- 버튼 클릭 시 API 호출 -->
@@ -405,6 +418,35 @@ const exportPDF = async () => {
                     {{ props.orderInfo.due_date }}
                   </td>
                 </tr>
+                <tr>
+                  <th
+                    class="label"
+                    style="
+                      border: 0.5px solid #000;
+                      padding: 4px 10px;
+                      text-align: center;
+                      font-size: 0.7rem;
+                      vertical-align: middle;
+                      height: 25px;
+                    "
+                  >
+                    비고
+                  </th>
+                  <td
+                    class="data"
+                    style="
+                      border: 0.5px solid #000;
+                      padding: 4px 10px;
+                      text-align: center;
+                      font-size: 0.7rem;
+                      vertical-align: middle;
+                      height: 25px;
+                    "
+                    colspan="3"
+                  >
+                    {{ props.orderInfo.remark }}
+                  </td>
+                </tr>
               </tbody>
             </table>
             <p class="guide-text" style="font-size: 0.7rem">아래와 같이 주문합니다.</p>
@@ -416,7 +458,7 @@ const exportPDF = async () => {
                   <th
                     style="
                       border: 1px solid #000;
-                      width: 10%;
+                      width: 5%;
                       text-align: center;
                       background-color: #f2f2f2;
                       font-size: 0.7rem;
@@ -438,7 +480,7 @@ const exportPDF = async () => {
                   <th
                     style="
                       border: 1px solid #000;
-                      width: 20%;
+                      width: 10%;
                       text-align: center;
                       background-color: #f2f2f2;
                       font-size: 0.7rem;
@@ -449,7 +491,7 @@ const exportPDF = async () => {
                   <th
                     style="
                       border: 1px solid #000;
-                      width: 20%;
+                      width: 10%;
                       text-align: center;
                       background-color: #f2f2f2;
                       font-size: 0.7rem;
@@ -460,13 +502,24 @@ const exportPDF = async () => {
                   <th
                     style="
                       border: 1px solid #000;
-                      width: 20%;
+                      width: 10%;
                       text-align: center;
                       background-color: #f2f2f2;
                       font-size: 0.7rem;
                     "
                   >
                     요청 수량
+                  </th>
+                  <th
+                    style="
+                      border: 1px solid #000;
+                      width: 20%;
+                      text-align: center;
+                      background-color: #f2f2f2;
+                      font-size: 0.7rem;
+                    "
+                  >
+                    비고
                   </th>
                 </tr>
               </thead>
@@ -521,6 +574,16 @@ const exportPDF = async () => {
                     "
                   >
                     {{ product.op_qty }}
+                  </td>
+                  <td
+                    style="
+                      border: 1px solid #000;
+                      text-align: left;
+                      padding: 0px 10px;
+                      font-size: 0.7rem;
+                    "
+                  >
+                    {{ product.remark }}
                   </td>
                 </tr>
               </tbody>

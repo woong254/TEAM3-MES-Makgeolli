@@ -6,7 +6,11 @@ const selectOrderDetail = sqlList.selectOrderDetail;
 const selectOrderDetailProducts = sqlList.selectOrderDetailProducts;
 const selectBcnc = sqlList.selectBcnc;
 const selectProd = sqlList.selectProd;
-const insertOrdDetail = sqlList.insertOrdDetail;
+const insertOrd = sqlList.insertOrd;
+const deleteOrder = sqlList.deleteOrder;
+const selectOrdId = sqlList.selectOrdId;
+const updateOrd = sqlList.updateOrd;
+const deleteDetail = sqlList.deleteDetail;
 
 // const testService = ()=>{
 //   let conn = null;
@@ -128,25 +132,39 @@ const ordFormInfoView = async (filters) => {
   }
 };
 
-// 주문서상세정보 및 주문제품 저장버튼 기능
-const ordDetail = async (ordDetail) => {
+// 주문제품 저장버튼 기능
+const ordDetail = async (orderForm) => {
+  const conn = await mariadb.getConnection();
   try {
-    const list = await mariadb.query(insertOrdDetail, ordDetail);
-    console.log("ordDetail : ", ordDetail);
+    await conn.beginTransaction();
 
-    let data = null;
-    if (list.insertId > 0) {
-      data = {
-        isSuccessed: true,
-      };
-    } else {
-      data = {
-        isSuccessed: false,
-      };
-    }
-    return data;
+    const result = await conn.query(insertOrd, [
+      orderForm.ord_id || null,
+      orderForm.ord_name,
+      orderForm.user_id,
+      orderForm.bcnc_name,
+      orderForm.due_date,
+      orderForm.ord_knd,
+      orderForm.remark,
+      JSON.stringify(orderForm.products),
+    ]);
+
+    const orderinfoRaw = result[0][0];
+    const products = result[1];
+
+    const orderinfo = {
+      ...orderinfoRaw,
+      due_date: formatDate(new Date(orderinfoRaw.due_date)),
+    };
+
+    await conn.commit();
+    return { isSuccessed: true, ord_id: orderinfo.ord_id, orderinfo, products };
   } catch (err) {
+    await conn.rollback();
     console.error(err);
+    return { isSuccessed: false, message: err.message };
+  } finally {
+    conn.release();
   }
 };
 
@@ -191,6 +209,25 @@ const productsView = async (prodData) => {
     return [];
   }
 };
+// 주문 삭제
+const removeOrder = async (ord_id) => {
+  const conn = await mariadb.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    await conn.query(deleteDetail, ord_id);
+    await conn.query(deleteOrder, ord_id);
+
+    await conn.commit();
+    return { isSuccessed: true };
+  } catch (err) {
+    await conn.rollback();
+    console.error(err);
+    return { isSuccessed: false, message: err.message };
+  } finally {
+    conn.release();
+  }
+};
 
 // export
 module.exports = {
@@ -199,4 +236,5 @@ module.exports = {
   ordDetail,
   bcncInfoView,
   productsView,
+  removeOrder,
 };
