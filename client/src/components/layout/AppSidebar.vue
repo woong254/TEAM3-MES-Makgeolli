@@ -292,7 +292,10 @@ const menuGroups: MenuGroup[] = [
       {
         icon: PlugInIcon,
         name: '생산',
-        subItems: [{ name: '생산지시관리', path: '/prodOrd', pro: false }],
+        subItems: [
+          { name: '생산지시관리', path: '/prodOrd', pro: false },
+          { name: '공정실적관리', path: '/prodOrdManage', pro: false },
+        ],
       },
       {
         icon: BoxCubeIcon,
