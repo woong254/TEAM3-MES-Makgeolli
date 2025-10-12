@@ -1,6 +1,8 @@
 // 영업 서비스
-const mariadb = require("../database/mapper.js");
-const sqlList = require("../database/sqlList.js");
+// const mariadb = require("../database/mapper.js");
+import mariadb from "../database/mapper.js";
+// const sqlList = require("../database/sqlList.js");
+import sqlList from "../database/sqlList.js";
 
 const selectOrderDetail = sqlList.selectOrderDetail;
 const selectOrderDetailProducts = sqlList.selectOrderDetailProducts;
@@ -80,7 +82,7 @@ const ordFormInfoView = async (filters) => {
     if (ord_name) {
       sql += ` AND o.ord_name = ?`; // 테이블명 포함
       sql1 += ` AND o.ord_name = ?`; // 테이블명 포함
-      params.push(ord_name); // LIKE 검색
+      params.push(ord_name);
     }
     if (due_start_date) {
       sql += ` AND o.due_date >= ?`;
@@ -93,13 +95,13 @@ const ordFormInfoView = async (filters) => {
       params.push(due_end_date);
     }
     if (ord_start_date) {
-      sql += ` AND o.ord_date >= ?`;
-      sql1 += ` AND o.ord_date >= ?`;
+      sql += ` AND Date(o.ord_date) >= ?`;
+      sql1 += ` AND Date(o.ord_date) >= ?`;
       params.push(ord_start_date);
     }
     if (ord_end_date) {
-      sql += ` AND o.ord_date <= ?`;
-      sql1 += ` AND o.ord_date <= ?`;
+      sql += ` AND Date(o.ord_date) <= ?`;
+      sql1 += ` AND Date(o.ord_date) <= ?`;
       params.push(ord_end_date);
     }
 
@@ -229,12 +231,24 @@ const removeOrder = async (ord_id) => {
   }
 };
 
+// 선택된 주문서의 제품 목록 조회
+const getOrderProducts = async (ord_id) => {
+  try {
+    const rows = await mariadb.query("selectOrderProducts", ord_id);
+    return rows;
+  } catch (err) {
+    console.error("getOrderProducts 쿼리 오류:", err);
+    throw err;
+  }
+};
+
 // export
-module.exports = {
+export {
   viewList,
   ordFormInfoView,
   ordDetail,
   bcncInfoView,
   productsView,
   removeOrder,
+  getOrderProducts,
 };

@@ -68,11 +68,24 @@ router.get("/productsView", async (req, res) => {
     .catch((err) => console.error(err));
   res.send(prodInfo);
 });
-// 주문서삭제 -- 미완성
+// 주문서삭제
 router.delete("/removeOrder/:ord_id", async (req, res) => {
   const { ord_id } = req.params;
   const result = await salesService.removeOrder(ord_id);
   res.json(result);
+});
+// 주문서중복 제품조회
+router.get("/orderProducts", async (req, res) => {
+  try {
+    const { ord_id } = req.query;
+    if (!ord_id) {
+      return res.status(400).json({ error: "ord_id는 필수입니다." });
+    }
+    const orderProducts = await salesService.getOrderProducts(ord_id);
+    res.json(orderProducts);
+  } catch (err) {
+    console.error("orderProducts 조회 오류:", err);
+  }
 });
 
 module.exports = router;

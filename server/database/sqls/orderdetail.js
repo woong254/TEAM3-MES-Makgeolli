@@ -35,9 +35,26 @@ const insertOrd = `CALL add_form(?,?,?,?,?,?,?,?)`;
 
 const deleteDetail = `DELETE FROM orderdetail WHERE ord_id = ?`;
 
+const selectOrderProducts = `
+SELECT od.ord_id,
+       od.no,
+       od.prod_code,
+       p.prod_name,
+       p.prod_spec,
+       p.prod_unit,
+       od.op_qty,
+       od.remark
+FROM   orderdetail od
+       JOIN orderform o
+       ON   od.ord_id = o.ord_id
+       JOIN prod_master p
+       ON   od.prod_code = p.prod_code
+WHERE  od.ord_id = ?`;
+
 module.exports = {
   selectOrderDetail,
   selectOrderDetailProducts,
   insertOrd,
   deleteDetail,
+  selectOrderProducts,
 };
