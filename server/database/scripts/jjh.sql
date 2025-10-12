@@ -79,55 +79,107 @@ FOR UPDATE;
  
 -- 주문서관리-주문서상세정보-저장버튼
 DELIMITER $$
-CREATE PROCEDURE add_form( 
-	IN p_ord_name  VARCHAR(10),
+
+CREATE PROCEDURE add_form(
+    IN p_ord_id    VARCHAR(20),   -- 수정 시 기존 ord_id 전달, 신규면 NULL
+    IN p_ord_name  VARCHAR(50),
     IN p_emp_name  VARCHAR(100),
     IN p_bcnc_name VARCHAR(100),
     IN p_due_date  DATE,
-    IN p_ord_knd   VARCHAR(30),
-    IN p_no		   INT(2),
-    IN p_prod_code VARCHAR(100),
-    IN p_op_qty    DECIMAL(9,2)
+    IN p_ord_knd   VARCHAR(100),
+    IN p_remark    VARCHAR(500),
+    IN p_products  JSON
 )
 BEGIN
-	SELECT CONCAT('ORD', CONCAT(DATE_FORMAT(NOW(), '%y%m'),LPAD(IFNULL(MAX(SUBSTR(ord_id, -3)),0) + 1, 3, '0'))) 
-    INTO   @new_ord_id
-	FROM   orderform
-	WHERE  SUBSTR(ord_id, 4, 4) = DATE_FORMAT(NOW(), '%y%m')
-	FOR UPDATE;
-     
-	INSERT INTO orderform(
-		ord_id,
-		ord_name,
-        emp_id,
-        bcnc_code,        
-		due_date,        		
-		ord_knd)
-	VALUES(
-		@new_ord_id,
-        p_ord_name,
-        (SELECT emp_id
-		 FROM   emp_master
-         WHERE  emp_name = p_emp_name),
-        (SELECT bcnc_code
-		 FROM   bcnc_master
-         WHERE  bcnc_name = p_bcnc_name),
-        p_due_date,
-        p_ord_knd);
-        
-	INSERT INTO orderdetail (
-		ord_id,
-        no,
-        prod_code,
-        op_qty)
-	VALUES (
-		@new_ord_id,
-        p_no,
-        p_prod_code,
-        p_op_qty);
-    
+    DECLARE target_ord_id VARCHAR(20);
+    DECLARE i INT DEFAULT 0;
+    DECLARE prod_count INT;
+
+    IF p_ord_id IS NULL OR p_ord_id = '' THEN
+        -- 신규 주문서 생성
+        SELECT CONCAT('ORD', CONCAT(DATE_FORMAT(NOW(), '%y%m'), LPAD(IFNULL(MAX(SUBSTR(ord_id, -3)),0)+1,3,'0')))
+        INTO target_ord_id
+        FROM orderform
+        WHERE SUBSTR(ord_id, 4, 4) = DATE_FORMAT(NOW(), '%y%m')
+        FOR UPDATE;
+
+        INSERT INTO orderform(
+            ord_id, ord_name, emp_id, bcnc_code, due_date, ord_knd, remark
+        )
+        VALUES(
+            target_ord_id,
+            p_ord_name,
+            (SELECT emp_id FROM emp_master WHERE emp_name = p_emp_name),
+            (SELECT bcnc_code FROM bcnc_master WHERE bcnc_name = p_bcnc_name),
+            p_due_date,
+            p_ord_knd,
+            p_remark
+        );
+    ELSE
+        -- 기존 주문서 수정
+        SET target_ord_id = p_ord_id;
+
+        UPDATE orderform
+        SET
+            ord_name = p_ord_name,
+            emp_id = (SELECT emp_id FROM emp_master WHERE emp_name = p_emp_name),
+            bcnc_code = (SELECT bcnc_code FROM bcnc_master WHERE bcnc_name = p_bcnc_name),
+            due_date = p_due_date,
+            ord_knd = p_ord_knd,
+            remark = p_remark
+        WHERE ord_id = target_ord_id;
+
+        -- 기존 orderdetail 삭제
+        DELETE FROM orderdetail WHERE ord_id = target_ord_id;
+    END IF;
+
+    -- orderdetail 삽입
+    SET prod_count = JSON_LENGTH(p_products);
+    WHILE i < prod_count DO
+        INSERT INTO orderdetail(ord_id, no, prod_code, op_qty, remark)
+        VALUES(
+            target_ord_id,
+            JSON_EXTRACT(p_products, CONCAT('$[', i, '].no')),
+            JSON_UNQUOTE(JSON_EXTRACT(p_products, CONCAT('$[', i, '].prod_code'))),
+            JSON_EXTRACT(p_products, CONCAT('$[', i, '].op_qty')),
+            JSON_UNQUOTE(JSON_EXTRACT(p_products, CONCAT('$[', i, '].remark')))
+        );
+        SET i = i + 1;
+    END WHILE;
+
+    -- 저장된 주문서와 상세 데이터 조회
+    SELECT 
+		o.ord_id,
+		o.ord_name,
+		e.emp_name,
+		b.bcnc_name,
+        o.ord_date,
+		o.due_date,
+		o.ord_knd,
+		o.remark
+	FROM orderform o
+	LEFT JOIN emp_master e ON o.emp_id = e.emp_id
+	LEFT JOIN bcnc_master b ON o.bcnc_code = b.bcnc_code
+	WHERE o.ord_id = target_ord_id;
+
+    SELECT 
+        od.no, 
+        od.prod_code,
+        p.prod_name,
+        p.prod_spec,     
+		p.prod_unit,
+        od.op_qty, 
+        od.remark
+    FROM orderdetail od
+    LEFT JOIN prod_master p ON od.prod_code = p.prod_code
+    WHERE od.ord_id = target_ord_id
+    ORDER BY od.no;
+
 END $$
+
 DELIMITER ;
+
+
 -- 제품 등록 프로시저 실행
 CALL add_form('testOne','장준현','예담','2025-10-30','생막걸리(750ml*20병)외3건',1,'MAK_001',1);
 -- add_form 삭제       
@@ -216,4 +268,16 @@ INSERT INTO orderform(ord_id, ord_name, due_date, bcnc_code, emp_id, ord_date, o
 			   VALUES('20251002-01', '생막걸리예담주문', '2025-10-10','1','EMP-20250616-0001', '2025-10-02','생막걸리(750ml*20병)외2건','주문완료');
                         
 DELETE FROM orderform
-WHERE  ord_id = 'ORD2510001';
+WHERE  ord_id = 'ORD2510005';
+DELETE FROM orderdetail
+WHERE  ofd_no = 44;
+DELETE FROM orderform
+WHERE  ord_id = 'ORD2510005';
+DELETE FROM orderform
+WHERE  ord_id = 'ORD2510006';
+
+SELECT prod_code, prod_name
+FROM prod_master
+WHERE prod_code IN ('PROD-20250101-001','PROD-20250101-002','PROD-20250101-003');
+
+

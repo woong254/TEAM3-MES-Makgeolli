@@ -24,6 +24,12 @@ FROM   orderform o
        JOIN prod_master p
        ON   od.prod_code = p.prod_code`;
 
+const selectOrdId = `SELECT LAST_INSERT_ID() AS ord_id`;
+
+const deleteOrder = `DELETE FROM orderform WHERE ord_id = ?`;
+
 module.exports = {
   selectOrdersForm,
+  deleteOrder,
+  selectOrdId,
 };
