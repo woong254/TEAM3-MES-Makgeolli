@@ -133,33 +133,62 @@ const beforeSubmit = () =>
   products.value.map((p, idx) => ({
     no: String(idx + 1),
     prod_code: p.prod_code,
-    mk_num: Number(p.make_qty),
+    mk_num: Number(p.make_qty || 1),
     mk_priority: p.make_priority,
-    remark: p.remark ?? null,
+    remark: p.remark || null,
   }))
 
 // 저장 버튼 클릭시 실행 함수
+const isSubmitting = ref(false);
+
 const submitMakeInfo = async () => {
-  if (products.value.length > 0 && products.value.some(p => !p.make_priority)) {
-    alert('우선순위를 입력하지 않은 제품이 있습니다. 확인해주세요.');
+  if (isSubmitting.value) return;
+
+  // 기본 유효성
+  if (!makeInfo.value.make_name) {
+    alert('생산지시명을 입력하세요.');
     return;
   }
-  console.log('유효성 검사 통과. 저장을 진행합니다.');
-  
+  if (!makeInfo.value.make_start_date || !makeInfo.value.make_end_date) {
+    alert('시작일과 종료일을 입력하세요.');
+    return;
+  }
+  if (products.value.length === 0) {
+    alert('제품을 한 개 이상 선택하세요.');
+    return;
+  }
+  if (products.value.some(p => p.make_priority == null)) {
+    alert('우선순위를 입력하지 않은 제품이 있습니다.');
+    return;
+  }
+
   const header = {
-    make_name: makeInfo.value.make_name,
-    mk_bgnde: makeInfo.value.make_start_date,
-    mk_ende: makeInfo.value.make_end_date,
+    mk_name: makeInfo.value.make_name,
+    mk_bgnde: makeInfo.value.make_start_date,         // 'YYYY-MM-DD'
+    mk_ende: makeInfo.value.make_end_date,            // 'YYYY-MM-DD'
     writing_date: new Date().toISOString().slice(0, 10),
-    remake: makeInfo.value.remake ?? null,
-    emp_name: "EMP-20250616-0002",
+    remark: makeInfo.value.remake ?? null,
+    emp_id: 'EMP-20250616-0002'                       // 서버는 emp_id 사용
   };
   const details = beforeSubmit();
 
-  await axios.post('/api/prodOrd', { header, details }, {
-    headers: { 'Content-Type': 'application/json' }
-  });
-}
+  try {
+    isSubmitting.value = true;
+    const res = await axios.post('/api/prodOrd', { header, details }, {
+      headers: { 'Content-Type': 'application/json' }
+    });
+    alert(`등록 완료: 지시번호 ${res.data?.mk_ord_no ?? ''}`);
+    // 폼/그리드 초기화 필요 시 여기서 처리
+    // makeInfo.value = ...
+    // products.value = []
+  } catch (e) {
+    console.error(e);
+    alert('등록 실패');
+  } finally {
+    isSubmitting.value = false;
+  }
+};
+
 
 const currentPageTitle = ref('생산 지시 관리');
 
@@ -187,7 +216,7 @@ const baseInputClass = "dark:bg-dark-900 h-8 w-full rounded-lg border border-gra
             <button type="button" class="btn-white btn-common" style="width: auto;">계획서 불러오기</button>
             <button type="button" class="btn-white btn-common">지시 목록</button>
             <button type="button" class="btn-white btn-common" @click="resetInfo">초기화</button>
-            <button type="button" class="btn-color btn-common">등록/수정</button>
+            <button type="button" class="btn-color btn-common" @click="submitMakeInfo" :disabled="isSubmitting">{{ isSubmitting ? '등록 중' : '등록/수정' }}</button>
             <button type="button" class="btn-white btn-common">삭제</button>
           </div>
         </template>
