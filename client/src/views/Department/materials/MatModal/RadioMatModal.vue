@@ -2,7 +2,7 @@
 import Modal from '@/components/ui/Modal.vue'
 import DataTable from 'primevue/datatable'
 import DataCol from 'primevue/column'
-import { ref, watch, computed } from 'vue'
+import { watch, ref, computed } from 'vue'
 import axios from 'axios'
 
 const props = defineProps({
@@ -13,9 +13,9 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue', 'close', 'select'])
 const close = () => emit('close')
 
-const modalBcnc = ref([])
+const modalMat = ref([])
 const searchName = ref('')
-const selectModalBcnc = ref(null)
+const selectModalMat = ref(null)
 
 const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400'
 const baseInputClass =
@@ -24,45 +24,45 @@ const baseInputClass =
 const blockedCodeSet = computed(() => new Set(props.blockedCodes ?? []))
 const blockedNameSet = computed(() => new Set(props.blockedNames ?? []))
 const displayed = computed(() =>
-  modalBcnc.value.filter(
-    (r) => !blockedCodeSet.value.has(r?.bcnc_code) && !blockedNameSet.value.has(r?.bcnc_name),
+  modalMat.value.filter(
+    (r) => !blockedCodeSet.value.has(r?.mat_code) && !blockedNameSet.value.has(r?.mat_name),
   ),
 )
 
 watch([blockedCodeSet, blockedNameSet], () => {
   if (
-    selectModalBcnc.value &&
-    (blockedCodeSet.value.has(selectModalBcnc.value?.bcnc_code) ||
-      blockedNameSet.value.has(selectModalBcnc.value?.bcnc_name))
+    selectModalMat.value &&
+    (blockedCodeSet.value.has(selectModalMat.value?.mat_code) ||
+      blockedNameSet.value.has(selectModalMat.value?.mat_name))
   ) {
-    selectModalBcnc.value = null
+    selectModalMat.value = null
   }
 })
 
-const getBcncList = async () => {
+const getMatList = async () => {
   try {
-    const { data } = await axios.get('/api/bcncList')
-    modalBcnc.value = data
+    const response = await axios.get('/api/purMatList')
+    modalMat.value = response.data
   } catch (error) {
     console.error('Error fetching data:', error)
   }
 }
 
-const searchBcnc = async () => {
+const searchMatList = async () => {
   const q = searchName.value.trim()
   try {
     let response
     if (q) {
-      response = await axios.get('/api/bcncTarget', { params: { bcnc_name: q } })
+      response = await axios.get('/api/purMatTarget', { params: { mat_name: q } })
       if (!response.data || response.data.length === 0) {
         alert('조회 결과가 없습니다.')
-        await getBcncList()
+        await getMatList()
         return
       }
     } else {
-      response = await axios.get('/api/bcncList')
+      response = await axios.get('/api/purMatList')
     }
-    modalBcnc.value = response.data
+    modalMat.value = response.data
   } catch (error) {
     console.error('Error searching data:', error)
     alert('검색 중 오류가 발생했습니다.')
@@ -72,21 +72,21 @@ const searchBcnc = async () => {
 watch(
   () => props.modelValue,
   (val) => {
-    if (val) getBcncList()
+    if (val) getMatList()
     else {
-      selectModalBcnc.value = null
+      selectModalMat.value = null
       searchName.value = ''
     }
   },
 )
 
-const selectBcnc = () => {
-  if (selectModalBcnc.value) {
-    emit('select', selectModalBcnc.value)
+const selectMat = () => {
+  if (selectModalMat.value) {
+    emit('select', selectModalMat.value)
     emit('update:modelValue', false)
     emit('close')
   } else {
-    alert('매입처를 선택해주세요.')
+    alert('자재를 선택해주세요.')
   }
 }
 </script>
@@ -95,25 +95,25 @@ const selectBcnc = () => {
   <Modal
     v-if="props.modelValue"
     @close="close"
-    title="매입처 조회"
+    title="자재 조회"
     title-align="left"
     header-align="right"
-    width="600px"
+    width="800px"
   >
     <template #modal-header>
-      <button type="button" class="btn-white btn-common" @click="searchBcnc">조회</button>
-      <button type="button" class="btn-color btn-common" @click="selectBcnc">등록</button>
+      <button type="button" class="btn-white btn-common" @click="searchMatList">조회</button>
+      <button type="button" class="btn-color btn-common" @click="selectMat">등록</button>
     </template>
 
     <template #modal-body>
       <div class="modal-container flex gap-2 mb-2">
         <div class="w-1/3">
-          <label :class="labelStyle">매입처명</label>
+          <label :class="labelStyle">자재명</label>
           <input
             type="text"
             v-model="searchName"
             :class="baseInputClass"
-            @keyup.enter="searchBcnc"
+            @keyup.enter="searchMatList"
             style="width: 200px"
           />
         </div>
@@ -123,30 +123,37 @@ const selectBcnc = () => {
         <DataTable
           :value="displayed"
           show-gridlines
-          v-model:selection="selectModalBcnc"
-          dataKey="bcnc_code"
-          style="width: 800px"
+          v-model:selection="selectModalMat"
+          dataKey="mat_code"
+          style="width: 1200px"
           paginator
           :rows="8"
         >
           <DataCol selectionMode="single" headerStyle="width: 37px" bodyStyle="width: 37px" />
           <DataCol
-            field="bcnc_code"
-            header="매입처코드"
-            :pt="{ columnHeaderContent: 'justify-center' }"
-            style="width: 130px"
-          />
-          <DataCol
-            field="bcnc_name"
-            header="매입처명"
+            field="mat_code"
+            header="자재코드"
             :pt="{ columnHeaderContent: 'justify-center' }"
           />
           <DataCol
-            field="bcnc_category"
-            header="업종"
-            style="width: 180px"
+            field="mat_name"
+            header="자재명"
             :pt="{ columnHeaderContent: 'justify-center' }"
           />
+          <DataCol
+            field="stock_qty"
+            header="재고"
+            :pt="{ columnHeaderContent: 'justify-center' }"
+            style="text-align: right"
+          />
+          <DataCol
+            field="safe_stock"
+            header="안전재고"
+            :pt="{ columnHeaderContent: 'justify-center' }"
+            style="text-align: right"
+          />
+          <DataCol field="mat_spec" header="규격" :pt="{ columnHeaderContent: 'justify-center' }" />
+          <DataCol field="mat_unit" header="단위" :pt="{ columnHeaderContent: 'justify-center' }" />
         </DataTable>
       </div>
     </template>

@@ -82,9 +82,10 @@ const saveBtn = async () => {
   try {
     validateBeforeSave()
     const h = purChase.value[0]
+    const code = h.pur_code || (await getPurCode())
     const header = {
-      pur_code: h.pur_code,
-      emp_id: h.emp_id || 'EMP-001',
+      pur_code: code,
+      emp_id: h.emp_id || 'EMP-20250616-0003',
       bcnc_code: h.bcnc_code,
       pur_name: (h.pur_name || '').trim(),
       pur_date: toYmd(h.pur_date),
@@ -217,24 +218,23 @@ const deleteBtn = async () => {
 const getPurCode = async () => {
   try {
     const response = await axios.get('/api/purManagement')
-    return response.data.pur_code ?? 'PUR-001'
+    return response.data.pur_code ?? ''
   } catch {
-    return 'PUR-001'
+    return ''
   }
 }
 
 const resetBtn = async () => {
-  const newCode = await getPurCode()
   const today = sysdate().format('YYYY-MM-DD')
   purChaseMat.value = []
   purChase.value = [
     {
-      pur_code: newCode,
+      pur_code: '',
       pur_name: '',
       bcnc_name: '',
       pur_date: today,
       receipt_date: null,
-      emp_name: purChase.value[0]?.emp_name || '',
+      emp_name: '정지웅',
       remark: '',
     },
   ]
@@ -248,7 +248,8 @@ const flatpickrConfig = computed(() => ({
   dateFormat: 'Y-m-d',
   altInput: true,
   altFormat: 'Y-m-d',
-  altInputClass: `${baseInputClass}`,
+  altInputClass: `${baseInputClass} text-center px-8`,
+
   minDate: purChase.value[0]?.pur_date || sysdate().format('YYYY-MM-DD'),
 }))
 
@@ -263,8 +264,6 @@ const handleCloseModal = () => {
 }
 
 onMounted(async () => {
-  const code = await getPurCode()
-  purChase.value[0].pur_code = code
   // 새 코드로 시작 → 삭제 버튼 숨김
   isExisting.value = false
 })
@@ -302,6 +301,7 @@ onMounted(async () => {
             <DataCol
               field="pur_code"
               header="발주코드"
+              v-if="purChase.length && purChase[0]?.pur_code"
               :pt="{ columnHeaderContent: 'justify-center' }"
               style="width: 120px"
             />
@@ -313,12 +313,7 @@ onMounted(async () => {
               style="width: 200px; padding: 8px"
             >
               <template #body="{ data, field }">
-                <input
-                  v-model="data[field]"
-                  type="text"
-                  :class="baseInputClass"
-                  placeholder="발주서명을 입력해주세요."
-                />
+                <input v-model="data[field]" type="text" :class="baseInputClass" />
               </template>
             </DataCol>
 
@@ -327,7 +322,7 @@ onMounted(async () => {
               field="bcnc_name"
               header="매입처명"
               :pt="{ columnHeaderContent: 'justify-center' }"
-              style="width: 200px"
+              style="width: 200px; padding: 8px"
             >
               <template #body="{ data, field }">
                 <div class="relative">
@@ -335,7 +330,6 @@ onMounted(async () => {
                     v-model="data[field]"
                     type="text"
                     readonly
-                    placeholder="매입처를 선택해주세요."
                     @click="isBcncModalOpen = true"
                     :class="[baseInputClass, 'pr-10']"
                   />
@@ -365,7 +359,7 @@ onMounted(async () => {
             <DataCol
               field="pur_date"
               header="발주일자"
-              style="width: 160px; text-align: center"
+              style="width: 170px; text-align: center; padding: 8px"
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
 
@@ -373,16 +367,12 @@ onMounted(async () => {
             <DataCol
               field="receipt_date"
               header="입고요청일자"
-              style="width: 180px; padding: 8px"
+              style="width: 170px; padding: 8px"
               :pt="{ columnHeaderContent: 'justify-center' }"
             >
               <template #body="{ data, field }">
                 <div class="relative">
-                  <flat-pickr
-                    v-model="data[field]"
-                    :config="flatpickrConfig"
-                    placeholder="날짜를 선택해주세요."
-                  />
+                  <flat-pickr v-model="data[field]" :config="flatpickrConfig" />
                   <span
                     class="absolute text-gray-500 -translate-y-1/2 pointer-events-none right-3 top-1/2 dark:text-gray-400"
                     aria-hidden="true"
@@ -465,6 +455,18 @@ onMounted(async () => {
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
             <DataCol
+              field="mat_spec"
+              header="규격"
+              style="width: 140px"
+              :pt="{ columnHeaderContent: 'justify-center' }"
+            />
+            <DataCol
+              field="mat_unit"
+              header="단위"
+              style="width: 140px"
+              :pt="{ columnHeaderContent: 'justify-center' }"
+            />
+            <DataCol
               field="stock_qty"
               header="재고"
               style="width: 180px; text-align: right"
@@ -489,22 +491,9 @@ onMounted(async () => {
                   min="1"
                   style="text-align: right"
                   :class="baseInputClass"
-                  placeholder="발주수량"
                 />
               </template>
             </DataCol>
-            <DataCol
-              field="mat_spec"
-              header="규격"
-              style="width: 140px"
-              :pt="{ columnHeaderContent: 'justify-center' }"
-            />
-            <DataCol
-              field="mat_unit"
-              header="단위"
-              style="width: 140px"
-              :pt="{ columnHeaderContent: 'justify-center' }"
-            />
             <DataCol
               field="remark"
               header="비고"
