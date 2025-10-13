@@ -16,7 +16,7 @@ import { Korean } from 'flatpickr/dist/l10n/ko.js';
 import ProductSelectmodal from '../sales/ProductSelectmodal.vue' // 제품선택
 
 // node 연결
-import axios from 'axios';
+import axios from 'axios'
 
 // props 인터페이스
 interface Props {
@@ -35,7 +35,7 @@ interface MakeInfo {
   remake: string          // 비고
 };
 
-//지시서-상세정보(상품)
+// 지시서-상세정보(상품)
 interface MakeItem {
   no: string            // 등록순서
   prod_code: string     // 제품코드
@@ -128,14 +128,37 @@ const resetInfo = () => {
   selectProducts.value = []
 }
 
+// 저장 전 상세정보 정리
+const beforeSubmit = () => 
+  products.value.map((p, idx) => ({
+    no: String(idx + 1),
+    prod_code: p.prod_code,
+    mk_num: Number(p.make_qty),
+    mk_priority: p.make_priority,
+    remark: p.remark ?? null,
+  }))
+
 // 저장 버튼 클릭시 실행 함수
-const submitMakeInfo = () => {
+const submitMakeInfo = async () => {
   if (products.value.length > 0 && products.value.some(p => !p.make_priority)) {
     alert('우선순위를 입력하지 않은 제품이 있습니다. 확인해주세요.');
     return;
   }
   console.log('유효성 검사 통과. 저장을 진행합니다.');
+  
+  const header = {
+    make_name: makeInfo.value.make_name,
+    mk_bgnde: makeInfo.value.make_start_date,
+    mk_ende: makeInfo.value.make_end_date,
+    writing_date: new Date().toISOString().slice(0, 10),
+    remake: makeInfo.value.remake ?? null,
+    emp_name: "EMP-20250616-0002",
+  };
+  const details = beforeSubmit();
 
+  await axios.post('/api/prodOrd', { header, details }, {
+    headers: { 'Content-Type': 'application/json' }
+  });
 }
 
 const currentPageTitle = ref('생산 지시 관리');
@@ -301,7 +324,7 @@ const baseInputClass = "dark:bg-dark-900 h-8 w-full rounded-lg border border-gra
               </div>
             </template>
             <template #body-content>
-              <div class="card h-100 ">
+              <div class="card h-70">
                 <DataTable 
                   :value="products"
                   v-model:selection="selectProducts"
@@ -310,7 +333,7 @@ const baseInputClass = "dark:bg-dark-900 h-8 w-full rounded-lg border border-gra
                   class="fixed-data"
                   showGridlines
                   scrollable
-                  scrollHeight="390px"
+                  scrollHeight="280px"
                   editMode="cell"
                   size="small"
                   :rows="10"

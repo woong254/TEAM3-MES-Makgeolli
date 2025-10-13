@@ -34,4 +34,5 @@ const query = async (alias, values) => {
 const getConnection = async () => {
   return await connectionPool.getConnection();
 };
+
 module.exports = { query, getConnection };

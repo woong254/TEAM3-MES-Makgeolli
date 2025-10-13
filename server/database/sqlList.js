@@ -15,7 +15,7 @@ const sales = {
 };
 
 // 생산
-const prodord = require("./sqls/prodord.js");
+const prodOrd = require("./sqls/prodOrd.js");
 
 // 자재
 const materials = require("./sqls/materials.js");
@@ -34,7 +34,7 @@ module.exports = {
   ...sales,
 
   // 생산
-  ...prodord, // 생산지시
+  ...prodOrd, // 생산지시
 
   // 자재
   ...materials,
