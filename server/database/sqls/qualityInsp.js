@@ -1,6 +1,6 @@
 // 품질기준관리
 
-// 모달 : 검사대상(자재,제품) 조회 
+// 모달 : 검사대상(자재,제품) 조회
 const selectInspTargetList = `
 SELECT
 	  p.prod_code AS t_id
@@ -62,10 +62,51 @@ JOIN comncode_dt c
  AND   (? = '' OR m.mat_item_code = ?)
  `;
 
+// 품질기준관리 등록
+const insertTmpQuestion = `
+INSERT INTO tmp_sen_questions (session_id, ques_name)
+VALUES (?, ?)
+`;
+const insertTmpTarget = `
+INSERT INTO tmp_targets (session_id, insp_target_type, insp_target_code, product_code, mat_code)
+VALUES (?, ?, ?, ?, ?)
+`;
+const callInspMaster = `
+  CALL insp_master_insert(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+`;
+const cleanupTmpQuestions = `
+DELETE FROM tmp_sen_questions WHERE session_id = ?
+`;
+const cleanupTmpTargets = `
+DELETE FROM tmp_targets WHERE session_id = ?
+`;
 
-
+// 품질기준관리 조회
+const selectInspMaster = `
+SELECT qcm.insp_item_id
+      ,qcm.insp_item_name
+      ,COALESCE(p.prod_name, m.mat_name) AS target_name
+      ,c.comncode_dtnm      AS insp_target_name 
+      ,qcm.use_yn
+FROM qc_master qcm
+LEFT JOIN qc_master_target qct
+       ON qct.insp_item_id = qcm.insp_item_id
+LEFT JOIN comncode_dt c
+       ON c.comncode_detailid = qct.insp_target_code 
+LEFT JOIN prod_master AS p
+       ON p.prod_code = qct.product_code
+LEFT JOIN mat_master AS m
+       ON m.mat_code = qct.mat_code
+ORDER BY qcm.write_date;
+`;
 
 module.exports = {
   selectInspTargetList,
-  searchInspTarget
-}
+  searchInspTarget,
+  insertTmpQuestion,
+  insertTmpTarget,
+  callInspMaster,
+  cleanupTmpQuestions,
+  cleanupTmpTargets,
+  selectInspMaster,
+};
