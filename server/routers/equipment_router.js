@@ -17,6 +17,17 @@ router.get("/equipment", async (req, res) => {
   }
 });
 
+//설비 상태 조회
+router.get("/equipments", async (req, res) => {
+  try {
+    const result = await equipmentService.viewList();
+    res.status(200).json(result);
+  } catch (err) {
+    console.error("[equipments][viewlist] error:", err);
+    res.status(err.status || 500).json({ message: err.message || "조회 오류" });
+  }
+});
+
 // [등록] POST /api/equipment
 // body: { equip_code, equip_name, equip_type, manager, equip_status, insp_cycle }
 router.post("/equipment", async (req, res) => {

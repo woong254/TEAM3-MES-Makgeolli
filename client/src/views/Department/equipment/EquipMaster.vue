@@ -440,9 +440,7 @@ onBeforeMount(getEquipList)
                   <th class="border border-gray-300 bg-gray-50 text-sm text-left p-2">설비상태</th>
                   <td class="border border-gray-300 p-2" colspan="3">
                     <select v-model="createForm.equipStatus" :class="inputStyle">
-                      <option value="">선택</option>
-                      <option value="가동중">가동중</option>
-                      <option value="비가동">비가동</option>
+                      <option value="j2" readonly>비가동</option>
                     </select>
                   </td>
                 </tr>

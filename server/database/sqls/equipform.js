@@ -1,3 +1,4 @@
+//table : equip_master
 //다건조회
 const searchEquipList = `
 SELECT
@@ -10,6 +11,12 @@ SELECT
 FROM equip_master o
 WHERE 1=1
 `;
+
+//설비 상태 조회
+const selectEquipStatus = `
+SELECT comncode_dtnm
+FROM comncode_dt
+WHERE comncode_id = '0j'`;
 //등록
 const insertEquip = `
       INSERT INTO equip_master (
@@ -26,12 +33,12 @@ SET
   equip_type = ?,
   manager = ?,
   equip_status = ?,
-  insp_cycle = ?
+  insp_cycle = ?,
   maker = ?,
   model_name = ?,
-  equip_image = ?,
-  WHERE equip_code = ?
-  `;
+  equip_image = ?
+WHERE equip_code = ?
+`;
 // 단건 상세 조회
 const selectEquipByCode = `
   SELECT
@@ -69,4 +76,5 @@ module.exports = {
   updateEquip,
   deleteEquip,
   selectEquipByCode,
+  selectEquipStatus,
 };
