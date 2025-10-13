@@ -41,6 +41,10 @@ router.get("/inspFindMaster", async (req, res) => {
 });
 
 // 1-5. 품질기준관리 검색
+router.get('/inspMaster/search', async (req, res) => {
+  const list = await qualityService.searchInspMaster(req.query);
+  res.json(list);
+});
 
 // 1-6. 품질기준관리 수정
 router.put("/inspMaster/:id", async (req, res) => {
@@ -64,13 +68,9 @@ router.delete("/inspMaster/:id", async (req, res) => {
 // 1-8. 품질기준관리 상세조회
 router.get("/inspMaster/:id", async (req, res) => {
   const { id } = req.params;
-  const result = await qualityService.findInspMasterDetail(id).catch((err) => {
-    console.error(err);
-    return { ok:false, message:"서버 오류" };
-  });
+  const result = await qualityService.findInspMasterDetail(id);
   res.status(result.ok ? 200 : 400).json(result);
 });
-
 
 
 

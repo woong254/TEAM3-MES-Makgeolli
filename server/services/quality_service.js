@@ -72,6 +72,10 @@ const registerInspMaster = async (payload) => {
     if (payload.pass_score_spec && String(payload.pass_score_spec).length > 2) {
       return { ok: false, message: "관능형: pass_score_spec은 2자리 코드여야 합니다." };
     }
+    // ★ score_desc_json 필수
+    if (!payload.score_desc_json || typeof payload.score_desc_json !== 'string') {
+      return { ok: false, message: "관능형: 채점기준(score_desc_json)이 필요합니다." };
+    }
   }
   // ---------- [A] 끝 ----------
 
@@ -113,6 +117,7 @@ const registerInspMaster = async (payload) => {
       payload.use_yn,
       payload.insp_method,
       payload.insp_file_name,
+      payload.writer ?? "system",
 
       payload.min_range,
       payload.min_range_spec, // R1/R2
@@ -123,11 +128,10 @@ const registerInspMaster = async (payload) => {
       payload.max_score,
       payload.pass_score,
       payload.pass_score_spec, // R1/R2
+      payload.score_desc_json ?? null,   // ★ 추가: JSON 문자열
 
       qSession,
       tSession,
-
-      payload.writer ?? "system",
     ];
 
     await mariadb.query("callInspMaster", params);
@@ -154,6 +158,23 @@ const findInspMaster = async () => {
 };
 
 // 1-5. 품질기준관리 검색
+const searchInspMaster = async (param) => {
+  const { itemName = '', targetName = '', typeCode = '', useYn = '' } = param;
+
+  const params = [
+    itemName, itemName,
+    targetName, targetName,
+    typeCode, typeCode,
+    useYn, useYn
+  ];
+
+  try {
+    return await mariadb.query("searchInspMaster", params);
+  } catch (err) {
+    console.error(err);
+    return [];
+  }
+};
 
 // 1-6. 품질기준관리 수정
 const updateInspMaster = async (inspItemId, payload) => {
@@ -225,6 +246,7 @@ const updateInspMaster = async (inspItemId, payload) => {
       payload.use_yn,
       payload.insp_method,
       payload.insp_file_name,
+      payload.writer ?? "system",
 
       payload.min_range,
       payload.min_range_spec,
@@ -235,11 +257,10 @@ const updateInspMaster = async (inspItemId, payload) => {
       payload.max_score,
       payload.pass_score,
       payload.pass_score_spec,
+      payload.score_desc_json ?? null,   // ★ 추가
 
       qSession,
       tSession,
-
-      payload.writer ?? "system",
     ];
 
     await mariadb.query("InspMasterUpdate", params);
@@ -268,21 +289,32 @@ const deleteInspMaster = async (inspItemId) => {
 // 1-8. 품질기준관리 상세조회
 const findInspMasterDetail = async (inspItemId) => {
   try {
-    // 마스터 1건
-    const [master] = await mariadb.query("selectInspMasterDetail", [inspItemId]);
-
+    const [master]  = await mariadb.query("selectInspMasterDetail", [inspItemId]);
     if (!master) return { ok:false, message:"데이터가 없습니다." };
 
-    // 대상 목록
     const targets = await mariadb.query("selectInspTargetsByItem", [inspItemId]);
-
-    // 관능 질문 목록
     const questions = await mariadb.query("selectInspQuestionsByItem", [inspItemId]);
 
-    return { ok:true, data: { master, targets, questions } };
+    // 프론트가 그대로 바인딩하기 좋게 키 이름만 맞춰서 반환
+    const normTargets = targets.map(t => ({
+      t_id: t.t_id,
+      t_type: t.insp_target_code,        // a1~a5
+      t_category: t.t_category,
+      t_name: t.t_name ?? '',
+      t_spec: t.t_spec ?? '',
+      t_unit: t.t_unit ?? '',
+      t_type_name: t.t_type_name ?? '',
+    }));
+
+    const normQuestions = questions.map((q, i) => ({
+      id: q.ques_id ?? i + 1,
+      text: q.ques_name ?? ''
+    }));
+
+    return { ok:true, data: { master, targets: normTargets, questions: normQuestions } };
   } catch (e) {
-    console.error(e); 
-    return { ok:false, message:e.message || "상세 조회 실패" };
+    console.error(e);
+    return { ok:false, message: e.sqlMessage || e.message || "상세 조회 실패" };
   }
 };
 
@@ -294,5 +326,6 @@ module.exports = {
   findInspMaster,
   deleteInspMaster,
   updateInspMaster,
-  findInspMasterDetail
+  findInspMasterDetail,
+  searchInspMaster
 };

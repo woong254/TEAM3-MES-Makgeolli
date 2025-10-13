@@ -72,7 +72,7 @@ INSERT INTO tmp_targets (session_id, insp_target_type, insp_target_code, product
 VALUES (?, ?, ?, ?, ?)
 `;
 const callInspMaster = `
-  CALL insp_master_insert(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+CALL insp_master_insert(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `;
 const cleanupTmpQuestions = `
 DELETE FROM tmp_sen_questions WHERE session_id = ?
@@ -81,7 +81,7 @@ const cleanupTmpTargets = `
 DELETE FROM tmp_targets WHERE session_id = ?
 `;
 
-// 품질기준관리 조회
+// 품질기준관리 조회(목록)
 const selectInspMaster = `
 SELECT qcm.insp_item_id
       ,qcm.insp_item_name
@@ -111,10 +111,86 @@ CALL insp_master_delete(?)
 `;
 
 // 품질기준관리 검색
+const searchInspMaster = `
+-- 검색 파라미터: ?, ?, ?, ?
+-- 1) 검사항목명 like
+-- 2) 검사대상명 like (prod/mat 중 coalesce)
+-- 3) 품목구분(a1~a5) 정확일치
+-- 4) 사용여부('Y'/'N') 정확일치
 
+SELECT qcm.insp_item_id
+      ,qcm.insp_item_name
+      ,COALESCE(p.prod_name, m.mat_name) AS target_name
+      ,c.comncode_dtnm      AS insp_target_name 
+      ,qcm.use_yn
+FROM qc_master qcm
+LEFT JOIN qc_master_target qct
+       ON qct.insp_item_id = qcm.insp_item_id
+LEFT JOIN comncode_dt c
+       ON c.comncode_detailid = qct.insp_target_code 
+LEFT JOIN prod_master AS p
+       ON p.prod_code = qct.product_code
+LEFT JOIN mat_master AS m
+       ON m.mat_code = qct.mat_code
+WHERE (? = '' OR qcm.insp_item_name LIKE CONCAT('%', ?, '%'))
+  AND (? = '' OR COALESCE(p.prod_name, m.mat_name) LIKE CONCAT('%', ?, '%'))
+  AND (? = '' OR qct.insp_target_code = ?)   -- a1~a5
+  AND (? = '' OR qcm.use_yn = ?)             -- 'Y'|'N'
+ORDER BY qcm.write_date DESC;`;
 
 // 품질기준관리 상세 조회
-
+const selectInspMasterDetail = `
+SELECT
+  qcm.insp_item_id,
+  qcm.insp_item_name,
+  qcm.insp_type,
+  qcm.use_yn,
+  qcm.insp_method,
+  qcm.file_name,
+  qcm.max_score,
+  qcm.pass_score,
+  qcm.pass_score_spec,
+  qcm.score_desc,  
+  ran.min_range,
+  ran.min_range_spec,
+  ran.max_range,
+  ran.max_range_spec,
+  ran.unit
+FROM qc_master AS qcm
+LEFT JOIN qc_master_ran AS ran
+       ON ran.insp_item_id = qcm.insp_item_id
+WHERE qcm.insp_item_id = ?
+`;
+// 상세(타겟 목록)
+const selectInspTargetsByItem = `
+SELECT
+  qmt.insp_target_id,
+  qmt.insp_target_code,
+  qmt.product_code,
+  qmt.mat_code,
+  COALESCE(p.prod_code, m.mat_code)         AS t_id,
+  COALESCE(p.prod_name, m.mat_name)         AS t_name,
+  COALESCE(p.prod_spec, m.mat_spec)         AS t_spec,
+  COALESCE(p.prod_unit, m.mat_unit)         AS t_unit,
+  CASE WHEN qmt.product_code IS NOT NULL THEN '제품' ELSE '자재' END AS t_category,
+  c.comncode_dtnm                            AS t_type_name
+FROM qc_master_target AS qmt
+LEFT JOIN prod_master  AS p ON p.prod_code      = qmt.product_code
+LEFT JOIN mat_master   AS m ON m.mat_code       = qmt.mat_code
+LEFT JOIN comncode_dt  AS c ON c.comncode_id    = '0A'
+                            AND c.comncode_detailid = qmt.insp_target_code
+WHERE qmt.insp_item_id = ?
+ORDER BY qmt.insp_target_code, qmt.product_code, qmt.mat_code
+`;
+const selectInspQuestionsByItem = `
+SELECT
+  qs.ques_id,
+  qs.ques_order,
+  qs.ques_name
+FROM qc_master_sen AS qs
+WHERE qs.insp_item_id = ?
+ORDER BY qs.ques_order, qs.ques_id
+`;
 
 module.exports = {
   selectInspTargetList,
@@ -127,4 +203,8 @@ module.exports = {
   selectInspMaster,
   InspMasterDel,
   InspMasterUpdate,
+  selectInspMasterDetail,
+  selectInspTargetsByItem,
+  selectInspQuestionsByItem,
+  searchInspMaster
 };

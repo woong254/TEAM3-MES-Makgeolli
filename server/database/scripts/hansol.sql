@@ -135,6 +135,7 @@ CREATE PROCEDURE insp_master_insert (
     IN p_max_score           INT,
     IN p_pass_score          DECIMAL(6,2),
     IN p_pass_score_spec     CHAR(2),
+    IN p_score_desc_json     TEXT,              -- ★ 추가: 점수-설명 JSON 문자열
 
     /* ===== 임시테이블 세션키 ===== */
     IN p_session_questions   VARCHAR(64),
@@ -211,7 +212,7 @@ BEGIN
     /* 4-3) qc_master INSERT */
     INSERT INTO qc_master (
         insp_item_id, insp_item_name, insp_type, use_yn, insp_method, file_name,
-        max_score, pass_score, pass_score_spec,
+        max_score, pass_score, pass_score_spec, score_desc,
         writer, write_date
     ) VALUES (
         v_insp_item_id, p_insp_item_name, p_insp_type, IFNULL(p_use_yn,'Y'),
@@ -219,6 +220,7 @@ BEGIN
         CASE WHEN p_insp_type='S' THEN p_max_score       ELSE NULL END,
         CASE WHEN p_insp_type='S' THEN p_pass_score      ELSE NULL END,
         CASE WHEN p_insp_type='S' THEN p_pass_score_spec ELSE NULL END,
+        CASE WHEN p_insp_type='S' THEN p_score_desc_json ELSE NULL END,  -- ★ 추가
         p_writer, NOW()
     );
 
@@ -392,104 +394,102 @@ DELIMITER ;
 
 
 -- 품질기준관리 수정 프로시저 (변경된 사항만 수정하는 것보다 재적재 방식이 안전하고 덜복잡)
+DROP PROCEDURE IF EXISTS insp_master_update;
 DELIMITER $$
 
 CREATE PROCEDURE insp_master_update (
-    /* ===== 식별자 ===== */
-    IN p_insp_item_id       VARCHAR(100),
+  -- [키]
+  IN p_insp_item_id        VARCHAR(100),
 
-    /* ===== 공통 ===== */
-    IN p_insp_item_name     VARCHAR(200),
-    IN p_insp_type          CHAR(1),          -- 'R' or 'S'
-    IN p_use_yn             CHAR(1),
-    IN p_insp_method        VARCHAR(1000),
-    IN p_insp_file_name     VARCHAR(50),
+  -- [공통]
+  IN p_insp_item_name      VARCHAR(200),
+  IN p_insp_type           CHAR(1),
+  IN p_use_yn              CHAR(1),
+  IN p_insp_method         VARCHAR(1000),
+  IN p_insp_file_name      VARCHAR(50),
+  IN p_writer              VARCHAR(100),
 
-    /* ===== 범위형 파라미터 ===== */
-    IN p_min_range          DECIMAL(6,2),
-    IN p_min_range_spec     CHAR(2),
-    IN p_max_range          DECIMAL(6,2),
-    IN p_max_range_spec     CHAR(2),
-    IN p_unit               VARCHAR(5),
+  -- [범위형]
+  IN p_min_range           DECIMAL(6,2),
+  IN p_min_range_spec      CHAR(2),
+  IN p_max_range           DECIMAL(6,2),
+  IN p_max_range_spec      CHAR(2),
+  IN p_unit                VARCHAR(5),
 
-    /* ===== 관능형 파라미터 ===== */
-    IN p_max_score          INT,
-    IN p_pass_score         DECIMAL(4,2),
-    IN p_pass_score_spec    CHAR(2),
+  -- [관능형]
+  IN p_max_score           INT,
+  IN p_pass_score          DECIMAL(6,2),
+  IN p_pass_score_spec     CHAR(2),
+  IN p_score_desc_json     TEXT,              -- ★ 추가
 
-    /* ===== 임시테이블 세션키 ===== */
-    IN p_session_questions  VARCHAR(64),
-    IN p_session_targets    VARCHAR(64),
-
-    /* ===== 작성자 ===== */
-    IN p_writer             VARCHAR(50)
+  -- [세션키]
+  IN p_session_questions   VARCHAR(64),
+  IN p_session_targets     VARCHAR(64)
 )
 BEGIN
-    DECLARE done INT DEFAULT 0;
+  DECLARE done INT DEFAULT 0;
 
-    DECLARE EXIT HANDLER FOR SQLEXCEPTION
-    BEGIN
-        ROLLBACK;
-        RESIGNAL;
-    END;
+  START TRANSACTION;
 
-    START TRANSACTION;
+  /* qc_master 업데이트 */
+  UPDATE qc_master
+     SET insp_item_name = p_insp_item_name,
+         insp_type      = p_insp_type,
+         use_yn         = IFNULL(p_use_yn,'Y'),
+         insp_method    = p_insp_method,
+         file_name      = p_insp_file_name,
+         max_score      = CASE WHEN p_insp_type='S' THEN p_max_score       ELSE NULL END,
+         pass_score     = CASE WHEN p_insp_type='S' THEN p_pass_score      ELSE NULL END,
+         pass_score_spec= CASE WHEN p_insp_type='S' THEN p_pass_score_spec ELSE NULL END,
+         score_desc     = CASE WHEN p_insp_type='S' THEN p_score_desc_json ELSE NULL END, -- ★ 추가
+         writer         = p_writer,
+         write_date     = NOW()
+   WHERE insp_item_id = p_insp_item_id;
 
-    /* 1) 기본정보 업데이트 */
-    UPDATE qc_master
-       SET insp_item_name = p_insp_item_name,
-           insp_type      = p_insp_type,
-           use_yn         = IFNULL(p_use_yn,'Y'),
-           insp_method    = p_insp_method,
-           file_name      = p_insp_file_name,
-           max_score      = CASE WHEN p_insp_type='S' THEN p_max_score       ELSE NULL END,
-           pass_score     = CASE WHEN p_insp_type='S' THEN p_pass_score      ELSE NULL END,
-           pass_score_spec= CASE WHEN p_insp_type='S' THEN p_pass_score_spec ELSE NULL END,
-           update_user    = p_writer,
-           update_date    = NOW()
-     WHERE insp_item_id = p_insp_item_id;
-
-    /* 2) 유형별 상세 싹 초기화 */
+  /* 범위형 상세 갱신 */
+  IF p_insp_type = 'R' THEN
+    INSERT INTO qc_master_ran (insp_item_id, min_range, min_range_spec, max_range, max_range_spec, unit)
+    VALUES (p_insp_item_id, p_min_range, p_min_range_spec, p_max_range, p_max_range_spec, p_unit)
+    ON DUPLICATE KEY UPDATE
+      min_range = VALUES(min_range),
+      min_range_spec = VALUES(min_range_spec),
+      max_range = VALUES(max_range),
+      max_range_spec = VALUES(max_range_spec),
+      unit = VALUES(unit);
+  ELSE
+    -- 관능형이면 범위형 상세 제거(선택)
     DELETE FROM qc_master_ran WHERE insp_item_id = p_insp_item_id;
+  END IF;
+
+  /* 관능형 질문 재적재 (선택: 필요 정책대로 처리) */
+  IF p_insp_type = 'S' THEN
     DELETE FROM qc_master_sen WHERE insp_item_id = p_insp_item_id;
-
-    /* 3) 유형별 상세 재적재 */
-    IF p_insp_type = 'R' THEN
-        INSERT INTO qc_master_ran (
-            insp_item_id, min_range, min_range_spec, max_range, max_range_spec, unit
-        ) VALUES (
-            p_insp_item_id, p_min_range, p_min_range_spec, p_max_range, p_max_range_spec, p_unit
-        );
-    ELSEIF p_insp_type = 'S' THEN
-        /* tmp_sen_questions → qc_master_sen 재적재 (질문 순번은 tmp id 오름차순 기준) */
-        INSERT INTO qc_master_sen (ques_id, ques_order, ques_name, insp_item_id)
-        SELECT 
-            CONCAT('QCS-', DATE_FORMAT(NOW(),'%Y%m%d'), '-', LPAD(ROW_NUMBER() OVER (ORDER BY id), 3, '0')) AS ques_id,
-            ROW_NUMBER() OVER (ORDER BY id) AS ques_order,
-            ques_name,
-            p_insp_item_id
-          FROM tmp_sen_questions
-         WHERE session_id = p_session_questions;
-    END IF;
-
-    /* 4) 대상 타깃 싹 초기화 후 재적재 */
-    DELETE FROM qc_master_target WHERE insp_item_id = p_insp_item_id;
-
-    INSERT INTO qc_master_target (
-        insp_target_id, insp_target_type, insp_target_code,
-        product_code, mat_code, insp_item_id
-    )
+    INSERT INTO qc_master_sen (ques_id, ques_order, ques_name, insp_item_id)
     SELECT
-        CONCAT('QCT-', DATE_FORMAT(NOW(),'%Y%m%d'), '-', LPAD(ROW_NUMBER() OVER (ORDER BY id), 3, '0')) AS insp_target_id,
-        insp_target_type,
-        insp_target_code,
-        CASE WHEN insp_target_type='제품' THEN product_code ELSE NULL END,
-        CASE WHEN insp_target_type='자재' THEN mat_code ELSE NULL END,
-        p_insp_item_id
-      FROM tmp_targets
-     WHERE session_id = p_session_targets;
+      CONCAT('QCS-', DATE_FORMAT(NOW(), '%Y%m%d'), '-', LPAD(ROW_NUMBER() OVER (ORDER BY id), 3, '0')),
+      ROW_NUMBER() OVER (ORDER BY id),
+      ques_name,
+      p_insp_item_id
+    FROM tmp_sen_questions
+    WHERE session_id = p_session_questions;
+  ELSE
+    DELETE FROM qc_master_sen WHERE insp_item_id = p_insp_item_id;
+  END IF;
 
-    COMMIT;
+  /* 검사대상 재적재 (정책대로: 전체 삭제 후 삽입 예시) */
+  DELETE FROM qc_master_target WHERE insp_item_id = p_insp_item_id;
+
+  INSERT INTO qc_master_target (insp_target_id, insp_target_type, insp_target_code, product_code, mat_code, insp_item_id)
+  SELECT
+    CONCAT('QCT-', DATE_FORMAT(NOW(), '%Y%m%d'), '-', LPAD(ROW_NUMBER() OVER (ORDER BY id), 3, '0')),
+    insp_target_type,
+    insp_target_code,
+    product_code,
+    mat_code,
+    p_insp_item_id
+  FROM tmp_targets
+  WHERE session_id = p_session_targets;
+
+  COMMIT;
 END $$
-
 DELIMITER ;

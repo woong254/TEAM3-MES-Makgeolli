@@ -54,6 +54,23 @@ const questions = ref<Question[]>([{ id: 1, text: '' }]) // 관능 질문 목록
 const allInspData = ref<any[]>([]) // 서버에서 받아온 원본
 const inspData = ref<any[]>([]) // 테이블에 바인딩하는 데이터
 const selectedInspData = ref<InspListRow | null>(null) // 라디오 버튼
+const qItemName = ref('')
+const qTargetName = ref('')
+const qTypeCode = ref('') // a1~a5
+const qUseY = ref(false)
+const qUseN = ref(false)
+const scoreDesc = ref<Record<number, string>>({
+  10: '',
+  9: '',
+  8: '',
+  7: '',
+  6: '',
+  5: '',
+  4: '',
+  3: '',
+  2: '',
+  1: '',
+}) // 관능 채점기준: 점수별 설명 (5점 모드일 때는 5~1 키 사용, 10점 모드일 땐 10~1 키 사용)
 
 // 5. 모달에서 선택한 검사대상들 검사대상 테이블에 넣기
 const onInspChecked = (rows: any[]) => {
@@ -195,6 +212,9 @@ function buildInspPayload() {
   let max_range_spec: 'R3' | 'R4' | null = null
   let t_unit: string | null = null
 
+  // ★ 추가: 선언 먼저!
+  let score_desc_json: string | null = null
+
   if (insp_type === 'R') {
     min_range = toDecimalOrNull(minValue.value)
     max_range = toDecimalOrNull(maxValue.value)
@@ -214,6 +234,12 @@ function buildInspPayload() {
     pass_score = toDecimalOrNull(passScore.value)
     pass_score_spec = passSpec.value as 'R1' | 'R2'
     questionsPayload = questions.value.map((q) => (q.text || '').trim()).filter((t) => t.length > 0)
+    // ★ 점수-설명 JSON 만들기 (입력값 있는 것만)
+    const scales = scoreSet.value
+      .map((s) => ({ score: s, desc: (scoreDesc.value[s] || '').trim() }))
+      .filter((x) => x.desc.length > 0)
+
+    score_desc_json = JSON.stringify(scales) // ← 문자열
   }
 
   // 검사대상 그대로 전달(a1~a5 코드와 카테고리/ID)
@@ -240,6 +266,7 @@ function buildInspPayload() {
     pass_score,
     pass_score_spec,
     questions: questionsPayload,
+    score_desc_json,
 
     // 대상
     targets,
@@ -379,7 +406,125 @@ onMounted(() => {
   findinspData()
 })
 
+// 9-2. 품질기준관리 상세 조회
+const onRowSelect = async (e: any) => {
+  await loadInspDetail(e.data.insp_item_id)
+}
+
+async function loadInspDetail(id: string) {
+  const { data } = await axios.get(`/api/inspMaster/${id}`)
+  if (!data?.ok) {
+    alert(data?.message || '상세 실패')
+    return
+  }
+
+  const { master, targets, questions: qs } = data.data // ✅ 질문도 받기
+
+  // 공통
+  inspName.value = master.insp_item_name || ''
+  inspUsing.value = master.use_yn === 'N'
+  inspDesc.value = master.insp_method || ''
+  inspTarget.value = targets // ✅ 이제 t_name/t_spec/t_unit/t_type_name 채워짐
+
+  if (master.insp_type === 'R') {
+    inspMode.value = 'range'
+    minValue.value = master.min_range != null ? String(master.min_range) : ''
+    minSpec.value = master.min_range_spec || 'R1'
+    maxValue.value = master.max_range != null ? String(master.max_range) : ''
+    maxSpec.value = master.max_range_spec || 'R3'
+    unit.value = master.unit || ''
+    // 관능 필드 초기화
+    scoreMax.value = 5
+    passScore.value = ''
+    passSpec.value = 'R1'
+    questions.value = [{ id: 1, text: '' }]
+  } else {
+    inspMode.value = 'sensory'
+    scoreMax.value = Number(master.max_score ?? 5)
+    passScore.value = master.pass_score != null ? String(master.pass_score) : ''
+    passSpec.value = master.pass_score_spec || 'R1'
+    // 범위 필드 초기화
+    minValue.value = ''
+    minSpec.value = 'R1'
+    maxValue.value = ''
+    maxSpec.value = 'R3'
+    unit.value = ''
+    // ✅ 질문 세팅
+    questions.value =
+      qs && qs.length
+        ? qs.map((q: any, i: number) => ({ id: q.id ?? i + 1, text: q.text ?? '' }))
+        : [{ id: 1, text: '' }]
+
+    // ★ 채점기준(score_desc) 복원
+    scoreDesc.value = {}
+    try {
+      // 반드시 selectInspMasterDetail 쿼리에 qc_master.score_desc가 포함되어야 합니다.
+      const arr = JSON.parse(master.score_desc ?? '[]') as Array<{ score: number; desc: string }>
+      for (const item of arr) {
+        if (typeof item?.score === 'number') {
+          scoreDesc.value[item.score] = String(item?.desc ?? '')
+        }
+      }
+      // 저장된 길이에 맞춰 최고점수 보정(선택)
+      if (arr.length === 5) scoreMax.value = 5
+      else if (arr.length === 10) scoreMax.value = 10
+    } catch {
+      // 파싱 실패 시 조용히 무시
+    }
+  }
+}
+
 // 10. 품질기준관리 검색
+// 10-1. 초기화 버튼
+function resetSearch() {
+  qItemName.value = ''
+  qTargetName.value = ''
+  qTypeCode.value = ''
+  qUseY.value = false
+  qUseN.value = false
+
+  selectedInspData.value = null
+  inspData.value = []
+  allInspData.value = []
+
+  // 필요하면 오른쪽 상세 폼도 비우고 싶을 때
+  // resetIspForm()
+
+  // 전체 목록 재조회
+  findinspData()
+}
+// 10-2. 체크박스 조합
+const qUseYnParam = computed(() => {
+  if ((qUseY.value && qUseN.value) || (!qUseY.value && !qUseN.value)) return '' // 전체
+  return qUseY.value ? 'Y' : 'N'
+})
+// 10-3. 조회 버튼
+async function searchList() {
+  try {
+    // 1) 기존 목록/선택 초기화
+    selectedInspData.value = null
+    inspData.value = []
+    allInspData.value = []
+
+    // 2) 조회
+    const { data } = await axios.get('/api/inspMaster/search', {
+      params: {
+        itemName: qItemName.value,
+        targetName: qTargetName.value,
+        typeCode: qTypeCode.value,
+        useYn: qUseYnParam.value,
+      },
+    })
+
+    // 3) 결과 덮어쓰기
+    allInspData.value = data ?? []
+    inspData.value = data ?? []
+  } catch (e) {
+    console.error(e)
+    allInspData.value = []
+    inspData.value = []
+  }
+}
 
 // 11. 품질기준관리 수정
 const updateInsp = async () => {
@@ -424,6 +569,9 @@ const deleteInsp = async () => {
   }
 }
 
+// 13. 버튼 조건부 렌더링(등록/수정)
+const isEditMode = computed(() => !!selectedInspData.value)
+
 // 모달 이벤트(open, close)
 const isModalOpen = ref(false)
 const openModal = () => {
@@ -452,24 +600,24 @@ const fileStyle =
     <ComponentCard title="조회" className="shadow-sm">
       <template v-slot:header-right>
         <div class="flex justify-end">
-          <button class="btn-common btn-white">초기화</button>
-          <button class="btn-common btn-color">조회</button>
+          <button class="btn-common btn-white" @click="resetSearch">초기화</button>
+          <button class="btn-common btn-color" @click="searchList">조회</button>
         </div>
       </template>
       <template #body-content>
         <div class="flex gap-4">
           <div class="w-1/4">
             <label :class="labelStyle" for="insp-name"> 검사항목명 </label>
-            <input type="text" id="insp-name" :class="inputStyle" />
+            <input type="text" id="insp-name" :class="inputStyle" v-model="qItemName" />
           </div>
           <div class="w-1/4">
             <label :class="labelStyle" for="insp-target-name"> 검사대상 </label>
-            <input type="text" id="insp-target-name" :class="inputStyle" />
+            <input type="text" id="insp-target-name" :class="inputStyle" v-model="qTargetName" />
           </div>
           <div class="w-1/4">
             <label :class="labelStyle" for="insp-type"> 품목구분 </label>
             <div class="relative z-20 bg-transparent">
-              <select id="insp-type" :class="selectStyle">
+              <select id="insp-type" :class="selectStyle" v-model="qTypeCode">
                 <option value="a1">주자재</option>
                 <option value="a2">부자재</option>
                 <option value="a3">재공품</option>
@@ -506,6 +654,7 @@ const fileStyle =
                 name="insp-using"
                 value="Y"
                 class="checkboxStyle text-sm text-gray-800"
+                v-model="qUseY"
               />사용
             </label>
             <label :class="labelStyle">
@@ -514,6 +663,7 @@ const fileStyle =
                 name="insp-using"
                 value="N"
                 class="checkboxStyle text-sm text-gray-800"
+                v-model="qUseN"
               />미사용
             </label>
           </div>
@@ -534,6 +684,7 @@ const fileStyle =
             class="text-sm"
             v-model:selection="selectedInspData"
             dataKey="insp_item_id"
+            @rowSelect="onRowSelect"
           >
             <Column
               field="inspCheck"
@@ -585,8 +736,18 @@ const fileStyle =
               class="btn-common btn-color"
               form="insp-form"
               @click="registerInsp"
+              v-if="!isEditMode"
             >
               등록
+            </button>
+            <button
+              type="button"
+              class="btn-common btn-color"
+              form="insp-form"
+              @click="updateInsp"
+              v-else
+            >
+              수정
             </button>
             <button
               type="button"
@@ -842,7 +1003,12 @@ const fileStyle =
                   <div v-for="(tscore, idx) in scoreSet" :key="idx">
                     <label :class="labelStyle" class="flex items-center">
                       <span :class="labelStyle" class="w-[80px] text-sm">{{ tscore }} 점</span>
-                      <input type="text" :class="inputStyle" class="w-full" />
+                      <input
+                        type="text"
+                        :class="inputStyle"
+                        class="w-full"
+                        v-model="scoreDesc[tscore]"
+                      />
                     </label>
                   </div>
                 </div>
