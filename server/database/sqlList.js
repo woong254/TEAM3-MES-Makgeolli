@@ -1,6 +1,3 @@
-// 기준 정보
-// const reference = require("./sqls/reference.js");
-
 // 영업
 // require는 하나만 받을 수 있음
 const orderform = require("./sqls/orderform.js");
