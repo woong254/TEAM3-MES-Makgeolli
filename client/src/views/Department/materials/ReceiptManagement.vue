@@ -27,9 +27,11 @@ const flatpickrConfig = computed(() => ({
 
 const iis = ref([
   {
-    mat_spec: '테스트',
+    mat_spec: '',
   },
 ])
+
+const pending = ref([{}])
 
 const handleCloseModal = () => {
   isBcncModalOpen.value = false
@@ -274,14 +276,63 @@ const onSelectBcnc = (selectedBcnc) => {
         <template #body-content>
           <TabView>
             <TabPanel header="검사대기">
-              <p class="m-0">
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
-                incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
-                exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute
-                irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla
-                pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia
-                deserunt mollit anim id est laborum.
-              </p>
+              <DataTable :value="pending" show-gridlines>
+                <DataCol
+                  field="pur_code"
+                  header="발주코드"
+                  :pt="{ columnHeaderContent: 'justify-center' }"
+                />
+                <DataCol
+                  field="pur_name"
+                  header="발주서명"
+                  :pt="{ columnHeaderContent: 'justify-center' }"
+                />
+                <DataCol
+                  field="pre_receipt_date"
+                  header="가입고일자"
+                  :pt="{ columnHeaderContent: 'justify-center' }"
+                />
+                <DataCol
+                  field="exp_date"
+                  header="유통기한"
+                  :pt="{ columnHeaderContent: 'justify-center' }"
+                />
+                <DataCol
+                  field="prod_date"
+                  header="제조일자"
+                  :pt="{ columnHeaderContent: 'justify-center' }"
+                />
+                <DataCol
+                  field="bcnc_name"
+                  header="매입처명"
+                  :pt="{ columnHeaderContent: 'justify-center' }"
+                />
+                <DataCol
+                  field="mat_code"
+                  header="자재코드"
+                  :pt="{ columnHeaderContent: 'justify-center' }"
+                />
+                <DataCol
+                  field="mat_name"
+                  header="자재명"
+                  :pt="{ columnHeaderContent: 'justify-center' }"
+                />
+                <DataCol
+                  field="mat_spec"
+                  header="규격"
+                  :pt="{ columnHeaderContent: 'justify-center' }"
+                />
+                <DataCol
+                  field="mat_unit"
+                  header="단위"
+                  :pt="{ columnHeaderContent: 'justify-center' }"
+                />
+                <DataCol
+                  field="receipt_qty"
+                  header="입고수량"
+                  :pt="{ columnHeaderContent: 'justify-center' }"
+                />
+              </DataTable>
             </TabPanel>
             <TabPanel header="검사완료">
               <p class="m-0">
@@ -313,3 +364,8 @@ const onSelectBcnc = (selectedBcnc) => {
     />
   </AdminLayout>
 </template>
+<style>
+.p-tabview-panels {
+  padding: 0 !important;
+}
+</style>
