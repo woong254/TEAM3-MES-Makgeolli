@@ -12,10 +12,12 @@ import Column from 'primevue/column'
 import 'primeicons/primeicons.css'
 import Button from 'primevue/button'
 import InspTargetSelectModal from './InspTargetSelectModal.vue' // import the modal component (검사대상조회)
+import axios from 'axios'
 
+// 1. 페이지 제목
 const currentPageTitle = ref('품질검사 기준관리')
 
-// 타입스크립트 -> 명시해주지 않으면 오류뜸
+// 2. TS명시
 interface InspRow {
   t_id: string
   t_name: string
@@ -26,6 +28,248 @@ interface InspRow {
 interface Question {
   id: number
   text: string
+}
+
+// 3. 변수 선언
+const inspName = ref('') //검사항목명
+const inspUsing = ref(false) //미사용 체크박스(false, 체크안된상태)
+const inspDesc = ref('') //검사방법
+const inspTarget = ref<InspRow[]>([]) //검사대상
+const minValue = ref('') // 범위 최소값
+const maxValue = ref('') // 범위 최대값
+const passScore = ref('') // 관능 합격 점수(평균)
+const minSpec = ref('R1') // 이상/초과
+const maxSpec = ref('R3') // 이하/미만
+const unit = ref('')
+const passSpec = ref('R1')
+const inspMode = ref('range') // 검사유형(범위/관능) 초기값 range
+const scoreMax = ref(5) // 관능검사 점수 초기값
+const questions = ref<Question[]>([{ id: 1, text: '' }]) // 관능 질문 목록 (처음 1줄)
+
+// 4. 테이블 라디오 버튼
+const selectedInspData = ref(null)
+
+// 5. 모달에서 선택한 검사대상들 검사대상 테이블에 넣기
+const onInspChecked = (rows: any[]) => {
+  // 여러 건 추가
+  const merged = [...inspTarget.value, ...rows] //기존데이터(inspTarget.value) + 넘어온데이터(rows)
+  // 중복 제거(de-duplicate)
+  const dedup = Array.from(new Map(merged.map((r) => [r.t_id, r])).values())
+  inspTarget.value = dedup
+}
+// 5-1. 검사대상 삭제 (휴지통 버튼 클릭시)
+const targetDel = (id: string) => {
+  inspTarget.value = inspTarget.value.filter((row) => row.t_id !== id)
+}
+
+// 6. 관능검사
+const scoreSet = computed(() => {
+  return scoreMax.value == 5 ? [5, 4, 3, 2, 1] : [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
+})
+// 6-1. 관능 질문 추가
+const addQuest = () => {
+  questions.value.push({
+    id: questions.value.length + 1, // 새 id
+    text: '',
+  })
+}
+// 6-2. 관능 질문 제거
+const removeQuest = (id: number) => {
+  if (questions.value.length <= 1) {
+    alert('최소 1개 이상의 질문이 필요합니다.') // 1개 최소 존재
+    return
+  }
+  questions.value = questions.value.filter((q) => q.id !== id)
+  // 라벨 번호 다시 1부터 재정렬(질문1,2,3...)
+  questions.value = questions.value.map((q, i) => ({ ...q, id: i + 1 }))
+}
+
+// 7. 유효성검사 -> 잘못 작성시 알람
+const sanitizeDecimal = (e: Event): string => {
+  const el = e.target as HTMLInputElement
+  const raw = el.value
+  let v = raw
+  let msg = ''
+
+  if (/[^0-9.]/.test(v)) {
+    v = v.replace(/[^0-9.]/g, '')
+    msg ||= '숫자만 입력해주세요.'
+  }
+  const dotCount = (v.match(/\./g) || []).length
+  if (dotCount > 1) {
+    v = v.replace(/(\..*)\./g, '$1')
+    msg = '소수점은 한 번만 사용할 수 있어요.'
+  }
+  if (v.startsWith('.')) v = '0' + v
+
+  let [intPart = '', decPart = ''] = v.split('.')
+  if (intPart.length > 4) {
+    intPart = intPart.slice(0, 4)
+    msg = '정수는 최대 4자리까지 가능합니다.'
+  }
+  if (decPart.length > 2) {
+    decPart = decPart.slice(0, 2)
+    msg = '소수점은 둘째자리까지 가능합니다.'
+  }
+
+  if (raw.endsWith('.') && dotCount <= 1 && decPart === '') {
+    v = intPart ? intPart + '.' : '0.'
+  } else {
+    v = decPart !== '' ? `${intPart}.${decPart}` : intPart
+  }
+
+  if (v !== raw && msg) alert(msg)
+  el.value = v
+  return v
+}
+
+// 8. 품질기준관리 등록
+// 8-1. 품질기준관리 등록 초기화
+const resetIspForm = () => {
+  // 공통
+  inspName.value = ''
+  inspUsing.value = false
+  inspDesc.value = ''
+  inspTarget.value = []
+  // 파일 업로드는 별도로 <input type="file">에서 직접 초기화 필요
+
+  // 범위형
+  minValue.value = ''
+  maxValue.value = ''
+  minSpec.value = 'R1'
+  maxSpec.value = 'R3'
+  unit.value = ''
+
+  // 관능형
+  inspMode.value = 'range' // 검사유형 초기값
+  scoreMax.value = 5
+  passScore.value = ''
+  passSpec.value = 'R1'
+  questions.value = [{ id: 1, text: '' }]
+
+  // 선택된 테이블 행
+  selectedInspData.value = null
+}
+
+// 8-2. 품질기준관리 등록 (빈문자열이면 null, 아니면 숫자)
+const toDecimalOrNull = (s: string) => (s === '' ? null : parseFloat(s))
+const registerInsp = async () => {
+  try {
+    // 1) 공통값
+    const insp_item_name = (inspName.value || '').trim()
+    if (!insp_item_name) {
+      alert('검사항목명을 입력하세요.')
+      return
+    }
+    const insp_type = inspMode.value === 'sensory' ? 'S' : 'R'
+    const use_yn = inspUsing.value ? 'N' : 'Y'
+    const insp_method = (inspDesc.value || '').trim()
+    const insp_file_name = '' // 업로드는 추후
+
+    // 2) 범위형만
+    let min_range = null,
+      min_range_spec = null as 'R1' | 'R2' | null
+    let max_range = null,
+      max_range_spec = null as 'R3' | 'R4' | null
+    let t_unit: string | null = null
+
+    if (insp_type === 'R') {
+      if (minValue.value === '' || maxValue.value === '' || !unit.value) {
+        alert('범위형: 최소/최대/단위를 모두 입력하세요.')
+        return
+      }
+      min_range = toDecimalOrNull(minValue.value) // "0"도 0으로 유지
+      max_range = toDecimalOrNull(maxValue.value)
+      if (Number.isNaN(min_range) || Number.isNaN(max_range)) {
+        alert('범위형 숫자 입력을 확인하세요.')
+        return
+      }
+      min_range_spec = minSpec.value as 'R1' | 'R2'
+      max_range_spec = maxSpec.value as 'R3' | 'R4'
+      t_unit = unit.value
+    }
+
+    // 3) 관능형만
+    let max_score: number | null = null
+    let pass_score: number | null = null
+    let pass_score_spec: 'R1' | 'R2' | null = null
+    let questionsPayload: string[] = []
+
+    if (insp_type === 'S') {
+      max_score = Number(scoreMax.value) // 5 또는 10
+      if (passScore.value === '') {
+        alert('관능형: 합격 기준 점수를 입력하세요.')
+        return
+      }
+      pass_score = toDecimalOrNull(passScore.value)
+      if (Number.isNaN(pass_score)) {
+        alert('관능형: 합격 기준 점수 숫자 입력을 확인하세요.')
+        return
+      }
+      pass_score_spec = passSpec.value as 'R1' | 'R2'
+      questionsPayload = questions.value
+        .map((q) => (q.text || '').trim())
+        .filter((t) => t.length > 0)
+      if (questionsPayload.length < 1) {
+        alert('관능형: 최소 1개 이상의 질문이 필요합니다.')
+        return
+      }
+    }
+
+    // 4) 검사대상 확인
+    if (inspTarget.value.length < 1) {
+      alert('검사대상을 1개 이상 선택하세요.')
+      return
+    }
+
+    // 5) ✅ 클릭 시점 payload 생성
+    const payload = {
+      // 공통
+      insp_item_name,
+      insp_type, // 'R' | 'S'
+      use_yn, // 'Y' | 'N'
+      insp_method,
+      insp_file_name,
+
+      // 범위형
+      min_range, // number | null
+      min_range_spec, // 'R1' | 'R2' | null
+      max_range, // number | null
+      max_range_spec, // 'R3' | 'R4' | null
+      unit: t_unit, // string | null
+
+      // 관능형
+      max_score, // number | null
+      pass_score, // number | null
+      pass_score_spec, // 'R1' | 'R2' | null
+      questions: questionsPayload, // string[]
+
+      // 대상 목록: a1~a5는 각 row.t_type 그대로
+      targets: inspTarget.value, // [{ t_id, t_type:'a1~a5', t_category:'자재'|'제품', ... }]
+    }
+
+    // 6) 전송
+    const res = await axios.post('/api/inspMaster', payload)
+    if (res.data?.ok) {
+      alert('등록되었습니다.')
+      // 필요 시 폼 초기화
+      resetIspForm()
+    } else {
+      alert(res.data?.message || '등록에 실패했습니다.')
+    }
+  } catch (e) {
+    console.error(e)
+    alert('서버 오류가 발생했습니다.')
+  }
+}
+
+// 모달 이벤트(open, close)
+const isModalOpen = ref(false)
+const openModal = () => {
+  isModalOpen.value = true
+}
+const closeModal = () => {
+  isModalOpen.value = false
 }
 
 // table data
@@ -97,128 +341,6 @@ const inspData = ref([
     inspUsing: '-',
   },
 ])
-
-const inspName = ref('') //검사항목명
-const inspUsing = ref(false) //미사용 체크박스(false, 체크안된상태)
-const inspDesc = ref('') //검사방법
-const inspTarget = ref<InspRow[]>([]) //검사대상
-const minValue = ref('') // 범위 최소값
-const maxValue = ref('') // 범위 최대값
-const passScore = ref('') // 관능 합격 점수(평균)
-const minSpec = ref('R1') // 이상/초과
-const maxSpec = ref('R3') // 이하/미만
-
-// 모달에서 선택한 검사대상(데이터)
-const onInspChecked = (rows: any[]) => {
-  // 여러 건 추가
-  const merged = [...inspTarget.value, ...rows] //기존데이터(inspTarget.value) + 넘어온데이터(rows)
-  // 중복 제거(de-duplicate)
-  const dedup = Array.from(new Map(merged.map((r) => [r.t_id, r])).values())
-  inspTarget.value = dedup
-}
-// 검사대상 삭제 (휴지통 버튼 클릭시)
-const targetDel = (id: string) => {
-  inspTarget.value = inspTarget.value.filter((row) => row.t_id !== id)
-}
-
-// 검사유형(범위/관능) 초기값 range
-const inspMode = ref('range')
-
-// 관능검사 - 점수 초기값
-const scoreMax = ref(5)
-const scoreSet = computed(() => {
-  return scoreMax.value == 5 ? [5, 4, 3, 2, 1] : [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
-})
-
-// 관능 질문 목록 (처음 1줄)
-const questions = ref<Question[]>([{ id: 1, text: '' }])
-
-// 관능 질문 추가
-const addQuest = () => {
-  questions.value.push({
-    id: questions.value.length + 1, // 새 id
-    text: '',
-  })
-}
-
-// 관능 질문 제거
-const removeQuest = (id: number) => {
-  if (questions.value.length <= 1) {
-    alert('최소 1개 이상의 질문이 필요합니다.') // 1개 최소 존재
-    return
-  }
-  questions.value = questions.value.filter((q) => q.id !== id)
-  // 라벨 번호 다시 1부터 재정렬(질문1,2,3...)
-  questions.value = questions.value.map((q, i) => ({ ...q, id: i + 1 }))
-}
-
-// 유효성 검사(숫자-실수) > 잘못입력시 알람
-const allowDecimal = (e: Event, model: { value: string }) => {
-  const el = e.target as HTMLInputElement
-  const raw = el.value
-  let v = raw
-  let msg = ''
-
-  // 1) 숫자/점 외 문자 제거
-  if (/[^0-9.]/.test(v)) {
-    v = v.replace(/[^0-9.]/g, '')
-    msg ||= '숫자만 입력해주세요.'
-  }
-  // 2) 소수점은 1개만 허용
-  const dotCount = (v.match(/\./g) || []).length
-  if (dotCount > 1) {
-    v = v.replace(/(\..*)\./g, '$1')
-    msg = '소수점은 한 번만 사용할 수 있어요.'
-  }
-  // 3) ".5" → "0.5"
-  if (v.startsWith('.')) v = '0' + v
-  // 4) 길이 제한(정수 4, 소수 2)
-  let [intPart = '', decPart = ''] = v.split('.')
-  if (intPart.length > 4) {
-    intPart = intPart.slice(0, 4)
-    msg = '정수는 최대 4자리까지 가능합니다.'
-  }
-  if (decPart.length > 2) {
-    decPart = decPart.slice(0, 2)
-    msg = '소수점은 둘째자리까지 가능합니다.'
-  }
-  // 5) 재조립: 입력이 "1."처럼 점으로 끝났다면 점 유지
-  if (raw.endsWith('.') && dotCount <= 1 && decPart === '') {
-    v = intPart ? intPart + '.' : '0.'
-  } else {
-    v = decPart !== '' ? `${intPart}.${decPart}` : intPart
-  }
-  // 변경되면 이유 안내
-  if (v !== raw && msg) alert(msg)
-
-  // let v = raw.replace(/[^0-9.]/g, '') // 숫자/점만
-  // v = v.replace(/(\..*)\./g, '$1') // 점 하나만
-  // if (v.startsWith('.')) v = '0' + v // ".5" -> "0.5"
-  // // 정수 4자리 + 소수 2자리 제한 (DECIMAL(6,2) 형태)
-  // v = v.replace(/^(\d{0,4})(\d+)?(?:\.(\d{0,2})?)?.*$/, (_, intPart, extra, decPart) => {
-  //   let result = intPart
-  //   if (decPart !== undefined) result += '.' + decPart
-  //   return result
-  // })
-  // if (v !== raw) {
-  //   alert('숫자만 입력해주세요(소수점 둘째자리까지 입력 가능, 예: 9999.99)')
-  // }
-
-  el.value = v // 실제 input 박스의 보이는 값도 교정
-  model.value = v // v-model 바인딩 값도 동기화
-}
-
-// table radio button
-const selectedInspData = ref(null)
-
-// modal event
-const isModalOpen = ref(false)
-const openModal = () => {
-  isModalOpen.value = true
-}
-const closeModal = () => {
-  isModalOpen.value = false
-}
 
 // style
 const inputStyle =
@@ -349,6 +471,12 @@ const fileStyle =
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
             <DataCol
+              field="inspType"
+              header="품목구분"
+              sortable
+              :pt="{ columnHeaderContent: 'justify-center' }"
+            />
+            <DataCol
               field="inspUsing"
               header="사용여부"
               sortable
@@ -362,7 +490,14 @@ const fileStyle =
       <ComponentCard title="등록" className="shadow-sm w-1/2 ">
         <template #header-right>
           <div class="flex justify-end">
-            <button type="button" class="btn-common btn-color" form="insp-form">등록</button>
+            <button
+              type="button"
+              class="btn-common btn-color"
+              form="insp-form"
+              @click="registerInsp"
+            >
+              등록
+            </button>
             <button class="btn-common btn-white">삭제</button>
           </div>
         </template>
@@ -504,7 +639,7 @@ const fileStyle =
                     :class="inputStyle"
                     v-model="minValue"
                     placeholder="숫자를 입력하세요 (소수 둘째자리까지 입력 가능)"
-                    @input="(e: Event) => allowDecimal(e, minValue)"
+                    @input="(e: Event) => (minValue = sanitizeDecimal(e))"
                     required
                   />
                   <div class="relative z-20 bg-transparent w-1/2">
@@ -543,7 +678,7 @@ const fileStyle =
                     :class="inputStyle"
                     v-model="maxValue"
                     placeholder="숫자를 입력하세요 (소수 둘째자리까지 입력 가능)"
-                    @input="(e: Event) => allowDecimal(e, maxValue)"
+                    @input="(e: Event) => (maxValue = sanitizeDecimal(e))"
                     required
                   />
                   <div class="relative z-20 bg-transparent w-1/2">
@@ -576,7 +711,7 @@ const fileStyle =
               </div>
               <div class="flex items-center mb-4 gap-4">
                 <label :class="labelStyle" class="w-[120px]">단위</label>
-                <input type="text" :class="inputStyle" class="w-3/4" required />
+                <input type="text" :class="inputStyle" class="w-3/4" v-model="unit" required />
               </div>
             </div>
             <!-- 관능 -->
@@ -621,12 +756,12 @@ const fileStyle =
                     :class="inputStyle"
                     placeholder="숫자를 입력하세요 (소수 둘째자리까지 입력가능)"
                     v-model="passScore"
-                    @input="(e: Event) => allowDecimal(e, passScore)"
+                    @input="(e: Event) => (passScore = sanitizeDecimal(e))"
                     required
                   />
                   <div class="relative z-20 bg-transparent w-1/2">
-                    <select :class="selectStyle" v-model="minSpec">
-                      <option value="R1" selected>이상</option>
+                    <select :class="selectStyle" v-model="passSpec">
+                      <option value="R1">이상</option>
                       <option value="R2">초과</option>
                     </select>
                     <span
@@ -659,7 +794,7 @@ const fileStyle =
                   style="margin: 0"
                   @click="addQuest"
                 >
-                  질문추가 +
+                  질문추가
                 </button>
                 <div v-for="(q, idx) in questions" :key="q.id" class="flex items-center mt-2 gap-2">
                   <label :class="labelStyle" class="w-[80px]">질문 {{ idx + 1 }}</label>
