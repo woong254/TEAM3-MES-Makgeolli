@@ -82,9 +82,10 @@ const saveBtn = async () => {
   try {
     validateBeforeSave()
     const h = purChase.value[0]
+    const code = h.pur_code || (await getPurCode())
     const header = {
-      pur_code: h.pur_code,
-      emp_id: h.emp_id || 'EMP-001',
+      pur_code: code,
+      emp_id: h.emp_id || 'EMP-20250616-0003',
       bcnc_code: h.bcnc_code,
       pur_name: (h.pur_name || '').trim(),
       pur_date: toYmd(h.pur_date),
@@ -217,24 +218,23 @@ const deleteBtn = async () => {
 const getPurCode = async () => {
   try {
     const response = await axios.get('/api/purManagement')
-    return response.data.pur_code ?? 'PUR-001'
+    return response.data.pur_code ?? ''
   } catch {
-    return 'PUR-001'
+    return ''
   }
 }
 
 const resetBtn = async () => {
-  const newCode = await getPurCode()
   const today = sysdate().format('YYYY-MM-DD')
   purChaseMat.value = []
   purChase.value = [
     {
-      pur_code: newCode,
+      pur_code: '',
       pur_name: '',
       bcnc_name: '',
       pur_date: today,
       receipt_date: null,
-      emp_name: purChase.value[0]?.emp_name || '',
+      emp_name: '정지웅',
       remark: '',
     },
   ]
@@ -249,6 +249,7 @@ const flatpickrConfig = computed(() => ({
   altInput: true,
   altFormat: 'Y-m-d',
   altInputClass: `${baseInputClass}`,
+
   minDate: purChase.value[0]?.pur_date || sysdate().format('YYYY-MM-DD'),
 }))
 
@@ -263,8 +264,6 @@ const handleCloseModal = () => {
 }
 
 onMounted(async () => {
-  const code = await getPurCode()
-  purChase.value[0].pur_code = code
   // 새 코드로 시작 → 삭제 버튼 숨김
   isExisting.value = false
 })
@@ -327,7 +326,7 @@ onMounted(async () => {
               field="bcnc_name"
               header="매입처명"
               :pt="{ columnHeaderContent: 'justify-center' }"
-              style="width: 200px"
+              style="width: 200px; padding: 8px"
             >
               <template #body="{ data, field }">
                 <div class="relative">
@@ -365,7 +364,7 @@ onMounted(async () => {
             <DataCol
               field="pur_date"
               header="발주일자"
-              style="width: 160px; text-align: center"
+              style="width: 170px; text-align: center; padding: 8px"
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
 
@@ -373,7 +372,7 @@ onMounted(async () => {
             <DataCol
               field="receipt_date"
               header="입고요청일자"
-              style="width: 180px; padding: 8px"
+              style="width: 170px; padding: 8px"
               :pt="{ columnHeaderContent: 'justify-center' }"
             >
               <template #body="{ data, field }">
@@ -465,6 +464,18 @@ onMounted(async () => {
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
             <DataCol
+              field="mat_spec"
+              header="규격"
+              style="width: 140px"
+              :pt="{ columnHeaderContent: 'justify-center' }"
+            />
+            <DataCol
+              field="mat_unit"
+              header="단위"
+              style="width: 140px"
+              :pt="{ columnHeaderContent: 'justify-center' }"
+            />
+            <DataCol
               field="stock_qty"
               header="재고"
               style="width: 180px; text-align: right"
@@ -493,18 +504,6 @@ onMounted(async () => {
                 />
               </template>
             </DataCol>
-            <DataCol
-              field="mat_spec"
-              header="규격"
-              style="width: 140px"
-              :pt="{ columnHeaderContent: 'justify-center' }"
-            />
-            <DataCol
-              field="mat_unit"
-              header="단위"
-              style="width: 140px"
-              :pt="{ columnHeaderContent: 'justify-center' }"
-            />
             <DataCol
               field="remark"
               header="비고"

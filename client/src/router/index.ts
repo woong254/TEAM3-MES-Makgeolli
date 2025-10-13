@@ -203,19 +203,19 @@ const router = createRouter({
 
     // 자재
     {
-      path: '/PurManagement',
-      name: 'PurManagement',
+      path: '/purManagement',
+      name: '발주관리',
       component: () => import('../views/Department/materials/PurManagement.vue'),
       meta: {
         title: '발주관리',
       },
     },
     {
-      path: '/BcncModal',
-      name: 'BcncModal',
-      component: () => import('../views/Department/materials/MatModal/BcncModal.vue'),
+      path: '/receiptManagement',
+      name: '입고관리',
+      component: () => import('../views/Department/materials/ReceiptManagement.vue'),
       meta: {
-        title: '매입처조회',
+        title: '입고관리',
       },
     },
 
