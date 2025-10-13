@@ -371,3 +371,125 @@ LEFT JOIN mat_master AS m
        ON m.mat_code = qct.mat_code
 ORDER BY qcm.write_date;
 
+
+
+-- 품질기준관리 삭제 프로시저
+DELIMITER $$
+CREATE PROCEDURE insp_master_delete(IN p_insp_item_id VARCHAR(100))
+BEGIN
+  DECLARE EXIT HANDLER FOR SQLEXCEPTION
+  BEGIN ROLLBACK; RESIGNAL; END;
+
+  START TRANSACTION;
+    DELETE FROM qc_master_sen    WHERE insp_item_id = p_insp_item_id;
+    DELETE FROM qc_master_ran    WHERE insp_item_id = p_insp_item_id;
+    DELETE FROM qc_master_target WHERE insp_item_id = p_insp_item_id;
+    DELETE FROM qc_master        WHERE insp_item_id = p_insp_item_id;
+  COMMIT;
+END$$
+DELIMITER ;
+
+
+
+-- 품질기준관리 수정 프로시저 (변경된 사항만 수정하는 것보다 재적재 방식이 안전하고 덜복잡)
+DELIMITER $$
+
+CREATE PROCEDURE insp_master_update (
+    /* ===== 식별자 ===== */
+    IN p_insp_item_id       VARCHAR(100),
+
+    /* ===== 공통 ===== */
+    IN p_insp_item_name     VARCHAR(200),
+    IN p_insp_type          CHAR(1),          -- 'R' or 'S'
+    IN p_use_yn             CHAR(1),
+    IN p_insp_method        VARCHAR(1000),
+    IN p_insp_file_name     VARCHAR(50),
+
+    /* ===== 범위형 파라미터 ===== */
+    IN p_min_range          DECIMAL(6,2),
+    IN p_min_range_spec     CHAR(2),
+    IN p_max_range          DECIMAL(6,2),
+    IN p_max_range_spec     CHAR(2),
+    IN p_unit               VARCHAR(5),
+
+    /* ===== 관능형 파라미터 ===== */
+    IN p_max_score          INT,
+    IN p_pass_score         DECIMAL(4,2),
+    IN p_pass_score_spec    CHAR(2),
+
+    /* ===== 임시테이블 세션키 ===== */
+    IN p_session_questions  VARCHAR(64),
+    IN p_session_targets    VARCHAR(64),
+
+    /* ===== 작성자 ===== */
+    IN p_writer             VARCHAR(50)
+)
+BEGIN
+    DECLARE done INT DEFAULT 0;
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        RESIGNAL;
+    END;
+
+    START TRANSACTION;
+
+    /* 1) 기본정보 업데이트 */
+    UPDATE qc_master
+       SET insp_item_name = p_insp_item_name,
+           insp_type      = p_insp_type,
+           use_yn         = IFNULL(p_use_yn,'Y'),
+           insp_method    = p_insp_method,
+           file_name      = p_insp_file_name,
+           max_score      = CASE WHEN p_insp_type='S' THEN p_max_score       ELSE NULL END,
+           pass_score     = CASE WHEN p_insp_type='S' THEN p_pass_score      ELSE NULL END,
+           pass_score_spec= CASE WHEN p_insp_type='S' THEN p_pass_score_spec ELSE NULL END,
+           update_user    = p_writer,
+           update_date    = NOW()
+     WHERE insp_item_id = p_insp_item_id;
+
+    /* 2) 유형별 상세 싹 초기화 */
+    DELETE FROM qc_master_ran WHERE insp_item_id = p_insp_item_id;
+    DELETE FROM qc_master_sen WHERE insp_item_id = p_insp_item_id;
+
+    /* 3) 유형별 상세 재적재 */
+    IF p_insp_type = 'R' THEN
+        INSERT INTO qc_master_ran (
+            insp_item_id, min_range, min_range_spec, max_range, max_range_spec, unit
+        ) VALUES (
+            p_insp_item_id, p_min_range, p_min_range_spec, p_max_range, p_max_range_spec, p_unit
+        );
+    ELSEIF p_insp_type = 'S' THEN
+        /* tmp_sen_questions → qc_master_sen 재적재 (질문 순번은 tmp id 오름차순 기준) */
+        INSERT INTO qc_master_sen (ques_id, ques_order, ques_name, insp_item_id)
+        SELECT 
+            CONCAT('QCS-', DATE_FORMAT(NOW(),'%Y%m%d'), '-', LPAD(ROW_NUMBER() OVER (ORDER BY id), 3, '0')) AS ques_id,
+            ROW_NUMBER() OVER (ORDER BY id) AS ques_order,
+            ques_name,
+            p_insp_item_id
+          FROM tmp_sen_questions
+         WHERE session_id = p_session_questions;
+    END IF;
+
+    /* 4) 대상 타깃 싹 초기화 후 재적재 */
+    DELETE FROM qc_master_target WHERE insp_item_id = p_insp_item_id;
+
+    INSERT INTO qc_master_target (
+        insp_target_id, insp_target_type, insp_target_code,
+        product_code, mat_code, insp_item_id
+    )
+    SELECT
+        CONCAT('QCT-', DATE_FORMAT(NOW(),'%Y%m%d'), '-', LPAD(ROW_NUMBER() OVER (ORDER BY id), 3, '0')) AS insp_target_id,
+        insp_target_type,
+        insp_target_code,
+        CASE WHEN insp_target_type='제품' THEN product_code ELSE NULL END,
+        CASE WHEN insp_target_type='자재' THEN mat_code ELSE NULL END,
+        p_insp_item_id
+      FROM tmp_targets
+     WHERE session_id = p_session_targets;
+
+    COMMIT;
+END $$
+
+DELIMITER ;

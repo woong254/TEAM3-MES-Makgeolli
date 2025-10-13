@@ -100,6 +100,22 @@ LEFT JOIN mat_master AS m
 ORDER BY qcm.write_date;
 `;
 
+// 품질기준관리 수정
+const InspMasterUpdate = `
+CALL insp_master_update(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+`;
+
+// 품질기준관리 삭제
+const InspMasterDel = `
+CALL insp_master_delete(?)
+`;
+
+// 품질기준관리 검색
+
+
+// 품질기준관리 상세 조회
+
+
 module.exports = {
   selectInspTargetList,
   searchInspTarget,
@@ -109,4 +125,6 @@ module.exports = {
   cleanupTmpQuestions,
   cleanupTmpTargets,
   selectInspMaster,
+  InspMasterDel,
+  InspMasterUpdate,
 };
