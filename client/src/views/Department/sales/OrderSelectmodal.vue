@@ -5,7 +5,7 @@ import Modal from '@/components/ui/Modal.vue'
 import DataTable from 'primevue/datatable'
 import DataCol from 'primevue/column'
 
-// ✅ 부모에서 넘겨받는 props 정의
+// 부모에서 넘겨받는 props 정의
 const props = defineProps({
   visible: {
     type: Boolean,

@@ -51,10 +51,16 @@ FROM   orderdetail od
        ON   od.prod_code = p.prod_code
 WHERE  od.ord_id = ?`;
 
+const selectProdUnit = `
+SELECT comncode_dtnm
+FROM   comncode_dt
+WHERE  comncode_id = '0B'`;
+
 module.exports = {
   selectOrderDetail,
   selectOrderDetailProducts,
   insertOrd,
   deleteDetail,
   selectOrderProducts,
+  selectProdUnit,
 };

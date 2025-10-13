@@ -87,5 +87,45 @@ router.get("/orderProducts", async (req, res) => {
     console.error("orderProducts 조회 오류:", err);
   }
 });
+// 제품선택 단위 조회
+router.get("/viewProdUnit", async (req, res) => {
+  try {
+    const result = await salesService.getProdUnit();
+    res.send(result);
+    console.log(result);
+  } catch (err) {
+    console.error("viewProdUnit 조회 오류", err);
+  }
+});
+
+// 완제품 입고 관리 검색
+router.get("/viewEpIsManage", async (req, res) => {
+  try {
+    const { prod_name, ep_start_date, ep_end_date } = req.query;
+
+    const result = await salesService.getEpIsManage({
+      prod_name,
+      ep_start_date,
+      ep_end_date,
+    });
+    res.send(result);
+    console.log(result);
+  } catch (err) {
+    console.error("viewEpIsManage 조회 오류", err);
+  }
+});
+// 완제품 입고 처리
+router.post("/insertEpIs", async (req, res) => {
+  try {
+    const orderform = req.body;
+    console.log("insertEpIs받은 데이터: ", orderform);
+
+    const result = await salesService.insertEpIs(orderform);
+    res.send(result);
+  } catch (err) {
+    console.error(err);
+    res.send({ isSuccessed: false, message: err.message });
+  }
+});
 
 module.exports = router;

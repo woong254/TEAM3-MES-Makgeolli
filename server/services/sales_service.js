@@ -13,6 +13,7 @@ const deleteOrder = sqlList.deleteOrder;
 const selectOrdId = sqlList.selectOrdId;
 const updateOrd = sqlList.updateOrd;
 const deleteDetail = sqlList.deleteDetail;
+const selectEpIsManage = sqlList.selectEpIsManage;
 
 // const testService = ()=>{
 //   let conn = null;
@@ -242,6 +243,71 @@ const getOrderProducts = async (ord_id) => {
   }
 };
 
+// 제품선택에서 단위 조회
+const getProdUnit = async () => {
+  try {
+    const result = await mariadb.query("selectProdUnit");
+    return result;
+  } catch (err) {
+    console.error("getProdUnit 오류", err);
+  }
+};
+
+// 완제품 입고 관리 조회
+const getEpIsManage = async (data) => {
+  const { prod_name, ep_start_date, ep_end_date } = data;
+  try {
+    let sql = selectEpIsManage;
+    let params = [];
+
+    if (prod_name) {
+      sql += ` AND pm.prod_name LIKE ?`;
+      params.push(`%${prod_name}%`);
+    }
+    if (ep_start_date) {
+      sql += ` AND epep_dt >= ?`;
+      params.push(ep_start_date);
+    }
+    if (ep_end_date) {
+      sql += ` AND epep_dt <= ?`;
+      params.push(ep_end_date);
+    }
+
+    const result = await mariadb.query(sql, params);
+    const formatted = result.map((row) => ({
+      ...row,
+      epep_dt: formatDate(new Date(row.epep_dt)),
+    }));
+    return formatted;
+  } catch (err) {
+    console.error("getEpIsManage", err);
+  }
+};
+// 완제품 입고 관리 입고 버튼 기능
+const insertEpIs = async (orderForm) => {
+  const conn = await mariadb.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    for (const item of orderForm) {
+      await conn.query(
+        `INSERT INTO epis_table (insp_id, prod_code, pass_qty, epep_dt, remark)
+         VALUES (?, ?, ?, ?, ?)`,
+        [item.insp_id, item.prod_code, item.pass_qty, item.epep_dt, item.remark]
+      );
+    }
+
+    await conn.commit();
+    return { isSuccessed: true };
+  } catch (err) {
+    await conn.rollback();
+    console.error(err);
+    return { isSuccessed: false, message: err.message };
+  } finally {
+    conn.release();
+  }
+};
+
 // export
 export {
   viewList,
@@ -251,4 +317,6 @@ export {
   productsView,
   removeOrder,
   getOrderProducts,
+  getProdUnit,
+  getEpIsManage,
 };
