@@ -1,6 +1,5 @@
 // 품질 서비스
 const mariadb = require("../database/mapper.js");
-const { v4: uuidv4 } = require("uuid");
 
 // 1. 품질 기준 관리
 // 1-1. 검사대상 조회
