@@ -83,6 +83,8 @@ const registerInspMaster = async (payload) => {
 
       qSession,
       tSession,
+
+      payload.writer ?? "system",
     ];
 
     await mariadb.query("callInspMaster", params);
@@ -101,10 +103,18 @@ const registerInspMaster = async (payload) => {
 };
 
 // 1-4. 품질기준관리 조회
+const findInspMaster = async () => {
+  let list = await mariadb
+    .query("selectInspMaster")
+    .catch((err) => console.log(err));
+  return list;
+};
+
 // 1-5. 품질기준관리 검색
 
 module.exports = {
   findInspTarget,
   findInspTargetSearch,
   registerInspMaster,
+  findInspMaster,
 };

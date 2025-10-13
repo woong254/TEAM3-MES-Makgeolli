@@ -1,7 +1,7 @@
 <!-- 품질기준관리 -->
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import '@/assets/common.css'
 import ComponentCard from '@/components/common/ComponentCardButton.vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
@@ -45,6 +45,8 @@ const passSpec = ref('R1')
 const inspMode = ref('range') // 검사유형(범위/관능) 초기값 range
 const scoreMax = ref(5) // 관능검사 점수 초기값
 const questions = ref<Question[]>([{ id: 1, text: '' }]) // 관능 질문 목록 (처음 1줄)
+const allInspData = ref<any[]>([]) // 서버에서 받아온 원본
+const inspData = ref<any[]>([]) // 테이블에 바인딩하는 데이터
 
 // 4. 테이블 라디오 버튼
 const selectedInspData = ref(null)
@@ -263,6 +265,24 @@ const registerInsp = async () => {
   }
 }
 
+// 9. 품질기준관리 조회
+async function findinspData() {
+  try {
+    const { data } = await axios.get('/api/inspFindMaster')
+    allInspData.value = data
+    inspData.value = data
+    console.log(data)
+  } catch (err) {
+    console.error('데이터 조회 오류:', err)
+    allInspData.value = []
+    inspData.value = []
+  }
+}
+onMounted(() => {
+  // 페이지 최초 진입 시 한 번 조회
+  findinspData()
+})
+
 // 모달 이벤트(open, close)
 const isModalOpen = ref(false)
 const openModal = () => {
@@ -271,76 +291,6 @@ const openModal = () => {
 const closeModal = () => {
   isModalOpen.value = false
 }
-
-// table data
-const inspData = ref([
-  {
-    inspCode: 'QC0001',
-    inspName: '쌀 외관검사',
-    inspTarget: '쌀20kg(원재료)',
-    inspUsing: 'Y',
-  },
-  {
-    inspCode: 'QC0002',
-    inspName: '알코올 도수 검사',
-    inspTarget: '막걸리(반제품)',
-    inspUsing: 'Y',
-  },
-  {
-    inspCode: 'QC0003',
-    inspName: '대장균 검사',
-    inspTarget: '막걸리(반제품)',
-    inspUsing: 'Y',
-  },
-  {
-    inspCode: '-',
-    inspName: '-',
-    inspTarget: '-',
-    inspUsing: '-',
-  },
-  {
-    inspCode: '-',
-    inspName: '-',
-    inspTarget: '-',
-    inspUsing: '-',
-  },
-  {
-    inspCode: '-',
-    inspName: '-',
-    inspTarget: '-',
-    inspUsing: '-',
-  },
-  {
-    inspCode: '-',
-    inspName: '-',
-    inspTarget: '-',
-    inspUsing: '-',
-  },
-  {
-    inspCode: '-',
-    inspName: '-',
-    inspTarget: '-',
-    inspUsing: '-',
-  },
-  {
-    inspCode: '-',
-    inspName: '-',
-    inspTarget: '-',
-    inspUsing: '-',
-  },
-  {
-    inspCode: '-',
-    inspName: '-',
-    inspTarget: '-',
-    inspUsing: '-',
-  },
-  {
-    inspCode: '-',
-    inspName: '-',
-    inspTarget: '-',
-    inspUsing: '-',
-  },
-])
 
 // style
 const inputStyle =
@@ -451,37 +401,35 @@ const fileStyle =
               style="width: 10px"
             />
             <DataCol
-              field="inspCode"
+              field="insp_item_id"
               header="검사항목ID"
               sortable
               :pt="{ columnHeaderContent: 'justify-center' }"
-              style="width: 120px"
               bodyStyle="text-align: center"
             />
             <DataCol
-              field="inspName"
+              field="insp_item_name"
               header="검사대상명"
               sortable
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
             <DataCol
-              field="inspTarget"
+              field="target_name"
               header="검사대상"
               sortable
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
             <DataCol
-              field="inspType"
+              field="insp_target_name"
               header="품목구분"
-              sortable
               :pt="{ columnHeaderContent: 'justify-center' }"
+              style="width: 80px"
             />
             <DataCol
-              field="inspUsing"
+              field="use_yn"
               header="사용여부"
-              sortable
               :pt="{ columnHeaderContent: 'justify-center' }"
-              style="width: 100px; text-align: center"
+              style="width: 70px; text-align: center"
             />
           </DataTable>
         </template>

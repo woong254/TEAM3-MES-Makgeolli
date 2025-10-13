@@ -122,6 +122,7 @@ CREATE PROCEDURE insp_master_insert (
     IN p_use_yn              CHAR(1), 
     IN p_insp_method         VARCHAR(1000),
     IN p_insp_file_name      VARCHAR(50),
+    IN p_writer              VARCHAR(100),
 
     /* ===== 범위형 파라미터 ===== */
     IN p_min_range           DECIMAL(6,2),
@@ -210,13 +211,15 @@ BEGIN
     /* 4-3) qc_master INSERT */
     INSERT INTO qc_master (
         insp_item_id, insp_item_name, insp_type, use_yn, insp_method, file_name,
-        max_score, pass_score, pass_score_spec
+        max_score, pass_score, pass_score_spec,
+        writer, write_date
     ) VALUES (
         v_insp_item_id, p_insp_item_name, p_insp_type, IFNULL(p_use_yn,'Y'),
         p_insp_method, p_insp_file_name,
         CASE WHEN p_insp_type='S' THEN p_max_score       ELSE NULL END,
         CASE WHEN p_insp_type='S' THEN p_pass_score      ELSE NULL END,
-        CASE WHEN p_insp_type='S' THEN p_pass_score_spec ELSE NULL END
+        CASE WHEN p_insp_type='S' THEN p_pass_score_spec ELSE NULL END,
+        p_writer, NOW()
     );
 
     /* 4-4) 유형별 상세 */
@@ -300,3 +303,71 @@ BEGIN
     COMMIT;
 END $$
 DELIMITER ;
+
+-- 관능 질문 임시테이블
+CREATE TABLE IF NOT EXISTS tmp_sen_questions (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  session_id VARCHAR(64) NOT NULL,
+  ques_name  VARCHAR(100) NOT NULL
+);
+
+-- 검사대상 임시테이블
+CREATE TABLE IF NOT EXISTS tmp_targets (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  session_id        VARCHAR(64) NOT NULL,
+  insp_target_type  VARCHAR(100)     NOT NULL,    
+  insp_target_code  CHAR(3) NOT NULL,    -- R1~R5
+  product_code      VARCHAR(100) NULL,
+  mat_code          VARCHAR(100) NULL
+);
+
+
+-- 날짜/작성자 추가
+ALTER TABLE qc_master
+  ADD COLUMN writer     VARCHAR(100) NULL COMMENT '작성자',
+  ADD COLUMN write_date DATETIME     NULL COMMENT '작성일자';
+
+UPDATE qc_master
+   SET writer     = '이한솔',
+       write_date = Now()
+WHERE insp_item_id = 'QC-20251013-003';
+
+
+-- 검사대상 조회 (CASE로 자재/제품 구분 -> 좀더 명시적으로 사용 가능)
+SELECT qcm.insp_item_id
+      ,qcm.insp_item_name
+      ,CASE 
+          WHEN qct.product_code IS NOT NULL THEN p.prod_name
+          WHEN qct.mat_code IS NOT NULL     THEN m.mat_name
+          ELSE NULL
+       END AS target_name
+      ,c.comncode_dtnm      AS insp_target_name
+      ,qcm.use_yn
+FROM qc_master qcm
+LEFT JOIN qc_master_target qct
+       ON qct.insp_item_id = qcm.insp_item_id
+LEFT JOIN comncode_dt c
+       ON c.comncode_detailid = qct.insp_target_code 
+LEFT JOIN prod_master AS p
+       ON p.prod_code = qct.product_code
+LEFT JOIN mat_master AS m
+       ON m.mat_code = qct.mat_code
+ORDER BY qcm.write_date;
+
+-- 검사대상 조회(COALESCE 함수사용)
+SELECT qcm.insp_item_id
+      ,qcm.insp_item_name
+      ,COALESCE(p.prod_name, m.mat_name) AS target_name  -- 제품명/자재명 중 하나
+      ,c.comncode_dtnm      AS insp_target_name 
+      ,qcm.use_yn
+FROM qc_master qcm
+LEFT JOIN qc_master_target qct
+       ON qct.insp_item_id = qcm.insp_item_id
+LEFT JOIN comncode_dt c
+       ON c.comncode_detailid = qct.insp_target_code 
+LEFT JOIN prod_master AS p
+       ON p.prod_code = qct.product_code
+LEFT JOIN mat_master AS m
+       ON m.mat_code = qct.mat_code
+ORDER BY qcm.write_date;
+

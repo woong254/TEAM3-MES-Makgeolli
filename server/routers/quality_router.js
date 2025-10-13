@@ -13,6 +13,15 @@ router.get("/inspTarget", async (req, res) => {
 });
 
 // 1-2. 검사대상 검색(모달)
+router.get("/inspTargetSearch", async (req, res) => {
+  const param = req.query;
+  const searchResults = await qualityService
+    .findInspTargetSearch(param)
+    .catch((err) => console.error(err));
+  res.send(searchResults);
+});
+
+// 1-3. 품질기준관리 등록
 router.post("/inspMaster", async (req, res) => {
   const result = await qualityService
     .registerInspMaster(req.body)
@@ -23,6 +32,12 @@ router.post("/inspMaster", async (req, res) => {
   res.status(result.ok ? 200 : 400).json(result);
 });
 
-// 1-3. 품질기준관리 등록
+// 1-4. 품질기준관리 조회
+router.get("/inspFindMaster", async (req, res) => {
+  let inspTargetList = await qualityService
+    .findInspMaster()
+    .catch((err) => console.error(err));
+  res.send(inspTargetList);
+});
 
 module.exports = router;
