@@ -237,7 +237,7 @@ WHERE  1=1
        
 -- 완제품 입고 관리 조회 입고버튼 프로시저
 DELIMITER $$
-CREATE PROCEDURE insert_order_item(
+CREATE PROCEDURE insert_epis(
     IN p_insp_id VARCHAR(50),
     IN p_prod_code VARCHAR(50),
     IN p_pass_qty INT,
@@ -245,29 +245,36 @@ CREATE PROCEDURE insert_order_item(
     IN p_remark VARCHAR(255)
 )
 BEGIN
-    DECLARE target_ord_id VARCHAR(20);
-
-    START TRANSACTION;
-
+    DECLARE target_ep_lot VARCHAR(20);
+    
+    -- 순번 계산
     SELECT CONCAT(
-         'EPRO', 
-         DATE_FORMAT(NOW(), '%y%m'),                        -- 생성일 연월 YYMM
-         LPAD(IFNULL(MAX(SUBSTR(ord_id, 8, 3)), 0) + 1, 3, '0'), -- 순번 3자리
-         DATE_FORMAT(@exp_date, '%y%m%d')                  -- 유통기한 YYMMDD
-       ) AS ep_lot
-	FROM epis
-	WHERE SUBSTR(ep_lot, 5, 4) = DATE_FORMAT(NOW(), '%y%m')
-	FOR UPDATE;
+         'EPRO',
+         DATE_FORMAT(p_epep_dt, '%y%m%d'),   -- 유통기한 YYMMDD
+         DATE_FORMAT(NOW(), '%y%m%d'),       -- 등록일자 YYMMDD
+         LPAD(IFNULL(MAX(CAST(SUBSTR(ep_lot,17,3) AS UNSIGNED)), 0) + 1, 3, '0') -- 순번 3자리
+    ) 
+    INTO target_ep_lot
+    FROM epis
+    WHERE SUBSTR(ep_lot,5,6) = DATE_FORMAT(p_epep_dt, '%y%m%d') -- 유통기한 기준 그룹화
+      AND SUBSTR(ep_lot,11,6) = DATE_FORMAT(NOW(), '%y%m%d')    -- 등록일 기준 그룹화
+    FOR UPDATE;
 
-    INSERT INTO orderform(ord_id, insp_id, prod_code, pass_qty, epep_dt, remark)
-    VALUES(target_ord_id, p_insp_id, p_prod_code, p_pass_qty, p_epep_dt, p_remark);
-
-    COMMIT;
-END$$
+    -- 데이터 INSERT
+    INSERT INTO epis(ep_lot, insp_id, prod_code, epis_qty, ep_qty, epep_dt, remark)
+    VALUES(target_ep_lot, p_insp_id, p_prod_code, p_pass_qty, p_pass_qty, p_epep_dt, p_remark);
+END $$
 DELIMITER ;
-       
 
-       
+-- 제품 조회 프로시저 실행
+CALL insert_epis();
+-- add_form 삭제       
+DROP PROCEDURE IF EXISTS insert_epis;      
+
+
+
+
+
        
 SELECT *
 FROM   orderform;
@@ -340,12 +347,40 @@ INSERT INTO orderform(ord_id, ord_name, due_date, bcnc_code, emp_id, ord_date, o
 			   VALUES('20251002-01', '생막걸리예담주문', '2025-10-10','1','EMP-20250616-0001', '2025-10-02','생막걸리(750ml*20병)외2건','주문완료');
                
 -- 완제품검사 테이블 임시 데이터 삽입
-INSERT INTO prod_insp(insp_id, insp_name, pass_qty, procs_no, epep_dt)
-			   VALUES('test01', '테스트01', 500, 100, '2025-11-04');
+INSERT INTO prod_insp (insp_id, insp_name, pass_qty, procs_no, epep_dt, final_result)
+VALUES
+  ('test01', '테스트01', 500, 100, '2025-11-04', 'P'),
+  ('test02', '테스트02', 400, 101, '2025-11-07', 'P'),
+  ('test03', '테스트03', 500, 102, '2025-11-10', 'P'),
+  ('test04', '테스트04', 500, 103, '2025-11-20', 'P'),
+  ('test05', '테스트05', 500, 104, '2025-11-15', 'P'),
+  ('test06', '테스트06', 500, 105, '2025-11-13', ''),
+  ('test07', '테스트07', 500, 106, '2025-11-13', 'F'),
+  ('test08', '테스트08', 500, 107, '2025-11-15', 'P'),
+  ('test09', '테스트09', 500, 108, '2025-11-12', 'P'),
+  ('test10', '테스트10', 500, 109, '2025-11-11', 'P'),
+  ('test11', '테스트11', 500, 110, '2025-11-10', 'P'),
+  ('test12', '테스트12', 500, 111, '2025-11-20', 'P'),
+  ('test13', '테스트13', 500, 112, '2025-11-25', 'P');              
                
 -- 공정실적관리 테이블 임시 데이터 삽입
 INSERT INTO processform(procs_no, mk_list, equip_code, emp_no, prod_code, inpt_qty, mk_qty, fail_qty, pass_qty, prog,now_procs)
-				 VALUES(100, 100, 'EQP-MK001','EMP-20250616-0001','PROD-20250101-001',500,500,0,500,'100','포장');
+VALUES
+    (100, 100, 'EQP-MK015','EMP-20250616-0001','PROD-20250101-001',500,500,0,500,'100','포장'),
+    (101, 100, 'EQP-MK015','EMP-20250616-0001','PROD-20250101-002',500,500,0,500,'100','포장'),
+    (102, 100, 'EQP-MK015','EMP-20250616-0001','PROD-20250101-003',500,500,0,500,'99','포장'),
+    (103, 100, 'EQP-MK015','EMP-20250616-0001','PROD-20250101-004',500,500,0,500,'100','병입'),
+    (104, 100, 'EQP-MK015','EMP-20250616-0001','PROD-20250101-005',500,500,0,500,'100','포장'),
+    (105, 100, 'EQP-MK015','EMP-20250616-0001','PROD-20250101-006',500,500,0,500,'100','포장'),
+    (106, 100, 'EQP-MK015','EMP-20250616-0001','PROD-20250101-007',500,500,0,500,'100','포장'),
+    (107, 100, 'EQP-MK015','EMP-20250616-0001','PROD-20250101-008',500,500,0,500,'100','포장'),
+    (108, 100, 'EQP-MK015','EMP-20250616-0001','PROD-20250101-009',500,500,0,500,'100','포장'),
+    (109, 100, 'EQP-MK015','EMP-20250616-0001','PROD-20250101-010',500,500,0,500,'100','포장'),
+    (110, 100, 'EQP-MK015','EMP-20250616-0001','PROD-20250101-011',500,500,0,500,'100','포장'),
+    (111, 100, 'EQP-MK015','EMP-20250616-0001','PROD-20250101-012',500,500,0,500,'100','포장'),
+    (112, 100, 'EQP-MK015','EMP-20250616-0001','PROD-20250101-001',500,500,0,500,'100','포장'); 
+
+                 
                         
 DELETE FROM orderform
 WHERE  ord_id = 'ORD2510005';
@@ -355,6 +390,13 @@ DELETE FROM orderform
 WHERE  ord_id = 'ORD2510005';
 DELETE FROM orderform
 WHERE  ord_id = 'ORD2510006';
+DELETE FROM epis
+WHERE  ep_lot = 'EPRO251115251014001';
+DELETE FROM epis;
+TRUNCATE TABLE epis;
+
+SELECT *
+FROM   epis;
 
 SELECT prod_code, prod_name
 FROM prod_master

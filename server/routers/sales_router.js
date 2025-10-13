@@ -101,12 +101,16 @@ router.get("/viewProdUnit", async (req, res) => {
 // 완제품 입고 관리 검색
 router.get("/viewEpIsManage", async (req, res) => {
   try {
-    const { prod_name, ep_start_date, ep_end_date } = req.query;
+    const { insp_name, prod_name, ep_start_date, ep_end_date, Is, Pass } =
+      req.query;
 
     const result = await salesService.getEpIsManage({
+      insp_name,
       prod_name,
       ep_start_date,
       ep_end_date,
+      Is,
+      Pass,
     });
     res.send(result);
     console.log(result);

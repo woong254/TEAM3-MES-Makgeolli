@@ -255,22 +255,37 @@ const getProdUnit = async () => {
 
 // 완제품 입고 관리 조회
 const getEpIsManage = async (data) => {
-  const { prod_name, ep_start_date, ep_end_date } = data;
+  const { insp_name, prod_name, ep_start_date, ep_end_date, Is, Pass } = data;
   try {
     let sql = selectEpIsManage;
     let params = [];
 
+    if (insp_name) {
+      sql += ` AND pi.insp_name LIKE ?`;
+      params.push(`%${insp_name}%`);
+    }
     if (prod_name) {
       sql += ` AND pm.prod_name LIKE ?`;
       params.push(`%${prod_name}%`);
     }
     if (ep_start_date) {
-      sql += ` AND epep_dt >= ?`;
+      sql += ` AND pi.epep_dt >= ?`;
       params.push(ep_start_date);
     }
     if (ep_end_date) {
-      sql += ` AND epep_dt <= ?`;
+      sql += ` AND pi.epep_dt <= ?`;
       params.push(ep_end_date);
+    }
+    if (Is && Pass) {
+      // 입고완료 OR 입고 안 된 검사완료
+      sql += ` AND (ep.eps = ? OR ep.ep_lot IS NULL)`;
+      params.push(Is);
+    } else if (Is) {
+      sql += ` AND ep.eps = ?`;
+      params.push(Is);
+    } else if (Pass) {
+      // 검사완료만 → 아직 입고 안 된 것
+      sql += ` AND ep.ep_lot IS NULL`;
     }
 
     const result = await mariadb.query(sql, params);
@@ -290,18 +305,20 @@ const insertEpIs = async (orderForm) => {
     await conn.beginTransaction();
 
     for (const item of orderForm) {
-      await conn.query(
-        `INSERT INTO epis_table (insp_id, prod_code, pass_qty, epep_dt, remark)
-         VALUES (?, ?, ?, ?, ?)`,
-        [item.insp_id, item.prod_code, item.pass_qty, item.epep_dt, item.remark]
-      );
+      await conn.query("CALL insert_epis(?,?,?,?,?)", [
+        item.insp_id,
+        item.prod_code,
+        item.pass_qty,
+        item.epep_dt,
+        item.remark,
+      ]);
     }
 
     await conn.commit();
     return { isSuccessed: true };
   } catch (err) {
     await conn.rollback();
-    console.error(err);
+    console.error("insertEpIs 오류:", err);
     return { isSuccessed: false, message: err.message };
   } finally {
     conn.release();
@@ -319,4 +336,5 @@ export {
   getOrderProducts,
   getProdUnit,
   getEpIsManage,
+  insertEpIs,
 };
