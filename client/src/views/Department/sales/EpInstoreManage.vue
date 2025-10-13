@@ -22,6 +22,7 @@ interface Props {
 }
 // 주문서관리-주문서조회검색 검색input 인터페이스
 interface SearchCondition {
+  insp_name: string
   prod_name: string
   ep_start_date: string // 유통기한 시작일
   ep_end_date: string // 유통기한 시작일
@@ -31,6 +32,7 @@ interface SearchCondition {
 // 주문제품 테이블 인터페이스 (Product 인터페이스를 대체)
 interface OrderItem {
   insp_id: string
+  insp_name: string
   prod_code: string
   prod_name: string
   prod_spec: string
@@ -56,6 +58,7 @@ const selectedProducts = ref<OrderItem[]>([])
 const products = ref<OrderItem[]>([])
 // 주문서조회검색 input태그 데이터 초기값
 const search = ref<SearchCondition>({
+  insp_name: '',
   prod_name: '',
   ep_start_date: '', // 유통기한 시작일
   ep_end_date: '', // 유통기한 시작일
@@ -95,7 +98,7 @@ const submitSearchForm = () => {
 }
 
 // 완제품 입고 관리 검색 조회 버튼 눌렀을때 데이터 가져오는 함수
-const getEpIsManage = async () => {
+const getEpIsManage = async (showAlert = true) => {
   try {
     const result = await axios.get('/api/viewEpIsManage', {
       params: search.value,
@@ -107,10 +110,10 @@ const getEpIsManage = async () => {
       products.value = []
       return
     }
-
+    selectedProducts.value = []
     products.value = rows
     console.log('조회버튼 누르고 나오는 products.value 값:', products.value)
-    alert('조회성공!')
+    if (showAlert) alert('조회성공!')
   } catch (err) {
     console.error('getEpIsManage 오류:', err)
   }
@@ -134,14 +137,24 @@ const submitEpIs = async () => {
     epep_dt: item.epep_dt,
     remark: item.remark || '',
   }))
+  console.log(obj)
 
   try {
+    if (selectedProducts.value.length === 0) {
+      alert('입고할 제품을 선택해주세요')
+      return
+    }
     // 저장
     const result = await axios.post('/api/insertEpIs', obj)
     const addRes = result.data
 
     if (!addRes.isSuccessed) {
-      alert('등록되지 않았습니다. 데이터를 확인해보세요.')
+      alert('입고가 이루어지지 않았습니다. 데이터를 확인해보세요.')
+      return
+    }
+    if (addRes.isSuccessed) {
+      alert('입고성공')
+      getEpIsManage(false)
       return
     }
   } catch (err) {
@@ -168,6 +181,18 @@ const submitEpIs = async () => {
           </template>
           <template #body-content>
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-400 mb-2">
+                  검사명
+                </label>
+                <input
+                  type="text"
+                  class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+                  placeholder="검사이름을 입력해주세요"
+                  v-model="search.insp_name"
+                  required
+                />
+              </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-400 mb-2">
                   제품명
@@ -276,14 +301,14 @@ const submitEpIs = async () => {
     </div>
     <form action="" id="submitEpIs" @submit.prevent="submitEpIs">
       <div class="space-y-5 sm:space-y-6 mt-2">
-        <ComponentCard title="완제품 입고 관리 조회">
+        <ComponentCard title="완제품 입고 관리">
           <template #header-right>
             <div class="flex items-center">
-              <button type="button" class="btn-color btn-common">입고</button>
+              <button type="submit" class="btn-color btn-common">입고</button>
             </div>
           </template>
           <template #body-content>
-            <div ref="tableWrapper" class="order-table-wrapper h-70">
+            <div ref="tableWrapper" class="order-table-wrapper h-140">
               <DataTable
                 v-model:selection="selectedProducts"
                 :value="products"
@@ -292,22 +317,34 @@ const submitEpIs = async () => {
                 class="fixed-data"
                 showGridlines
                 scrollable
-                scrollHeight="250px"
+                scrollHeight="500px"
                 editMode="cell"
                 size="small"
               >
                 <Column selectionMode="multiple" headerStyle="width: 1%" field="insp_id"></Column>
                 <Column
+                  field="insp_id"
+                  header="검사코드"
+                  :pt="{ columnHeaderContent: 'justify-center' }"
+                  headerStyle="width: 10%"
+                ></Column>
+                <Column
+                  field="insp_name"
+                  header="검사명"
+                  :pt="{ columnHeaderContent: 'justify-center' }"
+                  headerStyle="width: 10%"
+                ></Column>
+                <Column
                   field="prod_code"
                   header="제품코드"
                   :pt="{ columnHeaderContent: 'justify-center' }"
-                  headerStyle="width: 20%"
+                  headerStyle="width: 15%"
                 ></Column>
                 <Column
                   field="prod_name"
                   header="제품명"
                   :pt="{ columnHeaderContent: 'justify-center' }"
-                  headerStyle="width: 20%"
+                  headerStyle="width: 15%"
                 ></Column>
                 <Column
                   field="prod_spec"
@@ -353,7 +390,12 @@ const submitEpIs = async () => {
                       v-model="data.remark"
                       type="text"
                       :class="baseInputClass"
-                      style="height: 2rem"
+                      :style="{
+                        height: '2rem',
+                        backgroundColor: data.eps === '입고완료' ? '#e5e7eb' : '', // Tailwind bg-gray-200 색상값
+                        cursor: data.eps === '입고완료' ? 'not-allowed' : 'text',
+                      }"
+                      :disabled="data.eps === '입고완료'"
                     />
                   </template>
                 </Column>
