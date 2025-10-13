@@ -391,9 +391,9 @@ WHERE  ord_id = 'ORD2510005';
 DELETE FROM orderform
 WHERE  ord_id = 'ORD2510006';
 DELETE FROM epis
-WHERE  ep_lot = 'EPRO251104251014001';
-DELETE FROM processform;
-TRUNCATE TABLE processform;
+WHERE  ep_lot = 'EPRO251115251014001';
+DELETE FROM epis;
+TRUNCATE TABLE epis;
 
 SELECT *
 FROM   epis;
