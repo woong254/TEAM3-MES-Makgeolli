@@ -200,6 +200,14 @@ const router = createRouter({
         title: '생산지시관리',
       },
     },
+    {
+      path: '/prodOrdManage',
+      name: '공정실적관리',
+      component: () => import('../views/Department/production/ProdOrdManage.vue'),
+      meta: {
+        title: '공정실적관리',
+      },
+    },
 
     // 자재
     {

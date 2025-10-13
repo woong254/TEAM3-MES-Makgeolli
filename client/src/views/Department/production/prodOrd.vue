@@ -16,7 +16,7 @@ import { Korean } from 'flatpickr/dist/l10n/ko.js';
 import ProductSelectmodal from '../sales/ProductSelectmodal.vue' // 제품선택
 
 // node 연결
-import axios from 'axios';
+import axios from 'axios'
 
 // props 인터페이스
 interface Props {
@@ -35,7 +35,7 @@ interface MakeInfo {
   remake: string          // 비고
 };
 
-//지시서-상세정보(상품)
+// 지시서-상세정보(상품)
 interface MakeItem {
   no: string            // 등록순서
   prod_code: string     // 제품코드
@@ -128,18 +128,40 @@ const resetInfo = () => {
   selectProducts.value = []
 }
 
+// 저장 전 상세정보 정리
+const beforeSubmit = () => 
+  products.value.map((p, idx) => ({
+    no: String(idx + 1),
+    prod_code: p.prod_code,
+    mk_num: Number(p.make_qty),
+    mk_priority: p.make_priority,
+    remark: p.remark ?? null,
+  }))
+
 // 저장 버튼 클릭시 실행 함수
-const submitMakeInfo = () => {
+const submitMakeInfo = async () => {
   if (products.value.length > 0 && products.value.some(p => !p.make_priority)) {
     alert('우선순위를 입력하지 않은 제품이 있습니다. 확인해주세요.');
     return;
   }
-
   console.log('유효성 검사 통과. 저장을 진행합니다.');
+  
+  const header = {
+    make_name: makeInfo.value.make_name,
+    mk_bgnde: makeInfo.value.make_start_date,
+    mk_ende: makeInfo.value.make_end_date,
+    writing_date: new Date().toISOString().slice(0, 10),
+    remake: makeInfo.value.remake ?? null,
+    emp_name: "EMP-20250616-0002",
+  };
+  const details = beforeSubmit();
 
+  await axios.post('/api/prodOrd', { header, details }, {
+    headers: { 'Content-Type': 'application/json' }
+  });
 }
 
-const currentPageTitle = ref('생산지시관리');
+const currentPageTitle = ref('생산 지시 관리');
 
 // 입력 정보 템플릿 스타일
 const inputStyle = "dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
@@ -302,52 +324,61 @@ const baseInputClass = "dark:bg-dark-900 h-8 w-full rounded-lg border border-gra
               </div>
             </template>
             <template #body-content>
-              <div class="card h-100 ">
+              <div class="card h-70">
                 <DataTable 
                   :value="products"
                   v-model:selection="selectProducts"
                   data-key="no"
+                  tableStyle="max-width: 100%;"
+                  class="fixed-data"
                   showGridlines
                   scrollable
-                  scrollHeight="390px"
+                  scrollHeight="280px"
+                  editMode="cell"
                   size="small"
                   :rows="10"
                 >
-                  <Column selectionMode="multiple" headerStyle="width: 37px" />
+                  <Column selectionMode="multiple" headerStyle="width: 1%" />
                   <Column 
                     field="prod_code" 
                     header="제품코드" 
                     :pt="{ columnHeaderContent: 'justify-center' }"
+                    headerStyle="width: 10%"
                   />
                   <Column 
                     field="prod_name" 
                     header="제품명" 
                     :pt="{ columnHeaderContent: 'justify-center' }"
+                    headerStyle="width: 15%"
                   />
                   <Column 
                     field="prod_spec" 
                     header="규격"
-                    style="text-align: right;"
                     :pt="{ columnHeaderContent: 'justify-center' }"
+                    style="text-align: right;"
+                    headerStyle="width: 5%"
                   />
                   <Column 
                     field="prod_unit" 
-                    header="관리단위"
-                    style="text-align: left;"
+                    header="단위"
                     :pt="{ columnHeaderContent: 'justify-center' }"
+                    style="text-align: left;"
+                    headerStyle="width: 5%"
                   />
                   <Column
                     field="make_qty" 
-                    header="생산수량" 
+                    header="생산수량"
                     :pt="{ columnHeaderContent: 'justify-center' }"
+                    style="text-align: right"
+                    headerStyle="width: 7%"
                   >
                     <template #body="{ data }">
                       <input
                         v-model="data.make_qty"
                         type="number"
                         min="1"
-                        style="text-align: right"
                         :class="baseInputClass"
+                        :style="{ textAlign: 'right' }"
                         placeholder="생산수량"
                       />
                     </template>
@@ -356,28 +387,34 @@ const baseInputClass = "dark:bg-dark-900 h-8 w-full rounded-lg border border-gra
                     field="make_priority" 
                     header="우선순위" 
                     :pt="{ columnHeaderContent: 'justify-center' }"
+                    style="text-align: right"
+                    headerStyle="width: 7%"
                   >
                     <template #body="{ data }">
                       <input
                         v-model="data.make_priority"
                         type="number"
-                        min="1"
-                        style="text-align: right"
+                        :min="1"
                         :class="baseInputClass"
+                        :style="{ textAlign: 'right' }"
+                        style="height: 2rem"
                         placeholder="우선순위"
                       />
                     </template>
                   </Column>
                   <Column 
                     field="remark" 
-                    header="비고" 
+                    header="비고"
                     :pt="{ columnHeaderContent: 'justify-center' }"
+                    style="text-align: left"
+                    headerStyle="width: 24%"
                   >
                     <template #body="{ data }">
                       <input
                         v-model="data.remark"
                         type="text"
                         :class="baseInputClass"
+                        style="height: 2rem"
                         placeholder="내용을 입력해주세요."
                       />
                     </template>
