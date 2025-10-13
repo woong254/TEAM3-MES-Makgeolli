@@ -1,3 +1,4 @@
+//다건조회
 const searchEquipList = `
 SELECT
   equip_code,
@@ -9,13 +10,13 @@ SELECT
 FROM equip_master o
 WHERE 1=1
 `;
-
-// 등록
+//등록
 const insertEquip = `
-INSERT INTO equip_master (
-  equip_code, equip_name, equip_type, manager, equip_status, insp_cycle
-) VALUES (?, ?, ?, ?, ?, ?)
-`;
+      INSERT INTO equip_master (
+        equip_code, equip_name, equip_type, manager, equip_status,
+        insp_cycle, install_date, model_name, equip_image, mfg_dt, maker
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
 
 // 단건 수정 (PK로 찾음)
 const updateEquip = `
@@ -26,7 +27,19 @@ SET
   manager = ?,
   equip_status = ?,
   insp_cycle = ?
-WHERE equip_code = ?
+  maker = ?,
+  model_name = ?,
+  equip_image = ?,
+  WHERE equip_code = ?
+  `;
+// 단건 상세 조회
+const selectEquipByCode = `
+  SELECT
+    equip_code, equip_name, equip_type, manager, equip_status,
+    insp_cycle, install_date, model_name, equip_image, mfg_dt, maker
+  FROM equip_master
+  WHERE equip_code = ?
+  LIMIT 1
 `;
 
 // 삭제
@@ -55,4 +68,5 @@ module.exports = {
   insertEquip,
   updateEquip,
   deleteEquip,
+  selectEquipByCode,
 };

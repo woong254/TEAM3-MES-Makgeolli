@@ -43,6 +43,19 @@ router.put("/equipment/:equip_code", async (req, res) => {
   }
 });
 
+// 단건 상세: GET /api/equipment/:code
+router.get("/equipment/:code", async (req, res) => {
+  try {
+    const row = await equipmentService.getOne(req.params.code);
+    res.json(row); // 프론트에서 toCamel()로 변환
+  } catch (err) {
+    console.error("[equipment][detail] error:", err);
+    res
+      .status(err.status || 500)
+      .json({ message: err.message || "상세 조회 오류" });
+  }
+});
+
 // [삭제] DELETE /api/equipment/:equip_code
 router.delete("/equipment/:equip_code", async (req, res) => {
   try {

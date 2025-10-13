@@ -1,80 +1,115 @@
 <script setup lang="ts">
+/* ========================
+ * Imports
+ * ======================== */
+import { ref, shallowRef, computed, onBeforeMount } from 'vue'
+import axios from 'axios'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
-import '@/assets/common.css'
-import ComponentCard from '@/components/common/ComponentCardButton.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
+import ComponentCard from '@/components/common/ComponentCardButton.vue'
 import DataTable from 'primevue/datatable'
 import DataCol from 'primevue/column'
 import flatPickr from 'vue-flatpickr-component'
 import 'flatpickr/dist/flatpickr.css'
-import { ref, onBeforeMount, shallowRef, computed } from 'vue'
-import axios from 'axios'
-
 import equipSelectModal from './equipSelectModal.vue'
 
+/* ========================
+ * Types
+ * ======================== */
+interface EquipItem {
+  equipCode: string
+  equipName: string
+  equipType: string
+  manager: string | null
+  equipStatus: string | number | null
+  inspCycle: number | null
+  installDate: string | null
+  modelName: string | null
+  equipImage: string | null
+  mfgDt: string | null
+  maker: string | null
+}
+type CreateEquipPayload = Omit<EquipItem, 'equipImage'> & { equipImage?: string }
+
+/* ========================
+ * UI Const
+ * ======================== */
+const currentPageTitle = ref('설비 기준정보 관리')
 const inputStyle =
   'dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-950 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
-
 const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400'
+const flatpickrConfig = { dateFormat: 'Y-m-d', altInput: true, altFormat: 'Y-m-d', wrap: true }
+const fileStyle =
+  'focus:border-ring-brand-300 h-11 w-full overflow-hidden rounded-lg border border-gray-300 bg-transparent text-sm text-gray-500 shadow-theme-xs transition-colors file:mr-5 file:border-collapse file:cursor-pointer file:rounded-l-lg file:border-0 file:border-r file:border-solid file:border-gray-200 file:bg-gray-50 file:py-3 file:pl-3.5 file:pr-3 file:text-sm file:text-gray-700 placeholder:text-gray-400 hover:file:bg-gray-100 focus:outline-hidden focus:file:ring-brand-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400 dark:text-white/90 dark:file:border-gray-800 dark:file:bg-white/[0.03] dark:file:text-gray-400 dark:placeholder:text-gray-400'
 
-const currentPageTitle = ref('설비 기준정보 관리')
-
-interface EquipItem {
-  equipCode: string // 설비코드
-  equipName: string // 설비명
-  equipType: string // 설비유형
-  manager: string // 담당자
-  equipStatus: string // 설비상태
-  inspCycle: number // 점검주기 (예: 일수 or 주기 단위)
-  installDate: string //설치일자
-  modelName: string //모델명
-  equipImage: string //설비이미지
-  mfgDt: string //제조일자
-  maker: string //제조사
-}
-const searchForm = ref({
+/* ========================
+ * Utils (mappers & inits)
+ * ======================== */
+const toCamel = (r: any): EquipItem => ({
+  equipCode: r.equipCode ?? r.equip_code ?? '',
+  equipName: r.equipName ?? r.equip_name ?? '',
+  equipType: r.equipType ?? r.equip_type ?? '',
+  manager: r.manager ?? null,
+  equipStatus: r.equipStatus ?? r.equip_status ?? null,
+  inspCycle: r.inspCycle ?? r.insp_cycle ?? null,
+  installDate: r.installDate ?? r.install_date ?? null,
+  modelName: r.modelName ?? r.model_name ?? null,
+  equipImage: r.equipImage ?? r.equip_image ?? null,
+  mfgDt: r.mfgDt ?? r.mfg_dt ?? null,
+  maker: r.maker ?? null,
+})
+const toSnake = (p: CreateEquipPayload) => ({
+  equip_code: p.equipCode?.trim(),
+  equip_name: p.equipName?.trim(),
+  equip_type: p.equipType?.trim(),
+  manager: p.manager ?? null,
+  equip_status: p.equipStatus ?? null,
+  insp_cycle: p.inspCycle ?? null,
+  install_date: p.installDate || null,
+  model_name: p.modelName || null,
+  equip_image: p.equipImage || null,
+  mfg_dt: p.mfgDt || null,
+  maker: p.maker || null,
+})
+const initForm = (): CreateEquipPayload => ({
   equipCode: '',
   equipName: '',
   equipType: '',
+  manager: '',
   equipStatus: '',
+  inspCycle: 0,
+  installDate: '',
+  modelName: '',
+  equipImage: '',
+  mfgDt: '',
+  maker: '',
 })
-const resetSearchForm = () => {
-  searchForm.value.equipCode = '' // v-model 값 초기화
-  searchForm.value.equipName = ''
-  searchForm.value.equipType = ''
-  searchForm.value.equipStatus = ''
-}
+const initSearch = () => ({ equipCode: '', equipName: '', equipType: '', equipStatus: '' })
 
-const flatpickrConfig = {
-  dateFormat: 'Y-m-d',
-  altInput: true,
-  altFormat: 'Y-m-d',
-  wrap: true,
-}
-const orderStartDates = ref(null)
-const selectedbox = ref([])
+/* ========================
+ * State
+ * ======================== */
+const searchForm = ref(initSearch())
+const equipList = shallowRef<EquipItem[]>([])
+const selectedRow = ref<EquipItem | null>(null)
+const createForm = ref<CreateEquipPayload>(initForm())
+const count = computed(() => equipList.value.length)
 
+/* (optional) 담당자 모달 & 이미지 프리뷰 */
 const isModalOpen = ref(false)
-const openModal = () => {
-  isModalOpen.value = true
-}
-const closeModal = () => {
-  isModalOpen.value = false
-}
+const openModal = () => (isModalOpen.value = true)
+const closeModal = () => (isModalOpen.value = false)
 const fileInputEl = ref<HTMLInputElement | null>(null)
 const eqpImageName = ref('선택된 파일 없음')
 const eqpImagePreview = ref('')
-
 const onFileChange = (e: Event) => {
-  const files = (e.target as HTMLInputElement).files
-  if (!files || files.length === 0) {
+  const f = (e.target as HTMLInputElement).files?.[0]
+  if (!f) {
     eqpImageName.value = '선택된 파일 없음'
     eqpImagePreview.value = ''
     return
   }
-  const f = files[0]
   eqpImageName.value = f.name
-
   if (f.type?.startsWith('image/')) {
     const r = new FileReader()
     r.onload = () => (eqpImagePreview.value = (r.result as string) || '')
@@ -83,46 +118,126 @@ const onFileChange = (e: Event) => {
     eqpImagePreview.value = ''
   }
 }
-
 const clearImage = () => {
   if (fileInputEl.value) fileInputEl.value.value = ''
   eqpImageName.value = '선택된 파일 없음'
   eqpImagePreview.value = ''
 }
-const equipList = shallowRef<EquipItem[]>([])
 
-const count = computed(
-  () =>
-    // ref 기반의 반응형 객체이므로 실제 값에 접근할 떄는 value 필드 사용
-    // 동시에 Composition API에선 객체로 선언하지 않으므로 this로 접근 불가
-    equipList.value.length,
-)
+/* ========================
+ * API
+ * ======================== */
+//다건 조회
 const getEquipList = async () => {
   try {
-    const result = await axios.get<EquipItem[]>('/api/equipment', {
-      params: searchForm.value,
-    })
-    equipList.value = result.data
-  } catch (err) {
-    console.error(err)
-    equipList.value = [] // 실패 시 기본값
+    const { data } = await axios.get('/api/equipment', { params: searchForm.value })
+    equipList.value = (Array.isArray(data) ? data : []).map(toCamel)
+  } catch (e) {
+    console.error(e)
+    equipList.value = []
   }
 }
-onBeforeMount(() => {
-  getEquipList()
-})
+
+//수정/등록 함수
+const saveEquip = async () => {
+  // 필수값
+  if (
+    !createForm.value.equipCode?.trim() ||
+    !createForm.value.equipName?.trim() ||
+    !createForm.value.equipType?.trim()
+  ) {
+    alert('설비코드/설비명/설비유형은 필수입니다.')
+    return
+  }
+  try {
+    if (selectedRow.value) {
+      const code = selectedRow.value.equipCode || createForm.value.equipCode
+      await axios.put(`/api/equipment/${encodeURIComponent(code)}`, toSnake(createForm.value))
+      alert('수정 완료!')
+    } else {
+      await axios.post('/api/equipment', toSnake(createForm.value))
+      alert('등록 완료!')
+    }
+    await getEquipList()
+  } catch (e) {
+    console.error(e)
+    alert('저장 실패')
+  }
+}
+// (추가) 상세 단건 조회
+const getEquipDetail = async (code: string): Promise<EquipItem | null> => {
+  try {
+    const { data } = await axios.get(`/api/equipment/${encodeURIComponent(code)}`)
+    return toCamel(data)
+  } catch (e) {
+    console.error('상세 조회 실패:', e)
+    return null
+  }
+}
+// 삭제 함수
+const deleteOne = async () => {
+  if (!selectedRow.value) return
+  const code = selectedRow.value.equipCode
+  const ok = confirm(`[${code}] 설비를 삭제할까요?`)
+  if (!ok) return
+
+  try {
+    await axios.delete(`/api/equipment/${encodeURIComponent(code)}`)
+    alert('삭제 완료')
+    selectedRow.value = null // 선택 해제
+    resetCreateForm() // 오른쪽 폼 초기화(있으면)
+    await getEquipList() // 목록 새로고침
+  } catch (err: any) {
+    console.error(err?.response ?? err)
+    // FK 제약 등으로 삭제 실패할 수 있음
+    alert(err?.response?.data?.message ?? '삭제 실패')
+  }
+}
+
+/* ========================
+ * Handlers
+ * ======================== */
+const resetSearchForm = () => Object.assign(searchForm.value, initSearch())
+const resetCreateForm = () => {
+  selectedRow.value = null
+  createForm.value = initForm()
+}
+
+const fillFormFromRow = (row: EquipItem) => {
+  createForm.value = { ...row, inspCycle: row.inspCycle ?? 0 }
+}
+// (수정) 클릭/선택 시 상세 먼저 가져와서 폼 채우기
+const onRowClick = async (e: { data: EquipItem }) => {
+  selectedRow.value = e.data
+  const detail = await getEquipDetail(e.data.equipCode)
+  fillFormFromRow(detail ?? e.data)
+}
+const onSelectionChange = async (e: { value: EquipItem | null }) => {
+  if (!e.value) return
+  selectedRow.value = e.value
+  const detail = await getEquipDetail(e.value.equipCode)
+  fillFormFromRow(detail ?? e.value)
+}
+
+/* ========================
+ * Lifecycle
+ * ======================== */
+onBeforeMount(getEquipList)
 </script>
 
 <template>
   <AdminLayout>
-    <PageBreadcrumb :pageTitle="currentPageTitle"> </PageBreadcrumb>
+    <PageBreadcrumb :pageTitle="currentPageTitle" />
+
+    <!-- 조회 -->
     <ComponentCard title="조회" className="shadow-sm">
       <template #header-right>
-        <div class="flex justify-end">
+        <div class="flex justify-end gap-2">
           <button @click="resetSearchForm" class="btn-common btn-color">초기화</button>
           <button @click="getEquipList" class="btn-common btn-white">조회</button>
         </div>
       </template>
+
       <template #body-content>
         <div class="flex gap-4">
           <div class="w-1/4">
@@ -137,110 +252,83 @@ onBeforeMount(() => {
             <label :class="labelStyle">설비유형</label>
             <input v-model="searchForm.equipType" type="text" :class="inputStyle" />
           </div>
-          <div class="flex items-center gap-17 mb-2">
+          <div class="flex items-center gap-6">
             <div :class="labelStyle">설비상태</div>
-            <label :class="labelStyle"
-              >가동
+            <label class="flex items-center gap-2">
               <input
                 v-model="searchForm.equipStatus"
                 type="radio"
                 name="equip-using"
-                class="checkboxStyle"
-                checked
+                value="가동중"
               />
+              가동중
             </label>
-            <label :class="labelStyle"
-              >비가동
+            <label class="flex items-center gap-2">
               <input
                 v-model="searchForm.equipStatus"
                 type="radio"
                 name="equip-using"
-                class="checkboxStyle"
+                value="비가동"
               />
+              비가동
             </label>
           </div>
         </div>
       </template>
     </ComponentCard>
 
-    <div class="flex gap-2 mt-2 width-full" style="height: 550px">
-      <ComponentCard title="목록" className="shadow-sm w-1/2">
+    <div class="flex gap-2 mt-2 w-full" style="height: 550px">
+      <!-- 목록 -->
+      <ComponentCard title="목록" class="shadow-sm w-1/2">
         <template #header-right>
           <div class="flex justify-end">
-            <button class="btn-common btn-color">삭제</button>
+            <button class="btn-common btn-color" :disabled="!selectedRow" @click="deleteOne">
+              삭제
+            </button>
           </div>
         </template>
+
         <template #body-content>
           <DataTable
             :value="equipList"
             showGridlines
-            v-model:selection="selectedbox"
-            dataKey="equip_code"
+            v-model:selection="selectedRow"
+            dataKey="equipCode"
             scrollable
             scrollHeight="390px"
             class="text-sm"
             :rows="20"
             size="small"
+            @row-click="onRowClick"
+            @selection-change="onSelectionChange"
           >
+            <DataCol selectionMode="single" headerStyle="width: 2.5rem" />
+            <DataCol field="equipCode" header="설비코드" />
+            <DataCol field="equipName" header="설비명" />
+            <DataCol field="equipType" header="설비유형" sortable />
+            <DataCol field="manager" header="담당자" sortable />
+            <DataCol field="equipStatus" header="설비상태" sortable />
             <DataCol
-              field="equipCheck"
-              header=""
-              :pt="{ columnHeaderContent: 'justify-center' }"
-              selectionMode="single"
-              style="width: 10px"
-            />
-            <DataCol
-              field="equip_code"
-              header="설비코드"
-              :pt="{ columnHeaderContent: 'justify-center' }"
-            />
-            <DataCol
-              field="equip_name"
-              header="설비명"
-              :pt="{ columnHeaderContent: 'justify-center' }"
-              bodyStyle="text-align: center"
-            />
-            <DataCol
-              field="equip_type"
-              header="설비유형"
+              field="inspCycle"
+              header="점검주기"
               sortable
-              :pt="{ columnHeaderContent: 'justify-center' }"
-            />
-            <DataCol
-              field="manager"
-              header="담당자"
-              sortable
-              :pt="{ columnHeaderContent: 'justify-center' }"
-            />
-            <DataCol
-              field="equip_status"
-              header="설비상태"
-              sortable
-              :pt="{ columnHeaderContent: 'justify-center' }"
-            />
-            <DataCol
-              field="insp_cycle"
-              header="점검예정일"
-              sortable
-              :pt="{ columnHeaderContent: 'justify-center' }"
               style="width: 110px; text-align: center"
             />
           </DataTable>
         </template>
       </ComponentCard>
+
+      <!-- 등록/수정 -->
       <ComponentCard title="등록/수정" class="shadow-sm w-1/2">
-        <!-- 상단 버튼 -->
         <template #header-right>
           <div class="flex justify-end gap-2">
-            <button @click="getEquipList" class="btn-common btn-color">저장</button>
-            <button class="btn-common btn-white">신규</button>
+            <button @click="saveEquip" class="btn-common btn-color">저장</button>
+            <button @click="resetCreateForm" class="btn-common btn-white">신규</button>
           </div>
         </template>
 
-        <!-- ✅ 등록 폼 (라벨2 + 입력4) x 2 = 한 줄 4칸 -->
         <template #body-content>
-          <!-- 스크롤/고정높이 제거 -->
-          <form id="equip-form">
+          <form @submit.prevent="saveEquip">
             <table class="w-full table-fixed border-collapse border border-gray-300">
               <colgroup>
                 <col style="width: 120px" />
@@ -248,226 +336,113 @@ onBeforeMount(() => {
                 <col style="width: 120px" />
                 <col />
               </colgroup>
-
               <tbody>
-                <!-- 1행: 설비코드 / 설비명 -->
                 <tr>
-                  <th
-                    class="border border-gray-300 bg-gray-50 text-sm font-medium text-gray-700 text-left p-2"
-                  >
-                    설비코드
-                  </th>
-                  <td class="border border-gray-300 p-2 align-middle">
-                    <input type="text" :class="inputStyle" />
+                  <th class="border border-gray-300 bg-gray-50 text-sm text-left p-2">설비코드</th>
+                  <td class="border border-gray-300 p-2">
+                    <input
+                      v-model="createForm.equipCode"
+                      :disabled="!!selectedRow"
+                      type="text"
+                      :class="inputStyle"
+                    />
                   </td>
-
-                  <th
-                    class="border border-gray-300 bg-gray-50 text-sm font-medium text-gray-700 text-left p-2"
-                  >
-                    설비명
-                  </th>
-                  <td class="border border-gray-300 p-2 align-middle">
-                    <input type="text" :class="inputStyle" />
+                  <th class="border border-gray-300 bg-gray-50 text-sm text-left p-2">설비명</th>
+                  <td class="border border-gray-300 p-2">
+                    <input v-model="createForm.equipName" type="text" :class="inputStyle" />
                   </td>
                 </tr>
 
-                <!-- 2행: 설비유형 / 담당자(내장 돋보기) -->
                 <tr>
-                  <th
-                    class="border border-gray-300 bg-gray-50 text-sm font-medium text-gray-700 text-left p-2"
-                  >
-                    설비유형
-                  </th>
-                  <td class="border border-gray-300 p-2 align-middle">
-                    <input type="text" :class="inputStyle" />
+                  <th class="border border-gray-300 bg-gray-50 text-sm text-left p-2">설비유형</th>
+                  <td class="border border-gray-300 p-2">
+                    <input v-model="createForm.equipType" type="text" :class="inputStyle" />
                   </td>
-
-                  <th
-                    class="border border-gray-300 bg-gray-50 text-sm font-medium text-gray-700 text-left p-2"
-                  >
-                    담당자
-                  </th>
-                  <td class="border border-gray-300 p-2 align-middle">
+                  <th class="border border-gray-300 bg-gray-50 text-sm text-left p-2">담당자</th>
+                  <td class="border border-gray-300 p-2">
                     <div class="relative">
-                      <!-- 입력 오른쪽에 아이콘 여백 -->
-                      <input type="text" :class="inputStyle + ' pr-10'" />
-                      <!-- 돋보기 아이콘 버튼 -->
+                      <input
+                        v-model="createForm.manager"
+                        type="text"
+                        :class="inputStyle + ' pr-10'"
+                      />
                       <button
                         type="button"
-                        class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-brand-600"
+                        class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500"
                         @click="openModal"
-                        aria-label="담당자 찾기"
                         title="담당자 찾기"
                       >
-                        <svg width="18" height="18" viewBox="0 0 24 24" class="fill-current">
-                          <path
-                            d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79L20 21.5 21.5 20l-6-6zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"
-                          />
-                        </svg>
+                        🔍
                       </button>
                     </div>
                   </td>
                 </tr>
 
-                <!-- 3행: 제조사 / 설치일자 -->
                 <tr>
-                  <th
-                    class="border border-gray-300 bg-gray-50 text-sm font-medium text-gray-700 text-left p-2"
-                  >
-                    제조사
-                  </th>
-                  <td class="border border-gray-300 p-2 align-middle">
-                    <input type="text" :class="inputStyle" />
+                  <th class="border border-gray-300 bg-gray-50 text-sm text-left p-2">제조사</th>
+                  <td class="border border-gray-300 p-2">
+                    <input v-model="createForm.maker" type="text" :class="inputStyle" />
                   </td>
-
-                  <th
-                    class="border border-gray-300 bg-gray-50 text-sm font-medium text-gray-700 text-left p-2"
-                  >
-                    설치일자
-                  </th>
-                  <td class="border border-gray-300 p-2 align-middle">
-                    <div class="relative">
-                      <flat-pickr
-                        v-model="orderStartDates"
-                        :config="flatpickrConfig"
-                        class="dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                      />
-                      <span
-                        class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400"
-                      >
-                        <!-- 달력 아이콘 -->
-                        <svg class="fill-current" width="20" height="20" viewBox="0 0 20 20">
-                          <path
-                            fill-rule="evenodd"
-                            clip-rule="evenodd"
-                            d="M6.66659 1.5415C7.0808 1.5415 7.41658 1.87729 7.41658 2.2915V2.99984H12.5833V2.2915C12.5833 1.87729 12.919 1.5415 13.3333 1.5415C13.7475 1.5415 14.0833 1.87729 14.0833 2.2915V2.99984L15.4166 2.99984C16.5212 2.99984 17.4166 3.89527 17.4166 4.99984V7.49984V15.8332C17.4166 16.9377 16.5212 17.8332 15.4166 17.8332H4.58325C3.47868 17.8332 2.58325 16.9377 2.58325 15.8332V7.49984V4.99984C2.58325 3.89527 3.47868 2.99984 4.58325 2.99984L5.91659 2.99984V2.2915C5.91659 1.87729 6.25237 1.5415 6.66659 1.5415ZM6.66659 4.49984H4.58325C4.30711 4.49984 4.08325 4.7237 4.08325 4.99984V6.74984H15.9166V4.99984C15.9166 4.7237 15.6927 4.49984 15.4166 4.49984H13.3333H6.66659ZM15.9166 8.24984H4.08325V15.8332C4.08325 16.1093 4.30711 16.3332 4.58325 16.3332H15.4166C15.6927 16.3332 15.9166 16.1093 15.9166 15.8332V8.24984Z"
-                          />
-                        </svg>
-                      </span>
-                    </div>
+                  <th class="border border-gray-300 bg-gray-50 text-sm text-left p-2">설치일자</th>
+                  <td class="border border-gray-300 p-2">
+                    <flat-pickr
+                      v-model="createForm.installDate"
+                      :disabled="!!selectedRow"
+                      :config="flatpickrConfig"
+                      class="dark:bg-dark-900 h-11 w-full rounded-lg border px-4 py-2.5"
+                    />
                   </td>
                 </tr>
 
-                <!-- 4행: 모델명 / (오른쪽) 설비이미지 - 2행 rowspan 시작 -->
                 <tr>
-                  <th
-                    class="border border-gray-300 bg-gray-50 text-sm font-medium text-gray-700 text-left p-2"
-                  >
-                    모델명
-                  </th>
-                  <td class="border border-gray-300 p-2 align-middle">
-                    <input type="text" :class="inputStyle" />
+                  <th class="border border-gray-300 bg-gray-50 text-sm text-left p-2">모델명</th>
+                  <td class="border border-gray-300 p-2">
+                    <input v-model="createForm.modelName" type="text" :class="inputStyle" />
                   </td>
-
-                  <!-- 설비이미지: 라벨+셀 모두 2행 차지 -->
-                  <th
-                    rowspan="2"
-                    class="border border-gray-300 bg-gray-50 text-sm font-medium text-gray-700 text-left p-2 align-top"
-                  >
+                  <th class="border border-gray-300 bg-gray-50 text-sm text-left p-2">
                     설비이미지
                   </th>
-                  <td rowspan="2" class="border border-gray-300 p-2 align-top">
-                    <!-- 숨김 파일 입력 -->
+                  <td class="border border-gray-300 p-2">
+                    <!-- <input
+                      v-model="createForm.equipImage"
+                      type="text"
+                      :class="inputStyle"
+                      placeholder="https://..."
+                    /> -->
+                    <input type="file" :class="fileStyle" id="inspFile" />
+                  </td>
+                </tr>
+
+                <tr>
+                  <th class="border border-gray-300 bg-gray-50 text-sm text-left p-2">제조일자</th>
+                  <td class="border border-gray-300 p-2">
+                    <flat-pickr
+                      v-model="createForm.mfgDt"
+                      :disabled="!!selectedRow"
+                      :config="flatpickrConfig"
+                      class="dark:bg-dark-900 h-11 w-full rounded-lg border px-4 py-2.5"
+                    />
+                  </td>
+                  <th class="border border-gray-300 bg-gray-50 text-sm text-left p-2">
+                    점검주기(일)
+                  </th>
+                  <td class="border border-gray-300 p-2">
                     <input
-                      ref="fileInputEl"
-                      id="eqpImage"
-                      type="file"
-                      accept="image/*"
-                      class="sr-only"
-                      @change="onFileChange"
-                    />
-
-                    <!-- 인풋 그룹 -->
-                    <div class="flex w-full min-w-0">
-                      <!-- ✅ min-w-0: 내부 요소 올바른 축소 -->
-                      <!-- 파일명 인풋: 줄어들어도 됨 -->
-                      <input
-                        :value="eqpImageName"
-                        readonly
-                        class="dark:bg-dark-900 h-11 flex-1 rounded-l-lg rounded-r-none border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:z-10 focus:border-brand-950 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-                      />
-                      <!-- 파일 첨부 버튼: 줄바꿈 금지 + 수축 금지 + 최소폭 -->
-                      <label
-                        for="eqpImage"
-                        class="inline-flex items-center justify-center h-11 px-4 rounded-r-lg border border-l-0 border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-hidden focus:ring-2 focus:ring-brand-500/30 whitespace-nowrap shrink-0 min-w-[96px]"
-                        title="이미지 선택"
-                      >
-                        파일 첨부
-                      </label>
-                    </div>
-
-                    <div class="mt-2 flex items-center gap-2">
-                      <button
-                        v-if="eqpImagePreview"
-                        type="button"
-                        class="btn-common btn-white"
-                        @click="clearImage"
-                      >
-                        제거
-                      </button>
-                      <span class="text-xs text-gray-500">JPG/PNG, 최대 10MB</span>
-                    </div>
-
-                    <img
-                      v-if="eqpImagePreview"
-                      :src="eqpImagePreview"
-                      alt="이미지 미리보기"
-                      class="mt-2 w-24 h-24 rounded-lg border object-cover"
+                      v-model.number="createForm.inspCycle"
+                      type="number"
+                      :class="inputStyle"
+                      placeholder="예: 30"
                     />
                   </td>
                 </tr>
 
-                <!-- 5행: 제조일자 / (오른쪽은 이미지가 차지) -->
                 <tr>
-                  <th
-                    class="border border-gray-300 bg-gray-50 text-sm font-medium text-gray-700 text-left p-2"
-                  >
-                    제조일자
-                  </th>
-                  <td class="border border-gray-300 p-2 align-middle">
-                    <div class="relative">
-                      <flat-pickr
-                        v-model="orderStartDates"
-                        :config="flatpickrConfig"
-                        class="dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                      />
-                      <span
-                        class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400"
-                      >
-                        <svg class="fill-current" width="20" height="20" viewBox="0 0 20 20">
-                          <path
-                            fill-rule="evenodd"
-                            clip-rule="evenodd"
-                            d="M6.66659 1.5415C7.0808 1.5415 7.41658 1.87729 7.41658 2.2915V2.99984H12.5833V2.2915C12.5833 1.87729 12.919 1.5415 13.3333 1.5415C13.7475 1.5415 14.0833 1.87729 14.0833 2.2915V2.99984L15.4166 2.99984C16.5212 2.99984 17.4166 3.89527 17.4166 4.99984V7.49984V15.8332C17.4166 16.9377 16.5212 17.8332 15.4166 17.8332H4.58325C3.47868 17.8332 2.58325 16.9377 2.58325 15.8332V7.49984V4.99984C2.58325 3.89527 3.47868 2.99984 4.58325 2.99984L5.91659 2.99984V2.2915C5.91659 1.87729 6.25237 1.5415 6.66659 1.5415ZM6.66659 4.49984H4.58325C4.30711 4.49984 4.08325 4.7237 4.08325 4.99984V6.74984H15.9166V4.99984C15.9166 4.7237 15.6927 4.49984 15.4166 4.49984H13.3333H6.66659ZM15.9166 8.24984H4.08325V15.8332C4.08325 16.1093 4.30711 16.3332 4.58325 16.3332H15.4166C15.6927 16.3332 15.9166 16.1093 15.9166 15.8332V8.24984Z"
-                          />
-                        </svg>
-                      </span>
-                    </div>
-                  </td>
-                </tr>
-
-                <!-- 6행: 점검주기 / 설비상태 -->
-                <tr>
-                  <th
-                    class="border border-gray-300 bg-gray-50 text-sm font-medium text-gray-700 text-left p-2"
-                  >
-                    점검주기
-                  </th>
-                  <td class="border border-gray-300 p-2 align-middle">
-                    <input type="text" :class="inputStyle" placeholder="예: 30(일)" />
-                  </td>
-
-                  <th
-                    class="border border-gray-300 bg-gray-50 text-sm font-medium text-gray-700 text-left p-2"
-                  >
-                    설비상태
-                  </th>
-                  <td class="border border-gray-300 p-2 align-middle">
-                    <select :class="inputStyle">
+                  <th class="border border-gray-300 bg-gray-50 text-sm text-left p-2">설비상태</th>
+                  <td class="border border-gray-300 p-2" colspan="3">
+                    <select v-model="createForm.equipStatus" :class="inputStyle">
                       <option value="">선택</option>
-                      <option value="RUN">가동</option>
-                      <option value="STOP">비가동</option>
-                      <option value="MAINT">점검중</option>
+                      <option value="가동중">가동중</option>
+                      <option value="비가동">비가동</option>
                     </select>
                   </td>
                 </tr>
@@ -475,12 +450,9 @@ onBeforeMount(() => {
             </table>
           </form>
 
-          <!-- 담당자 검색 모달은 폼 바깥 -->
           <equipSelectModal :visible="isModalOpen" @close="closeModal" />
         </template>
       </ComponentCard>
     </div>
   </AdminLayout>
 </template>
-
-<style scoped></style>

@@ -1,4 +1,4 @@
-require("dotenv").config({ path: "./database/configs/dbConfig.env" });
+require("dotenv").config({ path: "./database/dbConfig.env" });
 const express = require("express");
 const app = express();
 const puppeteer = require("puppeteer");
