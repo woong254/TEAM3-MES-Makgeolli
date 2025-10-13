@@ -49,6 +49,15 @@ function toYmdOrNull(v) {
   return s && isYMD(s) ? s : null;
 }
 
+async function viewList() {
+  try {
+    const result = await mariadb.query(selectEquipStatus);
+    return result;
+  } catch (err) {
+    console.error("viewList 오류", err);
+  }
+}
+
 // 단건 상세
 async function getOne(equip_code) {
   const code = (equip_code ?? "").trim();
