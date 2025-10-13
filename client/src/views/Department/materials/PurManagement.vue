@@ -248,7 +248,7 @@ const flatpickrConfig = computed(() => ({
   dateFormat: 'Y-m-d',
   altInput: true,
   altFormat: 'Y-m-d',
-  altInputClass: `${baseInputClass}`,
+  altInputClass: `${baseInputClass} text-center px-8`,
 
   minDate: purChase.value[0]?.pur_date || sysdate().format('YYYY-MM-DD'),
 }))
@@ -301,6 +301,7 @@ onMounted(async () => {
             <DataCol
               field="pur_code"
               header="발주코드"
+              v-if="purChase.length && purChase[0]?.pur_code"
               :pt="{ columnHeaderContent: 'justify-center' }"
               style="width: 120px"
             />
@@ -312,12 +313,7 @@ onMounted(async () => {
               style="width: 200px; padding: 8px"
             >
               <template #body="{ data, field }">
-                <input
-                  v-model="data[field]"
-                  type="text"
-                  :class="baseInputClass"
-                  placeholder="발주서명을 입력해주세요."
-                />
+                <input v-model="data[field]" type="text" :class="baseInputClass" />
               </template>
             </DataCol>
 
@@ -334,7 +330,6 @@ onMounted(async () => {
                     v-model="data[field]"
                     type="text"
                     readonly
-                    placeholder="매입처를 선택해주세요."
                     @click="isBcncModalOpen = true"
                     :class="[baseInputClass, 'pr-10']"
                   />
@@ -377,11 +372,7 @@ onMounted(async () => {
             >
               <template #body="{ data, field }">
                 <div class="relative">
-                  <flat-pickr
-                    v-model="data[field]"
-                    :config="flatpickrConfig"
-                    placeholder="날짜를 선택해주세요."
-                  />
+                  <flat-pickr v-model="data[field]" :config="flatpickrConfig" />
                   <span
                     class="absolute text-gray-500 -translate-y-1/2 pointer-events-none right-3 top-1/2 dark:text-gray-400"
                     aria-hidden="true"
@@ -500,7 +491,6 @@ onMounted(async () => {
                   min="1"
                   style="text-align: right"
                   :class="baseInputClass"
-                  placeholder="발주수량"
                 />
               </template>
             </DataCol>
