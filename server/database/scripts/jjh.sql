@@ -176,10 +176,7 @@ BEGIN
     ORDER BY od.no;
 
 END $$
-
 DELIMITER ;
-
-
 -- 제품 등록 프로시저 실행
 CALL add_form('testOne','장준현','예담','2025-10-30','생막걸리(750ml*20병)외3건',1,'MAK_001',1);
 -- add_form 삭제       
@@ -216,6 +213,62 @@ CALL search_products(null,null,null);
 -- add_form 삭제       
 DROP PROCEDURE IF EXISTS search_products;      
        
+-- 제품단위 구분코드 조회
+SELECT comncode_dtnm
+FROM   comncode_dt
+WHERE  comncode_id = '0B';
+
+-- 완제품검사합격처리된 제품을 입고하기위해 합격된 완제품 조회 
+SELECT pm.prod_code,
+	   pm.prod_name,
+       pm.prod_spec,
+	   pm.prod_unit,
+       pi.pass_qty,
+       pi.epep_dt
+FROM   prod_insp pi
+	   JOIN processform pf
+       ON pi.procs_no = pf.procs_no
+       JOIN prod_master pm
+       ON pf.prod_code = pm.prod_code
+WHERE  1=1
+	   AND pf.prog = '100'
+	   AND pf.now_procs = '포장'
+       AND pi.final_result = 'p';
+       
+-- 완제품 입고 관리 조회 입고버튼 프로시저
+DELIMITER $$
+CREATE PROCEDURE insert_order_item(
+    IN p_insp_id VARCHAR(50),
+    IN p_prod_code VARCHAR(50),
+    IN p_pass_qty INT,
+    IN p_epep_dt DATE,
+    IN p_remark VARCHAR(255)
+)
+BEGIN
+    DECLARE target_ord_id VARCHAR(20);
+
+    START TRANSACTION;
+
+    SELECT CONCAT(
+         'EPRO', 
+         DATE_FORMAT(NOW(), '%y%m'),                        -- 생성일 연월 YYMM
+         LPAD(IFNULL(MAX(SUBSTR(ord_id, 8, 3)), 0) + 1, 3, '0'), -- 순번 3자리
+         DATE_FORMAT(@exp_date, '%y%m%d')                  -- 유통기한 YYMMDD
+       ) AS ep_lot
+	FROM epis
+	WHERE SUBSTR(ep_lot, 5, 4) = DATE_FORMAT(NOW(), '%y%m')
+	FOR UPDATE;
+
+    INSERT INTO orderform(ord_id, insp_id, prod_code, pass_qty, epep_dt, remark)
+    VALUES(target_ord_id, p_insp_id, p_prod_code, p_pass_qty, p_epep_dt, p_remark);
+
+    COMMIT;
+END$$
+DELIMITER ;
+       
+
+       
+       
 SELECT *
 FROM   orderform;
 SELECT *
@@ -226,11 +279,28 @@ SELECT *
 FROM   orderdetail;
 SELECT *
 FROM   prod_master;
+SELECT *
+FROM   comncode_dt;
+SELECT *
+FROM   prod_insp;
+SELECT *
+FROM   makelist;
+SELECT *
+FROM   equip_master;
+SELECT *
+FROM   processform;
+SELECT *
+FROM   epis;
+
 
 -- 테이블 foreign키 넣는 코드
 ALTER TABLE orderform ADD CONSTRAINT FOREIGN KEY(bcnc_code) REFERENCES bcnc_master(bcnc_code);
 ALTER TABLE orderdetail ADD CONSTRAINT FOREIGN KEY(ord_id) REFERENCES orderform(ord_id);
 ALTER TABLE orderdetail ADD CONSTRAINT FOREIGN KEY(prod_code) REFERENCES prod_master(prod_code);
+ALTER TABLE orderform ADD CONSTRAINT FOREIGN KEY(order_status) REFERENCES comncode_dt(comncode_detailid);
+
+-- 테이블 컬럼 추가 코드
+ALTER TABLE proc_insp ADD COLUMN epep_dt date;
 
 -- 테이블 이름 바꾸는 코드 
 ALTER TABLE bcnc_master CHANGE field5 biz_type varchar(100);
@@ -247,7 +317,9 @@ DESC equip_repair;
 DESC equip_inspection;
 DESC emp_master;
 DESC qc_master;
-DESC proc_insp;
+DESC prod_insp;
+DESC processform;
+DESC epis;
 
 -- 거래처기준관리, 거래처 데이터 삽입
 INSERT INTO bcnc_master(bcnc_code, bcnc_name, bcnc_type, brn, pic, biz_type, bcnc_category, bcnc_tel, writer, write_date)
@@ -266,6 +338,14 @@ INSERT INTO orderdetail(ord_id, no, prod_code, op_qty, ofd_st)
 -- 주문서조회, 주문서 데이터 삽입
 INSERT INTO orderform(ord_id, ord_name, due_date, bcnc_code, emp_id, ord_date, ord_knd, order_status)
 			   VALUES('20251002-01', '생막걸리예담주문', '2025-10-10','1','EMP-20250616-0001', '2025-10-02','생막걸리(750ml*20병)외2건','주문완료');
+               
+-- 완제품검사 테이블 임시 데이터 삽입
+INSERT INTO prod_insp(insp_id, insp_name, pass_qty, procs_no, epep_dt)
+			   VALUES('test01', '테스트01', 500, 100, '2025-11-04');
+               
+-- 공정실적관리 테이블 임시 데이터 삽입
+INSERT INTO processform(procs_no, mk_list, equip_code, emp_no, prod_code, inpt_qty, mk_qty, fail_qty, pass_qty, prog,now_procs)
+				 VALUES(100, 100, 'EQP-MK001','EMP-20250616-0001','PROD-20250101-001',500,500,0,500,'100','포장');
                         
 DELETE FROM orderform
 WHERE  ord_id = 'ORD2510005';

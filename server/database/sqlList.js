@@ -7,11 +7,13 @@ const orderform = require("./sqls/orderform.js");
 const orderdetail = require("./sqls/orderdetail.js");
 const bcncMaster = require("./sqls/bcncMaster.js");
 const prodMaster = require("./sqls/prodMaster.js");
+const epis = require("./sqls/epis.js");
 const sales = {
   ...orderform,
   ...orderdetail,
   ...bcncMaster,
   ...prodMaster,
+  ...epis,
 };
 
 // 생산

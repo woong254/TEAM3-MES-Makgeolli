@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, defineEmits } from 'vue'
+import { ref, defineEmits, watch } from 'vue'
 import '@/assets/common.css'
 import Modal from '@/components/ui/Modal.vue'
 import DataTable from 'primevue/datatable'
@@ -73,6 +73,30 @@ function selectedProductValue() {
     emit('close')
   }
 }
+// 제품 단위 타입 설정
+interface ProdUnit {
+  comncode_dtnm: string
+}
+// 제품 단위 변수 설정
+const prodUnits = ref<ProdUnit[]>([])
+// 제품 단위 select 조회
+const viewProdUnit = async () => {
+  try {
+    const result = await axios.get('/api/viewProdUnit')
+    prodUnits.value = result.data
+  } catch (err) {
+    console.error(err)
+  }
+}
+// 모달창이 열리면 viewProdUnit실행
+watch(
+  () => props.visible,
+  async (newVal) => {
+    if (newVal) {
+      await viewProdUnit()
+    }
+  },
+)
 </script>
 
 <template>
@@ -108,8 +132,13 @@ function selectedProductValue() {
               <div class="relative z-20 bg-transparent">
                 <select id="insp-type" :class="selectStyle" v-model="search.prod_unit">
                   <option value=""></option>
-                  <option value="BOX">BOX</option>
-                  <option value="P-BOX">P-BOX</option>
+                  <option
+                    v-for="unit in prodUnits"
+                    :key="unit.comncode_dtnm"
+                    :value="unit.comncode_dtnm"
+                  >
+                    {{ unit.comncode_dtnm }}
+                  </option>
                 </select>
                 <span
                   class="absolute z-30 text-gray-500 -translate-y-1/2 pointer-events-none right-4 top-1/2 dark:text-gray-400"

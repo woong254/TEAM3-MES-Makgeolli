@@ -68,11 +68,64 @@ router.get("/productsView", async (req, res) => {
     .catch((err) => console.error(err));
   res.send(prodInfo);
 });
-// 주문서삭제 -- 미완성
+// 주문서삭제
 router.delete("/removeOrder/:ord_id", async (req, res) => {
   const { ord_id } = req.params;
   const result = await salesService.removeOrder(ord_id);
   res.json(result);
+});
+// 주문서중복 제품조회
+router.get("/orderProducts", async (req, res) => {
+  try {
+    const { ord_id } = req.query;
+    if (!ord_id) {
+      return res.status(400).json({ error: "ord_id는 필수입니다." });
+    }
+    const orderProducts = await salesService.getOrderProducts(ord_id);
+    res.json(orderProducts);
+  } catch (err) {
+    console.error("orderProducts 조회 오류:", err);
+  }
+});
+// 제품선택 단위 조회
+router.get("/viewProdUnit", async (req, res) => {
+  try {
+    const result = await salesService.getProdUnit();
+    res.send(result);
+    console.log(result);
+  } catch (err) {
+    console.error("viewProdUnit 조회 오류", err);
+  }
+});
+
+// 완제품 입고 관리 검색
+router.get("/viewEpIsManage", async (req, res) => {
+  try {
+    const { prod_name, ep_start_date, ep_end_date } = req.query;
+
+    const result = await salesService.getEpIsManage({
+      prod_name,
+      ep_start_date,
+      ep_end_date,
+    });
+    res.send(result);
+    console.log(result);
+  } catch (err) {
+    console.error("viewEpIsManage 조회 오류", err);
+  }
+});
+// 완제품 입고 처리
+router.post("/insertEpIs", async (req, res) => {
+  try {
+    const orderform = req.body;
+    console.log("insertEpIs받은 데이터: ", orderform);
+
+    const result = await salesService.insertEpIs(orderform);
+    res.send(result);
+  } catch (err) {
+    console.error(err);
+    res.send({ isSuccessed: false, message: err.message });
+  }
 });
 
 module.exports = router;

@@ -70,14 +70,12 @@ const search = ref<SearchCondition>({
 
 const getOrdersForms = async () => {
   try {
-    const result = await axios
-    .get<Product[]>('/api/ordFormView', { params: search.value })
+    const result = await axios.get<Product[]>('/api/ordFormView', { params: search.value })
     products.value = result.data
   } catch (err) {
-    console.log(err);  
-    products.value = [];  
+    console.log(err)
+    products.value = []
   }
-  
 }
 
 onMounted(() => {

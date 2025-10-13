@@ -212,34 +212,70 @@ const getOrderFormSearch = async () => {
       params: search.value,
     })
     const payload = result.data
+    if (!search.value.ord_name) {
+      alert('주문서명을 입력해주세요!')
+      return
+    }
     if (!payload || payload.list.length == 0) {
       alert('조회 결과가 없습니다.')
       resetInfoForm()
       return
     }
 
-    if (payload.list.length > 1) {
+    if (payload.list.length === 1) {
+      // 1개면 바로 화면에 세팅
+      dbOrderDetailInfo.value = payload.list[0]
+      orderinfo.value = { ...payload.list[0] }
+      // 주문 제품 리스트 숫자 변환
+      const convertedList = result.data.list1.map((item: OrderItem) => ({
+        ...item,
+        op_qty: Number(item.op_qty), // 문자열 -> 숫자
+      }))
+
+      dbOrderProducts.value = structuredClone(convertedList)
+      products.value = structuredClone(convertedList)
+      alert('조회성공!')
+    } else {
+      // 2개 이상이면 모달창 띄우고 선택 대기
       matchedOrders.value = payload.list
       showOrderOpenModal()
-    }
 
-    dbOrderDetailInfo.value = result.data.list[0]
-    orderinfo.value = { ...result.data.list[0] }
+      // 제품 데이터 세팅 부분은 제거
+      dbOrderProducts.value = []
+      products.value = []
+    }
 
     console.log('db조회 주문서상세정보 결과:', dbOrderDetailInfo.value)
     console.log('orderinfo조회 결과:', orderinfo.value)
-    // 주문 제품 리스트 숫자 변환
-    const convertedList = result.data.list1.map((item: OrderItem) => ({
-      ...item,
-      op_qty: Number(item.op_qty), // 문자열 -> 숫자
-    }))
 
-    dbOrderProducts.value = structuredClone(convertedList)
-    products.value = structuredClone(convertedList)
     console.log('db조회 주문제품 결과:', dbOrderProducts.value)
     console.log('products조회 결과:', products.value)
   } catch (err) {
     console.error('조회 중 오류 발생', err)
+  }
+}
+// 모달에서 선택한 주문서
+const selectOrderFromModal = async (selectedOrder: OrderInfoInterface) => {
+  try {
+    // 선택된 주문서 정보 세팅
+    dbOrderDetailInfo.value = selectedOrder
+    orderinfo.value = { ...selectedOrder }
+    showOrderCloseModal()
+
+    // 이제 제품 정보만 따로 조회 (선택한 주문서 기준)
+    const result = await axios.get('/api/orderProducts', {
+      params: { ord_id: selectedOrder.ord_id },
+    })
+
+    const convertedList = result.data.map((item: OrderItem) => ({
+      ...item,
+      op_qty: Number(item.op_qty),
+    }))
+
+    dbOrderProducts.value = structuredClone(convertedList)
+    products.value = structuredClone(convertedList)
+  } catch (err) {
+    console.error('선택한 주문서 제품 조회 중 오류 발생', err)
   }
 }
 
@@ -425,9 +461,8 @@ const deleteOrder = async () => {
               <button type="button" class="btn-color btn-common" @click="submitSearchForm">
                 조회
               </button>
-              <!-- 모달 (필요할 때만 표시됨) -->
               <OrderSelectmodal
-                v-if="showOrderSelectModal"
+                :visible="showOrderSelectModal"
                 :orders="matchedOrders"
                 @select="selectOrderFromModal"
                 @close="showOrderCloseModal"
