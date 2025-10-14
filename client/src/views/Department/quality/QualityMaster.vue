@@ -59,6 +59,11 @@ const qTargetName = ref('')
 const qTypeCode = ref('') // a1~a5
 const qUseY = ref(false)
 const qUseN = ref(false)
+const uploadedFileName = ref('') // 서버가 돌려준 파일명(또는 상대경로)
+const uploadedFileUrl = ref('') // 서버가 돌려준 접근 URL
+// 상세 로드 시 DB의 기존 파일을 보존하기 위한 상태(수정 모드에서 새 업로드 없으면 유지)
+const existingFileName = ref('') // DB의 file_name
+const existingFileUrl = ref('') // 필요하면 서버에서 함께 내려주거나, 규칙으로 구성
 const scoreDesc = ref<Record<number, string>>({
   10: '',
   9: '',
@@ -203,7 +208,7 @@ function buildInspPayload() {
   const insp_type = inspMode.value === 'sensory' ? 'S' : 'R'
   const use_yn = inspUsing.value ? 'N' : 'Y'
   const insp_method = (inspDesc.value || '').trim()
-  const insp_file_name = '' // 파일 업로드는 별도
+  const insp_file_name = uploadedFileName.value || existingFileName.value || ''
 
   // 범위형 세팅
   let min_range: number | null = null
@@ -426,6 +431,11 @@ async function loadInspDetail(id: string) {
   inspDesc.value = master.insp_method || ''
   inspTarget.value = targets // ✅ 이제 t_name/t_spec/t_unit/t_type_name 채워짐
 
+  existingFileName.value = master.file_name || ''
+  existingFileUrl.value = master.file_name || '' // 서버가 '/uploads/...'로 주면 그대로 링크 사용
+  uploadedFileName.value = '' // 새 업로드 초기화
+  uploadedFileUrl.value = ''
+
   if (master.insp_type === 'R') {
     inspMode.value = 'range'
     minValue.value = master.min_range != null ? String(master.min_range) : ''
@@ -572,6 +582,35 @@ const deleteInsp = async () => {
 // 13. 버튼 조건부 렌더링(등록/수정)
 const isEditMode = computed(() => !!selectedInspData.value)
 
+// 14. 파일 업로드
+// 14-1.파일 변경 핸들러
+async function onFileChange(e: Event) {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  try {
+    await uploadFile(file) // 아래 14번 함수가 실제 업로드 호출
+  } catch (err: any) {
+    console.error(err)
+    alert(err?.response?.data?.message || '업로드 중 오류가 발생했습니다.')
+  }
+}
+// 14-2. 파일 업로드(multer) 호출 그대로 사용 (필드명 'file')
+async function uploadFile(file: File) {
+  const form = new FormData()
+  form.append('file', file) //필드명 file
+
+  const res = await axios.post('/api/upload', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  if (res.data?.ok) {
+    uploadedFileName.value = res.data.fileName
+    uploadedFileUrl.value = res.data.url
+  } else {
+    alert(res.data?.message || '업로드 실패')
+  }
+}
+
 // 모달 이벤트(open, close)
 const isModalOpen = ref(false)
 const openModal = () => {
@@ -696,20 +735,17 @@ const fileStyle =
             <Column
               field="insp_item_id"
               header="검사항목ID"
-              sortable
               :pt="{ columnHeaderContent: 'justify-center' }"
               bodyStyle="text-align: center"
             />
             <Column
               field="insp_item_name"
               header="검사대상명"
-              sortable
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
             <Column
               field="target_name"
               header="검사대상"
-              sortable
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
             <Column
@@ -731,6 +767,7 @@ const fileStyle =
       <ComponentCard title="등록" className="shadow-sm w-1/2 ">
         <template #header-right>
           <div class="flex justify-end">
+            <button type="button" class="btn-common btn-white" @click="resetIspForm">초기화</button>
             <button
               type="button"
               class="btn-common btn-color"
@@ -809,7 +846,26 @@ const fileStyle =
             </div>
             <div class="flex mb-4">
               <label :class="labelStyle" class="w-[120px]" for="inspFile">파일첨부 </label>
-              <input type="file" :class="fileStyle" id="inspFile" />
+              <div class="w-full">
+                <input type="file" :class="fileStyle" id="inspFile" @change="onFileChange" />
+                <!-- 새로 업로드 성공한 파일 -->
+                <!-- <div v-if="uploadedFileUrl" class="mt-2 text-sm">
+                  <a :href="uploadedFileUrl" target="_blank" class="text-blue-600 underline">
+                    업로드된 파일 열기
+                  </a>
+                </div> -->
+                <!-- 수정 모드에서 기존 파일(새 업로드 없을 때) -->
+                <div v-if="existingFileUrl" class="mt-2 text-sm">
+                  <a
+                    target="_blank"
+                    class="underline text-gray-500"
+                    :href="`/uploads/image/${encodeURIComponent(existingFileName)}`"
+                    :download="existingFileName"
+                  >
+                    {{ existingFileName }}
+                  </a>
+                </div>
+              </div>
             </div>
             <hr class="" />
             <div class="flex justify-between items-center mt-4 mb-4">

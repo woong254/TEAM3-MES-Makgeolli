@@ -2,10 +2,13 @@ require("dotenv").config({ path: "./database/configs/dbConfig.env" });
 const express = require("express");
 const app = express();
 const puppeteer = require("puppeteer");
+const path = require("path");
 
 app.use(express.urlencoded({ extended: false }));
 
 app.use(express.json());
+
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 app.listen(3000, () => {
   console.log("Server Start");
@@ -32,6 +35,9 @@ const qualityRouter = require("./routers/quality_router.js");
 // 5. 장비
 const equipmentRouter = require("./routers/equipment_router.js");
 
+// 6. 파일업로드
+const uploadsRouter = require("./routers/upload_router.js");
+
 // 기본 라우팅
 app.get("/", (req, res) => {
   res.send("Welcome!!");
@@ -56,6 +62,9 @@ app.use("/", qualityRouter);
 
 // 5. 장비
 app.use("/", equipmentRouter);
+
+// 6. 업로드
+app.use("/", uploadsRouter);
 
 // pdf 출력
 app.post("/download-order-pdf", async (req, res) => {
