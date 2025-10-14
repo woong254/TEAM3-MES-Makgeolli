@@ -432,7 +432,7 @@ const fileStyle =
           :value="inspData"
           showGridlines
           scrollable
-          scrollHeight="320px"
+          scrollHeight="310px"
           size="small"
           :rows="10"
           class="text-sm"
