@@ -135,7 +135,6 @@ const getEpOsManage = async (showAlert = true) => {
     }
 
     const computedRows = rows.map((row: OrderItem) => {
-      const cur = row.cur_os_qty || 0 // 현출고수량
       const ord = row.op_qty || 0 // 주문수량
       const ord_eps = row.ord_eps_qty || 0 // DB 기준 기출고수량
 
