@@ -21,7 +21,7 @@ router.get('/makeList', async(req, res) => {
 router.post('/prodOrd', async(req, res) => {
   const { header, details } = req.body || {};
   const prodOrd = await prodOrdService
-    .addNewMake(header, details)
+    .addMakeForm(header, details)
     .catch(err => console.err(err));
   res.json(prodOrd);
 });
