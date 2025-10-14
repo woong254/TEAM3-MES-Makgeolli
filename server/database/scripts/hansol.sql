@@ -110,9 +110,6 @@ JOIN comncode_dt c
 
 
 -- 25-10-13(월)
--- 기존 프로시저 삭제 
-DROP PROCEDURE IF EXISTS insp_master_insert;
-
 -- 품질기준관리 등록 프로시저 
 DELIMITER $$
 CREATE PROCEDURE insp_master_insert (
@@ -121,7 +118,7 @@ CREATE PROCEDURE insp_master_insert (
     IN p_insp_type           CHAR(1),          -- 'R': 범위형, 'S': 관능형
     IN p_use_yn              CHAR(1), 
     IN p_insp_method         VARCHAR(1000),
-    IN p_insp_file_name      VARCHAR(50),
+    IN p_insp_file_name      VARCHAR(1000),
     IN p_writer              VARCHAR(100),
 
     /* ===== 범위형 파라미터 ===== */
@@ -420,7 +417,7 @@ CREATE PROCEDURE insp_master_update (
   IN p_max_score           INT,
   IN p_pass_score          DECIMAL(6,2),
   IN p_pass_score_spec     CHAR(2),
-  IN p_score_desc_json     TEXT,              -- ★ 추가
+  IN p_score_desc_json     TEXT,
 
   -- [세션키]
   IN p_session_questions   VARCHAR(64),
@@ -428,46 +425,67 @@ CREATE PROCEDURE insp_master_update (
 )
 BEGIN
   DECLARE done INT DEFAULT 0;
+  DECLARE v_base_qcs INT DEFAULT 0;  -- 오늘 날짜 기준 QCS- 끝번호
+  DECLARE v_base_qct INT DEFAULT 0;  -- 오늘 날짜 기준 QCT- 끝번호
+
+  DECLARE EXIT HANDLER FOR SQLEXCEPTION
+  BEGIN
+    ROLLBACK;
+    RESIGNAL;
+  END;
 
   START TRANSACTION;
 
-  /* qc_master 업데이트 */
+  /* 1) qc_master 업데이트 */
   UPDATE qc_master
-     SET insp_item_name = p_insp_item_name,
-         insp_type      = p_insp_type,
-         use_yn         = IFNULL(p_use_yn,'Y'),
-         insp_method    = p_insp_method,
-         file_name      = p_insp_file_name,
-         max_score      = CASE WHEN p_insp_type='S' THEN p_max_score       ELSE NULL END,
-         pass_score     = CASE WHEN p_insp_type='S' THEN p_pass_score      ELSE NULL END,
-         pass_score_spec= CASE WHEN p_insp_type='S' THEN p_pass_score_spec ELSE NULL END,
-         score_desc     = CASE WHEN p_insp_type='S' THEN p_score_desc_json ELSE NULL END, -- ★ 추가
-         writer         = p_writer,
-         write_date     = NOW()
+     SET insp_item_name  = p_insp_item_name,
+         insp_type       = p_insp_type,
+         use_yn          = IFNULL(p_use_yn,'Y'),
+         insp_method     = p_insp_method,
+         file_name       = p_insp_file_name,
+         max_score       = CASE WHEN p_insp_type='S' THEN p_max_score       ELSE NULL END,
+         pass_score      = CASE WHEN p_insp_type='S' THEN p_pass_score      ELSE NULL END,
+         pass_score_spec = CASE WHEN p_insp_type='S' THEN p_pass_score_spec ELSE NULL END,
+         score_desc      = CASE WHEN p_insp_type='S' THEN p_score_desc_json ELSE NULL END,
+         writer          = p_writer,
+         write_date      = NOW()
    WHERE insp_item_id = p_insp_item_id;
 
-  /* 범위형 상세 갱신 */
+  /* 2) 범위형 상세 */
   IF p_insp_type = 'R' THEN
     INSERT INTO qc_master_ran (insp_item_id, min_range, min_range_spec, max_range, max_range_spec, unit)
     VALUES (p_insp_item_id, p_min_range, p_min_range_spec, p_max_range, p_max_range_spec, p_unit)
     ON DUPLICATE KEY UPDATE
-      min_range = VALUES(min_range),
+      min_range      = VALUES(min_range),
       min_range_spec = VALUES(min_range_spec),
-      max_range = VALUES(max_range),
+      max_range      = VALUES(max_range),
       max_range_spec = VALUES(max_range_spec),
-      unit = VALUES(unit);
+      unit           = VALUES(unit);
   ELSE
-    -- 관능형이면 범위형 상세 제거(선택)
     DELETE FROM qc_master_ran WHERE insp_item_id = p_insp_item_id;
   END IF;
 
-  /* 관능형 질문 재적재 (선택: 필요 정책대로 처리) */
+  /* 3) 관능형 질문 재적재 */
   IF p_insp_type = 'S' THEN
+    -- 기존 싹 지우고 다시 넣는 정책
     DELETE FROM qc_master_sen WHERE insp_item_id = p_insp_item_id;
+
+    /* 오늘 날짜 기준 QCS-의 최대 끝번호를 읽어 v_base_qcs 로 확보 (동시성 대비 FOR UPDATE) */
+    SELECT IFNULL(MAX(CAST(RIGHT(ques_id, 3) AS UNSIGNED)), 0)
+      INTO v_base_qcs
+      FROM qc_master_sen
+     WHERE SUBSTR(ques_id, 5, 8) = DATE_FORMAT(NOW(), '%Y%m%d')
+     FOR UPDATE;
+
     INSERT INTO qc_master_sen (ques_id, ques_order, ques_name, insp_item_id)
     SELECT
-      CONCAT('QCS-', DATE_FORMAT(NOW(), '%Y%m%d'), '-', LPAD(ROW_NUMBER() OVER (ORDER BY id), 3, '0')),
-      ROW_NUMBER() OVER (ORDER BY id),
+      CONCAT(
+        'QCS-',
+        DATE_FORMAT(NOW(), '%Y%m%d'),
+        '-',
+        LPAD(v_base_qcs + ROW_NUMBER() OVER (ORDER BY id), 3, '0')
+      ) AS ques_id,
+      ROW_NUMBER() OVER (ORDER BY id) AS ques_order,
       ques_name,
       p_insp_item_id
     FROM tmp_sen_questions
@@ -476,12 +494,24 @@ BEGIN
     DELETE FROM qc_master_sen WHERE insp_item_id = p_insp_item_id;
   END IF;
 
-  /* 검사대상 재적재 (정책대로: 전체 삭제 후 삽입 예시) */
+  /* 4) 검사대상 재적재 */
   DELETE FROM qc_master_target WHERE insp_item_id = p_insp_item_id;
+
+  /* 오늘 날짜 기준 QCT-의 최대 끝번호 확보 */
+  SELECT IFNULL(MAX(CAST(RIGHT(insp_target_id, 3) AS UNSIGNED)), 0)
+    INTO v_base_qct
+    FROM qc_master_target
+   WHERE SUBSTR(insp_target_id, 5, 8) = DATE_FORMAT(NOW(), '%Y%m%d')
+   FOR UPDATE;
 
   INSERT INTO qc_master_target (insp_target_id, insp_target_type, insp_target_code, product_code, mat_code, insp_item_id)
   SELECT
-    CONCAT('QCT-', DATE_FORMAT(NOW(), '%Y%m%d'), '-', LPAD(ROW_NUMBER() OVER (ORDER BY id), 3, '0')),
+    CONCAT(
+      'QCT-',
+      DATE_FORMAT(NOW(), '%Y%m%d'),
+      '-',
+      LPAD(v_base_qct + ROW_NUMBER() OVER (ORDER BY id), 3, '0')
+    ) AS insp_target_id,
     insp_target_type,
     insp_target_code,
     product_code,
@@ -492,4 +522,5 @@ BEGIN
 
   COMMIT;
 END $$
+
 DELIMITER ;
