@@ -47,16 +47,6 @@ const router = createRouter({
       },
     },
     {
-      path: '/line_chart',
-      name: 'Line Chart',
-      component: () => import('../views/Chart/LineChart/LineChart.vue'),
-    },
-    {
-      path: '/bar_chart',
-      name: 'Bar Chart',
-      component: () => import('../views/Chart/BarChart/BarChart.vue'),
-    },
-    {
       path: '/alerts',
       name: 'Alerts',
       component: () => import('../views/UiElements/Alerts.vue'),
