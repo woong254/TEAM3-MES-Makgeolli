@@ -27,6 +27,9 @@ const quality = require("./sqls/qualityInsp.js");
 // 설비
 const equipment = require("./sqls/equipform.js");
 
+// 기준정보
+const reference = require("./sqls/reference.js");
+
 module.exports = {
   // 기준 정보
   // ...reference,
