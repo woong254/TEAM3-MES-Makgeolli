@@ -185,10 +185,58 @@ DELETE FROM pur_form
 WHERE pur_code = ?
 `;
 
+const insertIis = `
+INSERT INTO iis (pur_code, bcnc_code, mat_code, prod_date, exp_date, pre_receipt_date, receipt_qty)
+SELECT
+  f.pur_code,
+  f.bcnc_code,
+  m.mat_code,
+  ?,
+  ?,
+  ?,
+  ?
+FROM pur_form f JOIN pur_mat m 
+ON f.pur_code = m.pur_code
+WHERE f.receipt_date = ?
+  AND f.bcnc_code    = ?
+  AND m.mat_code     = ?       
+  AND m.unreceipt_qty >= ?
+ORDER BY f.pur_date DESC
+LIMIT 1
+`;
+// 바인딩 순서 (mysql2.execute(insertIis, params)):
+// [
+//   prod_date, exp_date, pre_receipt_date, receipt_qty,
+//   pre_receipt_date, bcnc_code, mat_code, receipt_qty
+// ]
+
+const iisList = `
+SELECT
+  i.iis_id,
+  i.pur_code,
+  f.pur_name,   
+  b.bcnc_name,         
+  i.mat_code,
+  m.mat_name,         
+  m.mat_spec,
+  m.mat_unit,
+  i.prod_date,
+  i.exp_date,
+  i.pre_receipt_date,
+  i.receipt_qty
+FROM iis i
+JOIN mat_master m ON m.mat_code  = i.mat_code
+JOIN bcnc_master b ON b.bcnc_code = i.bcnc_code
+JOIN pur_form f ON f.pur_code  = i.pur_code  
+WHERE i.insp_status = ?
+ORDER BY i.iis_id DESC
+`;
+
 module.exports = {
   // 목록/검색
   selectPurList,
   selectPurTarget,
+  iisList,
   // 단건 조회
   selectPurHeaderByCode,
   selectPurLinesByCode,
@@ -208,4 +256,5 @@ module.exports = {
   selectMatCodesByPurCode,
   upsertOnePurMat,
   deleteOnePurMat,
+  insertIis,
 };

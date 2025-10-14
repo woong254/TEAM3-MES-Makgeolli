@@ -110,4 +110,41 @@ router.post("/pur/delete", async (req, res) => {
   res.send(out);
 });
 
+// ----- 가입고 등록 (조건 만족 시 1행 삽입, 아니면 0행) -----
+router.post("/iis/insert", async (req, res) => {
+  const {
+    prod_date,
+    exp_date,
+    pre_receipt_date,
+    bcnc_code,
+    mat_code,
+    receipt_qty,
+  } = req.body || {};
+
+  const out = await materialsService
+    .insertIisOne({
+      prod_date,
+      exp_date,
+      pre_receipt_date,
+      bcnc_code,
+      mat_code,
+      receipt_qty,
+    })
+    .catch((err) => {
+      console.error(err);
+      return { ok: false };
+    });
+
+  res.send(out); // { ok: true } 또는 { ok: false }
+});
+
+// GET /api/iis/list?status=검사대기
+router.get("/iis/list", async (req, res) => {
+  const status = req.query.status || "검사대기"; // 기본값
+  const list = await materialsService
+    .findIisList(status)
+    .catch((err) => (console.error(err), []));
+  res.send(list);
+});
+
 module.exports = router;
