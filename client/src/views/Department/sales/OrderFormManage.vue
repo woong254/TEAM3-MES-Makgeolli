@@ -5,7 +5,7 @@ import ComponentCard from '@/components/common/ComponentCardOrder.vue'
 import DataTable from 'primevue/datatable' // datatable 컴포넌트 import
 import Column from 'primevue/column'
 // import InputText from 'primevue/inputtext' // PrimeVue InputText 컴포넌트 import
-import { defineProps, ref, computed } from 'vue' // computed import 추가
+import { ref, computed } from 'vue' // computed import 추가
 // flatPickr 달력
 import flatPickr from 'vue-flatpickr-component' // flatPickr 달력 컴포넌트 import
 import 'flatpickr/dist/flatpickr.css' // flatPickr 달력 css import
@@ -22,11 +22,11 @@ import OrderSelectmodal from './OrderSelectmodal.vue' // 모달import
 const baseInputClass =
   'dark:bg-dark-900 h-8 w-full rounded-lg border border-gray-300 bg-transparent pl-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
 // 주문서관리 props 인터페이스
-interface Props {
-  title: string
-  className?: string
-  desc?: string
-}
+// interface Props {
+//   title: string
+//   className?: string
+//   desc?: string
+// }
 // 주문서관리-주문서조회검색 검색input 인터페이스
 interface SearchCondition {
   ord_name: string
@@ -77,7 +77,7 @@ interface OrderRequest {
 }
 
 // props 정의
-defineProps<Props>()
+// defineProps<Props>()
 
 // 선택된 제품들
 const selectedProducts = ref<OrderItem[]>([])
@@ -831,6 +831,9 @@ const deleteOrder = async () => {
                 editMode="cell"
                 size="small"
               >
+                <template #empty>
+                  <div class="text-center">추가된 제품이 없습니다.</div>
+                </template>
                 <Column selectionMode="multiple" headerStyle="width: 1%" field="no"></Column>
 
                 <Column

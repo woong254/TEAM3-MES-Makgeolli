@@ -5,7 +5,7 @@ import ComponentCard from '@/components/common/ComponentCardOrder.vue'
 import DataTable from 'primevue/datatable' // datatable 컴포넌트 import
 import Column from 'primevue/column'
 // import InputText from 'primevue/inputtext' // PrimeVue InputText 컴포넌트 import
-import { defineProps, ref, computed } from 'vue' // computed import 추가
+import { ref, computed } from 'vue' // computed import 추가
 // flatPickr 달력
 import flatPickr from 'vue-flatpickr-component' // flatPickr 달력 컴포넌트 import
 import 'flatpickr/dist/flatpickr.css' // flatPickr 달력 css import
@@ -16,10 +16,6 @@ import axios from 'axios' // axios 연결
 const baseInputClass =
   'dark:bg-dark-900 h-8 w-full rounded-lg border border-gray-300 bg-transparent pl-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
 
-// 주문서관리 props 인터페이스
-interface Props {
-  title: string
-}
 // 주문서관리-주문서조회검색 검색input 인터페이스
 interface SearchCondition {
   insp_name: string
@@ -50,8 +46,6 @@ interface EpIsRequest {
   remark: string
 }
 
-// props 정의
-defineProps<Props>()
 // 선택한 제품들
 const selectedProducts = ref<OrderItem[]>([])
 // products ref에 OrderItem[] 타입을 명시적으로 지정
@@ -354,6 +348,9 @@ const rowUnselectHook = () => {
                 size="small"
                 class="text-sm"
               >
+                <template #empty>
+                  <div class="text-center">조회를 먼저해주세요!</div>
+                </template>
                 <Column selectionMode="multiple" headerStyle="width: 1%" field="insp_id"></Column>
                 <Column
                   field="insp_id"

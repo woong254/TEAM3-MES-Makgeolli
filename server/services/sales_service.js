@@ -10,11 +10,10 @@ const selectBcnc = sqlList.selectBcnc;
 const selectProd = sqlList.selectProd;
 const insertOrd = sqlList.insertOrd;
 const deleteOrder = sqlList.deleteOrder;
-const selectOrdId = sqlList.selectOrdId;
-const updateOrd = sqlList.updateOrd;
 const deleteDetail = sqlList.deleteDetail;
 const selectEpIsManage = sqlList.selectEpIsManage;
 const selectEpOsManage = sqlList.selectEpOsManage;
+const insertEpOsManage = sqlList.insertEpOsManage;
 
 // const testService = ()=>{
 //   let conn = null;
@@ -383,6 +382,7 @@ const getEpOsManage = async (data) => {
       if (Os) params.push(Os);
       if (OsIP) params.push(OsIP);
     }
+    sql += `ORDER BY od.ofd_no, e.epep_dt`;
 
     const result = await mariadb.query(sql, params);
     const formatted = result.map((row) => ({
@@ -393,6 +393,32 @@ const getEpOsManage = async (data) => {
     return formatted;
   } catch (err) {
     console.error("getEpIsManage", err);
+  }
+};
+
+// 완제품 출고 관리 출고 버튼 기능
+const insertEpOs = async (orderForm) => {
+  const conn = await mariadb.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    for (const item of orderForm) {
+      await conn.query(insertEpOsManage, [
+        item.ofd_no,
+        item.ep_lot,
+        item.ord_epos_qty,
+        item.remark,
+      ]);
+    }
+
+    await conn.commit();
+    return { isSuccessed: true };
+  } catch (err) {
+    await conn.rollback();
+    console.error("insertEpOs 오류:", err);
+    return { isSuccessed: false, message: err.message };
+  } finally {
+    conn.release();
   }
 };
 
@@ -409,4 +435,5 @@ export {
   getEpIsManage,
   insertEpIs,
   getEpOsManage,
+  insertEpOs,
 };

@@ -5,7 +5,7 @@ import ComponentCard from '@/components/common/ComponentCardOrder.vue'
 import DataTable from 'primevue/datatable' // datatable 컴포넌트 import
 import Column from 'primevue/column'
 // import InputText from 'primevue/inputtext' // PrimeVue InputText 컴포넌트 import
-import { defineProps, ref, computed } from 'vue' // computed import 추가
+import { ref, computed } from 'vue' // computed import 추가
 // flatPickr 달력
 import flatPickr from 'vue-flatpickr-component' // flatPickr 달력 컴포넌트 import
 import 'flatpickr/dist/flatpickr.css' // flatPickr 달력 css import
@@ -16,10 +16,6 @@ import BcncnameSelectmodal from './BcncnameSelectmodal.vue' // 거래처, 대표
 const baseInputClass =
   'dark:bg-dark-900 h-8 w-full rounded-lg border border-gray-300 bg-transparent pl-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
 
-// 주문서관리 props 인터페이스
-interface Props {
-  title: string
-}
 // 주문서관리-주문서조회검색 검색input 인터페이스
 interface SearchCondition {
   ord_name: string
@@ -52,17 +48,9 @@ interface OrderItem {
   rem_os_qty: number // 미출고수량
   comncode_dtnm: string
   remark: string
+  orig_ord_eps_qty: number // DB에서 가져온 기존 기출고수량
 }
-// interface EpIsRequest {
-//   insp_id: string
-//   prod_code: string
-//   pass_qty: number
-//   epep_dt: string
-//   remark: string
-// }
 
-// props 정의
-defineProps<Props>()
 // 선택한 제품들
 const selectedProducts = ref<OrderItem[]>([])
 // products ref에 OrderItem[] 타입을 명시적으로 지정
@@ -145,8 +133,23 @@ const getEpOsManage = async (showAlert = true) => {
       products.value = []
       return
     }
+
+    const computedRows = rows.map((row: OrderItem) => {
+      const cur = row.cur_os_qty || 0 // 현출고수량
+      const ord = row.op_qty || 0 // 주문수량
+      const ord_eps = row.ord_eps_qty || 0 // DB 기준 기출고수량
+
+      return {
+        ...row,
+        orig_ord_eps_qty: ord_eps, // 기존 누적 기출고량 저장
+        ord_eps_qty: ord_eps, // 현재 화면에 표시할 기출고량
+        rem_os_qty: Math.max(ord - ord_eps, 0), // 미출고수량 = 주문수량 - 기존기출
+        cur_os_qty: 0, // 입력칸 초기화
+      }
+    })
+
     selectedProducts.value = []
-    products.value = rows
+    products.value = computedRows
     console.log('조회버튼 누르고 나오는 products.value 값:', products.value)
     if (showAlert) alert('조회성공!')
   } catch (err) {
@@ -167,65 +170,53 @@ const resetSearchForm = () => {
   search.value.ep_start_date = '' // 유통기한
   search.value.ep_end_date = '' // 유통기한
 }
+// 출고할때 필요한 데이터 인터페이스
+interface EpOsRequest {
+  ofd_no: number
+  ep_lot: string
+  ord_epos_qty: number
+  remark: string
+}
+// 출고버튼 기능
+const submitEpOs = async () => {
+  const obj: EpOsRequest[] = selectedProducts.value.map((item) => ({
+    ofd_no: item.ofd_no,
+    ep_lot: item.ep_lot,
+    ord_epos_qty: item.cur_os_qty,
+    remark: item.remark || '',
+  }))
+  console.log(obj)
 
-// 입고버튼 기능
-// const submitEpIs = async () => {
-//   const obj: EpIsRequest[] = selectedProducts.value.map((item) => ({
-//     insp_id: item.insp_id,
-//     prod_code: item.prod_code,
-//     pass_qty: item.pass_qty,
-//     epep_dt: item.epep_dt,
-//     remark: item.remark || '',
-//   }))
-//   console.log(obj)
+  try {
+    if (selectedProducts.value.length === 0) {
+      alert('출고할 주문서 제품을 선택해주세요')
+      return
+    }
+    // 저장
+    const result = await axios.post('/api/insertEpOs', obj)
+    const addRes = result.data
 
-//   try {
-//     if (selectedProducts.value.length === 0) {
-//       alert('입고할 제품을 선택해주세요')
-//       return
-//     }
-//     // 저장
-//     const result = await axios.post('/api/insertEpIs', obj)
-//     const addRes = result.data
+    if (!addRes.isSuccessed) {
+      alert('출고가 이루어지지 않았습니다. 데이터를 확인해보세요.')
+      return
+    }
+    alert('출고성공')
+    getEpOsManage(false)
 
-//     if (!addRes.isSuccessed) {
-//       alert('입고가 이루어지지 않았습니다. 데이터를 확인해보세요.')
-//       return
-//     }
-//     if (addRes.isSuccessed) {
-//       alert('입고성공')
-//       getEpIsManage(false)
-//       rowUnselectHook()
-//       return
-//     }
-//   } catch (err) {
-//     console.error('추가 중 오류 발생', err)
-//     alert('서버 요청 중 오류가 발생했습니다.')
-//   }
-// }
-
-const selectAll = ref(false)
-// eps가 없는 행 선택
-// const isSelectableRow = (row: OrderItem) => !row.eps || row.eps.trim() === ''
-
-// eps가 있는 행은 비활성화
-// const rowClassHook = (row: OrderItem) => {
-//   return row.eps && row.eps.trim() !== '' ? 'disabled-row' : ''
-// }
-
-// 전체 선택 변경
-// const selectAllChangeHook = (event: { checked: boolean }) => {
-//   selectAll.value = event.checked
-//   if (event.checked) {
-//     selectedProducts.value = products.value.filter(isSelectableRow)
-//   } else {
-//     selectedProducts.value = []
-//   }
-// }
-
-// 한 행 선택 해제 시 전체 체크 해제
-const rowUnselectHook = () => {
-  selectAll.value = false
+    // 출고 후 프론트 단에서 누적 출고량 기준으로 다시 계산
+    products.value.forEach((p) => {
+      const selected = selectedProducts.value.find((s) => s.ofd_no === p.ofd_no)
+      if (selected) {
+        p.ord_eps_qty = p.ord_eps_qty // DB에서 반영된 누적 출고량 그대로
+        p.rem_os_qty = p.op_qty - p.ord_eps_qty
+        p.cur_os_qty = 0 // 입력칸 초기화
+      }
+    })
+    selectedProducts.value = []
+  } catch (err) {
+    console.error('추가 중 오류 발생', err)
+    alert('서버 요청 중 오류가 발생했습니다.')
+  }
 }
 
 // 거래처 모달창 열고 닫을 수 있음
@@ -239,6 +230,18 @@ const BcncnameClosemodal = () => {
 const BcncSelect = (value: SearchCondition) => {
   console.log(value.bcnc_name)
   search.value.bcnc_name = value.bcnc_name
+}
+
+// cur_os_qty 입력 시 미출고수량 및 기출고수량 자동 계산
+const updateQty = (item: OrderItem) => {
+  // cur_os_qty는 0 ~ 남은 미출고량 사이로 제한
+  item.cur_os_qty = Math.min(Math.max(item.cur_os_qty, 0), item.op_qty - item.orig_ord_eps_qty)
+
+  // 화면상 기출고수량 = 기존기출 + 입력한 현출고
+  item.ord_eps_qty = item.orig_ord_eps_qty + item.cur_os_qty
+
+  // 화면상 미출고수량 = 주문수량 - 화면상 기출
+  item.rem_os_qty = item.op_qty - item.ord_eps_qty
 }
 </script>
 <template>
@@ -468,7 +471,7 @@ const BcncSelect = (value: SearchCondition) => {
         </ComponentCard>
       </form>
     </div>
-    <form action="" id="submitEpIs" @submit.prevent="submitEpIs">
+    <form action="" id="submitEpIs" @submit.prevent="submitEpOs">
       <div class="space-y-5 sm:space-y-6 mt-2">
         <ComponentCard title="완제품 출고 관리">
           <template #header-right>
@@ -488,16 +491,15 @@ const BcncSelect = (value: SearchCondition) => {
                 dataKey="ofd_no"
                 tableStyle="max-width: 100%;"
                 selectionMode="multiple"
-                :rowClass="rowClassHook"
-                :select-all="selectAll"
-                @select-all-change="selectAllChangeHook"
-                @row-unselect="rowUnselectHook"
                 showGridlines
                 scrollable
-                scrollHeight="430px"
+                scrollHeight="390px"
                 size="small"
                 class="text-sm"
               >
+                <template #empty>
+                  <div class="text-center">조회를 먼저해주세요!</div>
+                </template>
                 <Column
                   selectionMode="multiple"
                   headerStyle="width: 1%"
@@ -582,6 +584,8 @@ const BcncSelect = (value: SearchCondition) => {
                       :class="baseInputClass"
                       style="text-align: right"
                       :min="1"
+                      :max="Math.min(data.ep_qty, data.op_qty)"
+                      @change="updateQty(data)"
                     /> </template
                 ></Column>
                 <Column
