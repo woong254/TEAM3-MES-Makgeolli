@@ -132,4 +132,39 @@ router.post("/insertEpIs", async (req, res) => {
   }
 });
 
+// 완제품 입고 관리 검색
+router.get("/viewEpOsManage", async (req, res) => {
+  try {
+    const {
+      ord_name,
+      bcnc_name,
+      prod_name,
+      Is,
+      Os,
+      OsIP,
+      due_start_date,
+      due_end_date,
+      ep_start_date,
+      ep_end_date,
+    } = req.query;
+
+    const result = await salesService.getEpOsManage({
+      ord_name,
+      bcnc_name,
+      prod_name,
+      Is,
+      Os,
+      OsIP,
+      due_start_date,
+      due_end_date,
+      ep_start_date,
+      ep_end_date,
+    });
+    res.send(result);
+    console.log(result);
+  } catch (err) {
+    console.error("viewEpOsManage 조회 오류", err);
+  }
+});
+
 module.exports = router;

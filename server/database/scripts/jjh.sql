@@ -219,20 +219,28 @@ FROM   comncode_dt
 WHERE  comncode_id = '0B';
 
 -- 완제품검사합격처리된 제품을 입고하기위해 합격된 완제품 조회 
-SELECT pm.prod_code,
-	   pm.prod_name,
+SELECT pi.insp_id,
+       pi.insp_name,
+       pm.prod_code,
+	pm.prod_name,
        pm.prod_spec,
-	   pm.prod_unit,
+	pm.prod_unit,
        pi.pass_qty,
-       pi.epep_dt
+       pi.epep_dt,
+       cd.comncode_dtnm,
+       ep.remark
 FROM   prod_insp pi
-	   JOIN processform pf
+	JOIN processform pf
        ON pi.procs_no = pf.procs_no
        JOIN prod_master pm
        ON pf.prod_code = pm.prod_code
+       LEFT JOIN epis ep
+       ON pi.insp_id = ep.insp_id
+       LEFT JOIN comncode_dt cd
+       ON ep.eps = cd.comncode_detailid
 WHERE  1=1
-	   AND pf.prog = '100'
-	   AND pf.now_procs = '포장'
+	AND pf.prog = '100'
+	AND pf.now_procs = '포장'
        AND pi.final_result = 'p';
        
 -- 완제품 입고 관리 조회 입고버튼 프로시저
@@ -271,9 +279,32 @@ CALL insert_epis();
 -- add_form 삭제       
 DROP PROCEDURE IF EXISTS insert_epis;      
 
-
-
-
+-- 완제품출고관리조회
+SELECT	od.ofd_no,
+		o.ord_name,
+		bm.bcnc_name,
+		od.prod_code,
+		pm.prod_name,
+		pm.prod_spec,
+		pm.prod_unit,
+		od.op_qty,
+		o.due_date,
+        e.ep_lot,
+        e.epep_dt,
+        e.ep_qty,
+        cd.comncode_dtnm
+FROM	orderdetail od
+		JOIN orderform o
+        ON od.ord_id = o.ord_id
+        JOIN bcnc_master bm
+        ON o.bcnc_code = bm.bcnc_code
+        JOIN prod_master pm
+        ON od.prod_code = pm.prod_code
+        JOIN epis e
+        ON od.prod_code = e.prod_code
+        JOIN comncode_dt cd
+        ON od.ofd_st = cd.comncode_detailid;
+        
 
        
 SELECT *
@@ -298,6 +329,8 @@ SELECT *
 FROM   processform;
 SELECT *
 FROM   epis;
+SELECT *
+FROM   edcts;
 
 
 -- 테이블 foreign키 넣는 코드
@@ -305,6 +338,7 @@ ALTER TABLE orderform ADD CONSTRAINT FOREIGN KEY(bcnc_code) REFERENCES bcnc_mast
 ALTER TABLE orderdetail ADD CONSTRAINT FOREIGN KEY(ord_id) REFERENCES orderform(ord_id);
 ALTER TABLE orderdetail ADD CONSTRAINT FOREIGN KEY(prod_code) REFERENCES prod_master(prod_code);
 ALTER TABLE orderform ADD CONSTRAINT FOREIGN KEY(order_status) REFERENCES comncode_dt(comncode_detailid);
+ALTER TABLE epis ADD CONSTRAINT FOREIGN KEY(eps) REFERENCES comncode_dt(comncode_detailid);
 
 -- 테이블 컬럼 추가 코드
 ALTER TABLE proc_insp ADD COLUMN epep_dt date;

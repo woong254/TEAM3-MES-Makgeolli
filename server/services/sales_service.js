@@ -14,6 +14,7 @@ const selectOrdId = sqlList.selectOrdId;
 const updateOrd = sqlList.updateOrd;
 const deleteDetail = sqlList.deleteDetail;
 const selectEpIsManage = sqlList.selectEpIsManage;
+const selectEpOsManage = sqlList.selectEpOsManage;
 
 // const testService = ()=>{
 //   let conn = null;
@@ -324,6 +325,76 @@ const insertEpIs = async (orderForm) => {
     conn.release();
   }
 };
+// 완제품 출고 관리 조회 버튼 기능
+const getEpOsManage = async (data) => {
+  const {
+    ord_name,
+    bcnc_name,
+    prod_name,
+    Is,
+    Os,
+    OsIP,
+    due_start_date,
+    due_end_date,
+    ep_start_date,
+    ep_end_date,
+  } = data;
+  try {
+    let sql = selectEpOsManage;
+    let params = [];
+
+    if (ord_name) {
+      sql += ` AND o.ord_name LIKE ?`;
+      params.push(`%${ord_name}%`);
+    }
+    if (bcnc_name) {
+      sql += ` AND bm.bcnc_name = ?`;
+      params.push(bcnc_name);
+    }
+    if (prod_name) {
+      sql += ` AND pm.prod_name LIKE ?`;
+      params.push(`%${prod_name}%`);
+    }
+    if (due_start_date) {
+      sql += ` AND o.due_date >= ?`;
+      params.push(due_start_date);
+    }
+    if (due_end_date) {
+      sql += ` AND o.due_date <= ?`;
+      params.push(due_end_date);
+    }
+    if (ep_start_date) {
+      sql += ` AND e.epep_dt >= ?`;
+      params.push(ep_start_date);
+    }
+    if (ep_end_date) {
+      sql += ` AND e.epep_dt <= ?`;
+      params.push(ep_end_date);
+    }
+    // 상태 조건 입고완료, 출고완료, 출고진행중
+    const stateConditions = [];
+    if (Is) stateConditions.push("cd.comncode_dtnm = ?");
+    if (Os) stateConditions.push("cd.comncode_dtnm = ?");
+    if (OsIP) stateConditions.push("cd.comncode_dtnm = ?");
+
+    if (stateConditions.length > 0) {
+      sql += ` AND (${stateConditions.join(" OR ")})`;
+      if (Is) params.push(Is);
+      if (Os) params.push(Os);
+      if (OsIP) params.push(OsIP);
+    }
+
+    const result = await mariadb.query(sql, params);
+    const formatted = result.map((row) => ({
+      ...row,
+      due_date: formatDate(new Date(row.due_date)),
+      epep_dt: formatDate(new Date(row.epep_dt)),
+    }));
+    return formatted;
+  } catch (err) {
+    console.error("getEpIsManage", err);
+  }
+};
 
 // export
 export {
@@ -337,4 +408,5 @@ export {
   getProdUnit,
   getEpIsManage,
   insertEpIs,
+  getEpOsManage,
 };

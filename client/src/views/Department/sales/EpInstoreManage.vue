@@ -39,7 +39,7 @@ interface OrderItem {
   prod_unit: string
   pass_qty: number
   epep_dt: string
-  eps: string
+  comncode_dtnm: string
   remark: string
 }
 interface EpIsRequest {
@@ -155,12 +155,37 @@ const submitEpIs = async () => {
     if (addRes.isSuccessed) {
       alert('입고성공')
       getEpIsManage(false)
+      rowUnselectHook()
       return
     }
   } catch (err) {
     console.error('추가 중 오류 발생', err)
     alert('서버 요청 중 오류가 발생했습니다.')
   }
+}
+
+const selectAll = ref(false)
+// comncode_dtnm가 없는 행 선택
+const isSelectableRow = (row: OrderItem) => !row.comncode_dtnm || row.comncode_dtnm.trim() === ''
+
+// comncode_dtnm가 있는 행은 비활성화
+const rowClassHook = (row: OrderItem) => {
+  return row.comncode_dtnm && row.comncode_dtnm.trim() !== '' ? 'disabled-row' : ''
+}
+
+// 전체 선택 변경
+const selectAllChangeHook = (event: { checked: boolean }) => {
+  selectAll.value = event.checked
+  if (event.checked) {
+    selectedProducts.value = products.value.filter(isSelectableRow)
+  } else {
+    selectedProducts.value = []
+  }
+}
+
+// 한 행 선택 해제 시 전체 체크 해제
+const rowUnselectHook = () => {
+  selectAll.value = false
 }
 </script>
 <template>
@@ -308,18 +333,26 @@ const submitEpIs = async () => {
             </div>
           </template>
           <template #body-content>
-            <div ref="tableWrapper" class="order-table-wrapper h-140">
+            <div ref="tableWrapper" class="order-table-wrapper h-120">
+              <!-- :rowClass는 동적으로 css클래스를 적용하는거,  -->
+              <!-- :select-all="selectAll" selectAll이 true면 전체 선택 체크박스가 체크된 상태로 표시 -->
+              <!-- @select-all-change="selectAllChangeHook" 전체 선택 이벤트 발생할때, 전체 선택 시 비활성화 된 행빼고 선택하게 -->
+              <!-- @row-unselect="rowUnselectHook" 전체선택된 상태에서 하나라도 행이 선택해제한다면 동시에 전체선택도 해제 -->
               <DataTable
                 v-model:selection="selectedProducts"
                 :value="products"
                 dataKey="insp_id"
                 tableStyle="max-width: 100%;"
-                class="fixed-data"
+                selectionMode="multiple"
+                :rowClass="rowClassHook"
+                :select-all="selectAll"
+                @select-all-change="selectAllChangeHook"
+                @row-unselect="rowUnselectHook"
                 showGridlines
                 scrollable
                 scrollHeight="500px"
-                editMode="cell"
                 size="small"
+                class="text-sm"
               >
                 <Column selectionMode="multiple" headerStyle="width: 1%" field="insp_id"></Column>
                 <Column
@@ -374,7 +407,7 @@ const submitEpIs = async () => {
                   style="text-align: center"
                 ></Column>
                 <Column
-                  field="eps"
+                  field="comncode_dtnm"
                   header="입고상태"
                   :pt="{ columnHeaderContent: 'justify-center' }"
                   headerStyle="width: 10%"
@@ -392,10 +425,10 @@ const submitEpIs = async () => {
                       :class="baseInputClass"
                       :style="{
                         height: '2rem',
-                        backgroundColor: data.eps === '입고완료' ? '#e5e7eb' : '', // Tailwind bg-gray-200 색상값
-                        cursor: data.eps === '입고완료' ? 'not-allowed' : 'text',
+                        backgroundColor: data.comncode_dtnm === '입고완료' ? '#e5e7eb' : '', // Tailwind bg-gray-200 색상값
+                        cursor: data.comncode_dtnm === '입고완료' ? 'not-allowed' : 'text',
                       }"
-                      :disabled="data.eps === '입고완료'"
+                      :disabled="data.comncode_dtnm === '입고완료'"
                     />
                   </template>
                 </Column>
@@ -409,16 +442,20 @@ const submitEpIs = async () => {
 </template>
 
 <style scoped>
-.btn-common-pdf {
-  width: 150px;
-  padding: 8px 20px;
-  border-radius: 8px;
-  margin: 0 5px;
-  transition: all 0.3s;
-}
 input {
   height: 40px; /* input 높이 */
   line-height: 40px; /* line-height를 input 높이와 같게 */
   padding: 0 10px; /* 좌우 패딩 */
+}
+:deep(.disabled-row) {
+  opacity: 0.6; /* 불투명도 흐릿하게 만드는거 */
+  pointer-events: none; /* 클릭 선택 못하게 */
+  user-select: none; /* 사용자가 드래그 하지 못하게 */
+}
+:deep(.disabled-row .p-checkbox-box) {
+  /* 비활성화 될경우 체크박스 배경색 */
+  background-color: #f5f5f5 !important;
+  /* 비활성화 될경우 체크박스 선색 */
+  border-color: #ccc !important;
 }
 </style>
