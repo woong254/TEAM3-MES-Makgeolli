@@ -64,6 +64,12 @@ const uploadedFileUrl = ref('') // 서버가 돌려준 접근 URL
 // 상세 로드 시 DB의 기존 파일을 보존하기 위한 상태(수정 모드에서 새 업로드 없으면 유지)
 const existingFileName = ref('') // DB의 file_name
 const existingFileUrl = ref('') // 필요하면 서버에서 함께 내려주거나, 규칙으로 구성
+const uploadedStoredPath = ref<string>('') // image/xxx.png or file/yyy.pdf
+const existingStoredPath = ref<string>('') // 수정 모드에서 받아온 기존 값(백엔드 조회 결과)
+
+const fileInputRef = ref<HTMLInputElement | null>(null)
+const fileInputKey = ref(0)
+
 const scoreDesc = ref<Record<number, string>>({
   10: '',
   9: '',
@@ -181,7 +187,13 @@ const resetIspForm = () => {
   inspUsing.value = false
   inspDesc.value = ''
   inspTarget.value = []
-  // 파일 업로드는 별도로 <input type="file">에서 직접 초기화 필요
+
+  // 파일
+  uploadedStoredPath.value = ''
+  existingStoredPath.value = ''
+  existingFileName.value = ''
+  if (fileInputRef.value) fileInputRef.value.value = '' // ← 인풋 값 비우기
+  fileInputKey.value++ // ← 강제 리마운트
 
   // 범위형
   minValue.value = ''
@@ -208,7 +220,19 @@ function buildInspPayload() {
   const insp_type = inspMode.value === 'sensory' ? 'S' : 'R'
   const use_yn = inspUsing.value ? 'N' : 'Y'
   const insp_method = (inspDesc.value || '').trim()
-  const insp_file_name = uploadedFileName.value || existingFileName.value || ''
+
+  // 1순위: 이번에 업로드한 storedPath
+  // 2순위: 기존 storedPath (수정 진입 시 백엔드에서 가져온 값)
+  // 3순위: 과거 호환 - filename만 있을 때 폴더 추정
+  let insp_file_name = ''
+  if (uploadedStoredPath.value) {
+    insp_file_name = uploadedStoredPath.value
+  } else if (existingStoredPath.value) {
+    insp_file_name = existingStoredPath.value
+  } else if (existingFileName.value) {
+    // 하위호환: 옛 데이터가 파일명만 있을 때
+    insp_file_name = toStoredPathFromFileName(existingFileName.value)
+  }
 
   // 범위형 세팅
   let min_range: number | null = null
@@ -281,98 +305,6 @@ function buildInspPayload() {
 // 8-2. 품질기준관리 등록 (빈문자열이면 null, 아니면 숫자)
 const registerInsp = async () => {
   try {
-    // // 1) 공통값
-    // const insp_item_name = (inspName.value || '').trim()
-    // if (!insp_item_name) {
-    //   alert('검사항목명을 입력하세요.')
-    //   return
-    // }
-    // const insp_type = inspMode.value === 'sensory' ? 'S' : 'R'
-    // const use_yn = inspUsing.value ? 'N' : 'Y'
-    // const insp_method = (inspDesc.value || '').trim()
-    // const insp_file_name = '' // 업로드는 추후
-
-    // // 2) 범위형만
-    // let min_range = null,
-    //   min_range_spec = null as 'R1' | 'R2' | null
-    // let max_range = null,
-    //   max_range_spec = null as 'R3' | 'R4' | null
-    // let t_unit: string | null = null
-
-    // if (insp_type === 'R') {
-    //   if (minValue.value === '' || maxValue.value === '' || !unit.value) {
-    //     alert('범위형: 최소/최대/단위를 모두 입력하세요.')
-    //     return
-    //   }
-    //   min_range = toDecimalOrNull(minValue.value) // "0"도 0으로 유지
-    //   max_range = toDecimalOrNull(maxValue.value)
-    //   if (Number.isNaN(min_range) || Number.isNaN(max_range)) {
-    //     alert('범위형 숫자 입력을 확인하세요.')
-    //     return
-    //   }
-    //   min_range_spec = minSpec.value as 'R1' | 'R2'
-    //   max_range_spec = maxSpec.value as 'R3' | 'R4'
-    //   t_unit = unit.value
-    // }
-
-    // // 3) 관능형만
-    // let max_score: number | null = null
-    // let pass_score: number | null = null
-    // let pass_score_spec: 'R1' | 'R2' | null = null
-    // let questionsPayload: string[] = []
-
-    // if (insp_type === 'S') {
-    //   max_score = Number(scoreMax.value) // 5 또는 10
-    //   if (passScore.value === '') {
-    //     alert('관능형: 합격 기준 점수를 입력하세요.')
-    //     return
-    //   }
-    //   pass_score = toDecimalOrNull(passScore.value)
-    //   if (Number.isNaN(pass_score)) {
-    //     alert('관능형: 합격 기준 점수 숫자 입력을 확인하세요.')
-    //     return
-    //   }
-    //   pass_score_spec = passSpec.value as 'R1' | 'R2'
-    //   questionsPayload = questions.value
-    //     .map((q) => (q.text || '').trim())
-    //     .filter((t) => t.length > 0)
-    //   if (questionsPayload.length < 1) {
-    //     alert('관능형: 최소 1개 이상의 질문이 필요합니다.')
-    //     return
-    //   }
-    // }
-
-    // // 4) 검사대상 확인
-    // if (inspTarget.value.length < 1) {
-    //   alert('검사대상을 1개 이상 선택하세요.')
-    //   return
-    // }
-
-    // // 5) ✅ 클릭 시점 payload 생성
-    // const payload = {
-    //   // 공통
-    //   insp_item_name,
-    //   insp_type, // 'R' | 'S'
-    //   use_yn, // 'Y' | 'N'
-    //   insp_method,
-    //   insp_file_name,
-
-    //   // 범위형
-    //   min_range, // number | null
-    //   min_range_spec, // 'R1' | 'R2' | null
-    //   max_range, // number | null
-    //   max_range_spec, // 'R3' | 'R4' | null
-    //   unit: t_unit, // string | null
-
-    //   // 관능형
-    //   max_score, // number | null
-    //   pass_score, // number | null
-    //   pass_score_spec, // 'R1' | 'R2' | null
-    //   questions: questionsPayload, // string[]
-
-    //   // 대상 목록: a1~a5는 각 row.t_type 그대로
-    //   targets: inspTarget.value, // [{ t_id, t_type:'a1~a5', t_category:'자재'|'제품', ... }]
-    // }
     const payload = buildInspPayload()
 
     // 6) 전송
@@ -585,30 +517,44 @@ const isEditMode = computed(() => !!selectedInspData.value)
 // 14. 파일 업로드
 // 14-1.파일 변경 핸들러
 async function onFileChange(e: Event) {
-  const input = e.target as HTMLInputElement
-  const file = input.files?.[0]
+  const file = (e.target as HTMLInputElement).files?.[0]
   if (!file) return
-  try {
-    await uploadFile(file) // 아래 14번 함수가 실제 업로드 호출
-  } catch (err: any) {
-    console.error(err)
-    alert(err?.response?.data?.message || '업로드 중 오류가 발생했습니다.')
-  }
-}
-// 14-2. 파일 업로드(multer) 호출 그대로 사용 (필드명 'file')
-async function uploadFile(file: File) {
-  const form = new FormData()
-  form.append('file', file) //필드명 file
 
-  const res = await axios.post('/api/upload', form, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  })
+  const fd = new FormData()
+  fd.append('file', file)
+
+  const res = await axios.post('/api/upload', fd) // ← '/api'로 통일
   if (res.data?.ok) {
-    uploadedFileName.value = res.data.fileName
-    uploadedFileUrl.value = res.data.url
+    uploadedStoredPath.value = res.data.storedPath // image/... or file/...
+    existingFileName.value = res.data.fileName // 화면 표기용
   } else {
     alert(res.data?.message || '업로드 실패')
   }
+}
+// 14-2. 파일 업로드(multer) 호출 그대로 사용 (필드명 'file')
+// async function uploadFile(file: File) {
+//   const form = new FormData()
+//   form.append('file', file) //필드명 file
+
+//   const res = await axios.post('/api/upload', form, {
+//     headers: { 'Content-Type': 'multipart/form-data' },
+//   })
+//   if (res.data?.ok) {
+//     uploadedFileName.value = res.data.fileName
+//     uploadedFileUrl.value = res.data.url
+//   } else {
+//     alert(res.data?.message || '업로드 실패')
+//   }
+// }
+
+// 15. 순수 파일명 보정 함수(다운로드시)
+// 과거 데이터(폴더 없는 순수 파일명)용 보정 함수
+const imgExts = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'])
+function toStoredPathFromFileName(fileName: string) {
+  if (!fileName) return ''
+  const ext = fileName.split('.').pop()?.toLowerCase() || ''
+  const subdir = imgExts.has(ext) ? 'image' : 'file'
+  return `${subdir}/${fileName}`
 }
 
 // 모달 이벤트(open, close)
@@ -847,19 +793,20 @@ const fileStyle =
             <div class="flex mb-4">
               <label :class="labelStyle" class="w-[120px]" for="inspFile">파일첨부 </label>
               <div class="w-full">
-                <input type="file" :class="fileStyle" id="inspFile" @change="onFileChange" />
-                <!-- 새로 업로드 성공한 파일 -->
-                <!-- <div v-if="uploadedFileUrl" class="mt-2 text-sm">
-                  <a :href="uploadedFileUrl" target="_blank" class="text-blue-600 underline">
-                    업로드된 파일 열기
-                  </a>
-                </div> -->
+                <input
+                  type="file"
+                  :key="fileInputKey"
+                  :class="fileStyle"
+                  id="inspFile"
+                  @change="onFileChange"
+                  ref="fileInputRef"
+                />
                 <!-- 수정 모드에서 기존 파일(새 업로드 없을 때) -->
                 <div v-if="existingFileUrl" class="mt-2 text-sm">
                   <a
                     target="_blank"
                     class="underline text-gray-500"
-                    :href="`/uploads/image/${encodeURIComponent(existingFileName)}`"
+                    :href="`/uploads/${encodeURIComponent(existingFileName)}`"
                     :download="existingFileName"
                   >
                     {{ existingFileName }}

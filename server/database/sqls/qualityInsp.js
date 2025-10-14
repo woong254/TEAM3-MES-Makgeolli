@@ -97,7 +97,7 @@ LEFT JOIN prod_master AS p
        ON p.prod_code = qct.product_code
 LEFT JOIN mat_master AS m
        ON m.mat_code = qct.mat_code
-ORDER BY qcm.write_date;
+ORDER BY qcm.insp_item_id;
 `;
 
 // 품질기준관리 수정
@@ -136,7 +136,8 @@ WHERE (? = '' OR qcm.insp_item_name LIKE CONCAT('%', ?, '%'))
   AND (? = '' OR COALESCE(p.prod_name, m.mat_name) LIKE CONCAT('%', ?, '%'))
   AND (? = '' OR qct.insp_target_code = ?)   -- a1~a5
   AND (? = '' OR qcm.use_yn = ?)             -- 'Y'|'N'
-ORDER BY qcm.write_date DESC;`;
+ORDER BY qcm.write_date DESC;
+`;
 
 // 품질기준관리 상세 조회
 const selectInspMasterDetail = `
