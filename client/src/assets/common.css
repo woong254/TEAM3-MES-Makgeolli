@@ -53,7 +53,7 @@
   margin: 0 3px;
 }
 
-/* radio button color */
+/* Primvue - radio, checkbox, pagination color */
 :root {
   --p-radiobutton-checked-background: #213555 !important;
   --p-radiobutton-checked-border-color: #213555 !important;
@@ -67,4 +67,11 @@
   --p-datatable-filter-constraint-selected-color: #213555 !important;
   --p-datatable-filter-constraint-selected-focus-color: #213555 !important;
   --p-datatable-row-toggle-button-selected-hover-color: #213555 !important;
+  --p-paginator-nav-button-selected-color: #213555 !important;
+  --p-checkbox-checked-background: #213555 !important;
+  --p-checkbox-checked-hover-background: #213555 !important;
+  --p-checkbox-focus-border-color: #213555 !important;
+  --p-checkbox-checked-border-color: #213555 !important;
+  --p-checkbox-checked-hover-border-color: #213555 !important;
+  --p-checkbox-checked-focus-border-color: #213555 !important;
 }
