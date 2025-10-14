@@ -437,3 +437,29 @@ FROM prod_master
 WHERE prod_code IN ('PROD-20250101-001','PROD-20250101-002','PROD-20250101-003');
 
 
+SELECT od.ofd_no,
+       o.ord_name,
+       bm.bcnc_name,
+       od.prod_code,
+       pm.prod_name,
+       pm.prod_spec,
+       pm.prod_unit,
+       od.op_qty,
+       o.due_date,
+       e.ep_lot,
+       e.epep_dt,
+       e.ep_qty,
+       cd.comncode_dtnm
+FROM orderdetail od
+JOIN orderform o ON od.ord_id = o.ord_id
+JOIN bcnc_master bm ON o.bcnc_code = bm.bcnc_code
+JOIN prod_master pm ON od.prod_code = pm.prod_code
+JOIN epis e ON od.prod_code = e.prod_code
+JOIN comncode_dt cd ON od.ofd_st = cd.comncode_detailid
+WHERE e.epep_dt = (
+    SELECT MIN(e2.epep_dt)
+    FROM epis e2
+    WHERE e2.prod_code = od.prod_code
+      AND e2.ep_qty > 0  -- 재고가 0인 LOT 제외
+)
+ORDER BY od.ofd_no, e.epep_dt;
