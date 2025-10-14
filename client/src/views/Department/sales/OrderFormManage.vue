@@ -818,13 +818,13 @@ const deleteOrder = async () => {
             </div>
           </template>
           <template #body-content>
-            <div ref="tableWrapper" class="order-table-wrapper h-70">
+            <div ref="tableWrapper" class="order-table-wrapper h-65">
               <DataTable
                 v-model:selection="selectedProducts"
                 :value="products"
                 dataKey="no"
                 tableStyle="max-width: 100%;"
-                class="fixed-data"
+                class="fixed-data text-sm"
                 showGridlines
                 scrollable
                 scrollHeight="250px"
@@ -873,7 +873,7 @@ const deleteOrder = async () => {
                       :style="{ textAlign: 'right' }"
                       :class="baseInputClass"
                       style="height: 2rem"
-                      step="0.01"
+                      step="1"
                     />
                   </template>
                 </Column>
