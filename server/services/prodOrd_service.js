@@ -1,18 +1,6 @@
 // 생산 지시 서비스
 const mariadb = require('../database/mapper.js');
 
-const {
-  selectMakeForm,
-  addInfoToMakeForm,
-  addProdToMakeDetail,
-  addMakeList,
-  selectBomByDetail,
-  selectFlowByMake,
-  genMkOrdNo,
-  genMkListNo,
-} = require('../database/sqlList.js');
-
-
 // 생산 지시 목록
 const findByEmpId = async(empId) => {
   let list = await mariadb
@@ -22,76 +10,44 @@ const findByEmpId = async(empId) => {
 }
 
 // 생산 지시 추가
-const addNewMake = async (header, details) => {
+const addMakeForm = async (header, details) => {
   let conn = null;
-
   try {
+    // 1) 커넥션 획득
     conn = await mariadb.getConnection();
-    await conn.beginTransaction();
 
-    // 지시서 기본 정보 기본키
-    const mkOrdRows = await conn.query(genMkOrdNo);
-    const mk_ord_no = mkOrdRows[0].mk_ord_no;
-    if (!mk_ord_no) throw new Error('mk_ord_no 생성 실패');
-    console.log("mk_ord_no", mk_ord_no);
-
-    // 지시서 목록 기본키
-    const mkListRow = await conn.query(genMkListNo);
-    const mk_list = mkListRow[0].mk_list;
-    if (!mk_list) throw new Error('mk_list 생성 실패');
-    console.log("mk_list", mk_list);
-
-    // 지시서 상세 - BOM
-    const bomCodeRow = await conn.query(selectBomByDetail);
-
-    // 기본 정보
-    await conn.query(addInfoToMakeForm, [
-      mk_ord_no,  
+    // 2) 파라미터 준비 (JSON 배열 변환 필수!)
+    const params = [
       header.mk_name,
       header.mk_bgnde,
       header.mk_ende,
       header.writing_date,
       header.remark || null,
-      header.emp_id
-    ]);
-    
-    // 상제 정보
-    const params = details.map(d => [
-      mk_ord_no,
-      d.no,
-      d.prod_code,
-      d.mk_num,
-      d.mk_priority,
-      d.remark || null,
-      bomCodeRow(d.prod_code),
-      d.pld_no || null
-    ]);
-    await conn.batch(addProdToMakeDetail, params);
-    
-    // makelist에 들어갈 flow_id
-    const flowRows = await conn.query(selectFlowByMake, [mk_ord_no]); 
-    console.log(flowRows);
-      
-    const listParams = flowRows.map(r => [
-      mk_list,         // 지시서별 동일 mk_list 코드 사용
-      mk_ord_no,
-      r.flow_id,
-      r.prod_code
-    ]);
-    await conn.batch(addMakeList, listParams);
+      header.emp_id,
+      JSON.stringify(details)
+    ];
 
-    await conn.commit();
-    return {mk_ord_no, mkd_no, mk_list}
-    
-  } catch(err) {
-    console.error(err);
-    if(conn) await conn.rollback();
+    // 3) 프로시저 호출
+    const rows = await conn.query('CALL add_makeForm(?,?,?,?,?,?,?)', params);
+
+    /**
+     * 결과 rows 형태: [ [ { mk_ord_no: ..., mk_list: ... } ], ... ]
+     * 프로시저의 SELECT 결과는 rows[0][0]에 첫 결과가 담긴다
+     */
+    const result = Array.isArray(rows) && Array.isArray(rows[0]) && rows[0][0]
+      ? rows[0][0]
+      : { mk_ord_no: null, mk_list: null };
+
+    return result;
+  } catch (e) {
+    console.error('[addMakeForm] Error:', e);
+    throw e;
   } finally {
-    if(conn) conn.release();
+    if (conn) conn.release();
   }
-}
+};
 
 module.exports = {
   findByEmpId,
-  addNewMake,
+  addMakeForm,
 }

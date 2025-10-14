@@ -18,13 +18,6 @@ import ProductSelectmodal from '../sales/ProductSelectmodal.vue' // 제품선택
 // node 연결
 import axios from 'axios'
 
-// props 인터페이스
-interface Props {
-  title: string
-  className?: string
-  desc?: string
-};
-
 // 지시서-기본정보
 interface MakeInfo {
   make_code: string       // 지시코드
@@ -45,9 +38,8 @@ interface MakeItem {
   make_qty: number      // 생산 수량, 초기값 100에 맞춰 number 타입으로 설정
   make_priority: number // 우선순위
   remark: string        // 비고
+  pld_no: string        // 계획서
 };
-
-defineProps<Props>();
 
 const selectProducts = ref<MakeItem[]>([]);
 const products = ref<MakeItem[]>([]);
@@ -62,11 +54,18 @@ const makeInfo = ref<MakeInfo>({
   remake: '',
 });
 
+// 당일 설정
+const getToday = () => {
+  const today = new Date();
+  return today.toISOString().slice(0, 10);
+};
+
 // 생산 시작일 설정
 const makeStartDateConfig = computed(() => ({
   dateFormat: 'Y-m-d',
   altInput: false,
   wrap: true,
+  minDate: getToday(),
   maxDate: makeInfo.value.make_end_date,
   locale: Korean,
 }));
@@ -103,7 +102,8 @@ const ProductSelect = (value: MakeItem[]) => {
       prod_unit: item.prod_unit,
       make_qty: item.make_qty || 1,
       make_priority: item.make_priority,
-      remark: item.remark ?? '',
+      remark: item.remark || '',
+      pld_no: item.pld_no || ''
     })
   })
   productModal.value = false;
@@ -116,26 +116,31 @@ const deleteSelectedRows = (prod: MakeItem[]) => {
   prod.length = 0
 }
 
+const blankMakeInfo: MakeInfo = {
+  make_code: '',
+  make_name: '',
+  emp_name: '',
+  make_start_date: '',
+  make_end_date: '',
+  remake: '',
+};
+
 // 초기화
 const resetInfo = () => {
-  makeInfo.value.make_code = ''
-  makeInfo.value.make_name = ''
-  makeInfo.value.emp_name = ''
-  makeInfo.value.make_start_date = ''
-  makeInfo.value.make_end_date = ''
-  makeInfo.value.remake = ''
+  makeInfo.value = { ...blankMakeInfo };
   products.value = []
   selectProducts.value = []
 }
 
 // 저장 전 상세정보 정리
-const beforeSubmit = () => 
+const detailsInfo = () => 
   products.value.map((p, idx) => ({
     no: String(idx + 1),
     prod_code: p.prod_code,
     mk_num: Number(p.make_qty || 1),
     mk_priority: p.make_priority,
     remark: p.remark || null,
+    pld_no: p.pld_no || null
   }))
 
 // 저장 버튼 클릭시 실행 함수
@@ -170,7 +175,7 @@ const submitMakeInfo = async () => {
     remark: makeInfo.value.remake ?? null,
     emp_id: 'EMP-20250616-0002'                       // 서버는 emp_id 사용
   };
-  const details = beforeSubmit();
+  const details = detailsInfo();
 
   try {
     isSubmitting.value = true;
@@ -178,9 +183,7 @@ const submitMakeInfo = async () => {
       headers: { 'Content-Type': 'application/json' }
     });
     alert(`등록 완료: 지시번호 ${res.data?.mk_ord_no ?? ''}`);
-    // 폼/그리드 초기화 필요 시 여기서 처리
-    // makeInfo.value = ...
-    // products.value = []
+     resetInfo();
   } catch (e) {
     console.error(e);
     alert('등록 실패');
