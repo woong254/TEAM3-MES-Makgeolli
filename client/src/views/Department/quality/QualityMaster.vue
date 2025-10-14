@@ -223,15 +223,11 @@ function buildInspPayload() {
 
   // 1순위: 이번에 업로드한 storedPath
   // 2순위: 기존 storedPath (수정 진입 시 백엔드에서 가져온 값)
-  // 3순위: 과거 호환 - filename만 있을 때 폴더 추정
   let insp_file_name = ''
   if (uploadedStoredPath.value) {
     insp_file_name = uploadedStoredPath.value
   } else if (existingStoredPath.value) {
     insp_file_name = existingStoredPath.value
-  } else if (existingFileName.value) {
-    // 하위호환: 옛 데이터가 파일명만 있을 때
-    insp_file_name = toStoredPathFromFileName(existingFileName.value)
   }
 
   // 범위형 세팅
@@ -531,31 +527,6 @@ async function onFileChange(e: Event) {
     alert(res.data?.message || '업로드 실패')
   }
 }
-// 14-2. 파일 업로드(multer) 호출 그대로 사용 (필드명 'file')
-// async function uploadFile(file: File) {
-//   const form = new FormData()
-//   form.append('file', file) //필드명 file
-
-//   const res = await axios.post('/api/upload', form, {
-//     headers: { 'Content-Type': 'multipart/form-data' },
-//   })
-//   if (res.data?.ok) {
-//     uploadedFileName.value = res.data.fileName
-//     uploadedFileUrl.value = res.data.url
-//   } else {
-//     alert(res.data?.message || '업로드 실패')
-//   }
-// }
-
-// 15. 순수 파일명 보정 함수(다운로드시)
-// 과거 데이터(폴더 없는 순수 파일명)용 보정 함수
-const imgExts = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'])
-function toStoredPathFromFileName(fileName: string) {
-  if (!fileName) return ''
-  const ext = fileName.split('.').pop()?.toLowerCase() || ''
-  const subdir = imgExts.has(ext) ? 'image' : 'file'
-  return `${subdir}/${fileName}`
-}
 
 // 모달 이벤트(open, close)
 const isModalOpen = ref(false)
@@ -656,14 +627,14 @@ const fileStyle =
       </template>
     </ComponentCard>
 
-    <div class="flex gap-2 mt-2 width-full" style="height: 500px">
+    <div class="flex gap-2 mt-2 width-full" style="height: 550px">
       <ComponentCard title="목록" className="shadow-sm w-1/2">
         <template #body-content>
           <DataTable
             :value="inspData"
             showGridlines
             scrollable
-            scrollHeight="390px"
+            scrollHeight="420px"
             size="small"
             :rows="10"
             class="text-sm"
@@ -743,7 +714,7 @@ const fileStyle =
           </div>
         </template>
         <template #body-content>
-          <form action="" id="insp-form" class="overflow-y-auto" style="height: 380px">
+          <form action="" id="insp-form" class="overflow-y-auto" style="height: 420px">
             <div class="flex mb-2 gap-2">
               <label :class="labelStyle" class="w-[152px]" for="inspName"> 검사항목명 </label>
               <input type="text" :class="inputStyle" id="inspName" v-model="inspName" required />

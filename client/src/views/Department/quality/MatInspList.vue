@@ -432,11 +432,10 @@ const fileStyle =
           :value="inspData"
           showGridlines
           scrollable
-          scrollHeight="310px"
+          scrollHeight="340px"
           size="small"
           :rows="10"
           class="text-sm"
-          v-model:selection="selectedInspData"
         >
           <!-- 데이터가 없을 때 나타낼 방법 #empty슬롯 -->
           <template #empty>

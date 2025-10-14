@@ -193,6 +193,35 @@ WHERE qs.insp_item_id = ?
 ORDER BY qs.ques_order, qs.ques_id
 `;
 
+// 자재입고검사 가입고(검사대기) 조회 (모달)
+const matInspTargetSelect = `
+SELECT
+  i.iis_id,               -- 가입고번호
+  i.pur_code,             -- 발주번호
+  pf.pur_name,            -- 발주명
+  pf.pur_date,            -- 발주일자
+  bcm.bcnc_name,          -- 거래처
+  i.mat_code,             -- 자재코드 (iis 기준)
+  mat.mat_name,           -- 자재명
+  mat.mat_spec,           -- 자재규격
+  mat.mat_unit,           -- 자재단위
+  pm.pur_qty,             -- 주문수량(발주수량)
+  i.receipt_qty           -- 입고량
+FROM iis i
+LEFT JOIN pur_form pf
+       ON i.pur_code = pf.pur_code
+LEFT JOIN pur_mat pm
+       ON pm.pur_code = i.pur_code
+      AND pm.mat_code = i.mat_code      -- ★ 추가
+LEFT JOIN bcnc_master bcm
+       ON i.bcnc_code = bcm.bcnc_code
+LEFT JOIN mat_master mat
+       ON i.mat_code = mat.mat_code
+WHERE i.insp_status = '검사대기';
+`;
+
+
+
 module.exports = {
   selectInspTargetList,
   searchInspTarget,
@@ -207,5 +236,6 @@ module.exports = {
   selectInspMasterDetail,
   selectInspTargetsByItem,
   selectInspQuestionsByItem,
-  searchInspMaster
+  searchInspMaster,
+  matInspTargetSelect
 };
