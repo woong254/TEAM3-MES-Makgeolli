@@ -35,9 +35,7 @@ type CreateEquipPayload = Omit<EquipItem, 'equipImage'> & { equipImage?: string 
 
 // 주문서관리-주문서상세정보 input 인터페이스
 interface EmpInfoInterface {
-  emp_id: '' // 사원번호
   emp_name: '' // 사원이름
-  emp_phone: '' // 전화번호
 }
 
 /* ========================
@@ -96,10 +94,11 @@ const initForm = (): CreateEquipPayload => ({
 const initSearch = () => ({ equipCode: '', equipName: '', equipType: '', equipStatus: '' })
 
 const empinfo = ref<EmpInfoInterface>({
-  emp_id: '', // 사원번호
   emp_name: '', // 사원이름
-  emp_phone: '', // 전화번호
 })
+const SelectEmp = (value: EmpInfoInterface) => {
+  empinfo.value.emp_name = value.emp_name
+}
 
 /* ========================
  * State
@@ -486,7 +485,11 @@ onBeforeMount(getEquipList)
             </table>
           </form>
 
-          <equipSelectModal :visible="isModalOpen" @close="closeModal" />
+          <equipSelectModal
+            @selectedEmpValue="SelectEmp"
+            :visible="isModalOpen"
+            @close="closeModal"
+          />
         </template>
       </ComponentCard>
     </div>
