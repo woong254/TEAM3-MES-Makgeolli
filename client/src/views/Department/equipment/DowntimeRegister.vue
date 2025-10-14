@@ -12,33 +12,10 @@ import DataCol from 'primevue/column'
 import flatPickr from 'vue-flatpickr-component'
 import 'flatpickr/dist/flatpickr.css'
 import equipSelectModal from './equipSelectModal.vue'
-import 'primeicons/primeicons.css'
-import { ValueCache } from 'ag-grid-community'
 
 /* ========================
  * Types
  * ======================== */
-interface EquipItem {
-  equipCode: string
-  equipName: string
-  equipType: string
-  manager: string | null
-  equipStatus: string
-  inspCycle: number | null
-  installDate: string | null
-  modelName: string | null
-  equipImage: string | null
-  mfgDt: string | null
-  maker: string | null
-}
-type CreateEquipPayload = Omit<EquipItem, 'equipImage'> & { equipImage?: string }
-
-// 주문서관리-주문서상세정보 input 인터페이스
-interface EmpInfoInterface {
-  emp_id: '' // 사원번호
-  emp_name: '' // 사원이름
-  emp_phone: '' // 전화번호
-}
 
 /* ========================
  * UI Const
@@ -59,7 +36,7 @@ const toCamel = (r: any): EquipItem => ({
   equipName: r.equipName ?? r.equip_name ?? '',
   equipType: r.equipType ?? r.equip_type ?? '',
   manager: r.manager ?? null,
-  equipStatus: r.equipStatus ?? r.equip_status ?? '',
+  equipStatus: r.equipStatus ?? r.equip_status ?? null,
   inspCycle: r.inspCycle ?? r.insp_cycle ?? null,
   installDate: r.installDate ?? r.install_date ?? null,
   modelName: r.modelName ?? r.model_name ?? null,
@@ -72,7 +49,7 @@ const toSnake = (p: CreateEquipPayload) => ({
   equip_name: p.equipName?.trim(),
   equip_type: p.equipType?.trim(),
   manager: p.manager ?? null,
-  equip_status: p.equipStatus || '비가동',
+  equip_status: p.equipStatus ?? null,
   insp_cycle: p.inspCycle ?? null,
   install_date: p.installDate || null,
   model_name: p.modelName || null,
@@ -85,7 +62,7 @@ const initForm = (): CreateEquipPayload => ({
   equipName: '',
   equipType: '',
   manager: '',
-  equipStatus: '비가동',
+  equipStatus: '',
   inspCycle: 0,
   installDate: '',
   modelName: '',
@@ -95,12 +72,6 @@ const initForm = (): CreateEquipPayload => ({
 })
 const initSearch = () => ({ equipCode: '', equipName: '', equipType: '', equipStatus: '' })
 
-const empinfo = ref<EmpInfoInterface>({
-  emp_id: '', // 사원번호
-  emp_name: '', // 사원이름
-  emp_phone: '', // 전화번호
-})
-
 /* ========================
  * State
  * ======================== */
@@ -108,6 +79,7 @@ const searchForm = ref(initSearch())
 const equipList = shallowRef<EquipItem[]>([])
 const selectedRow = ref<EquipItem | null>(null)
 const createForm = ref<CreateEquipPayload>(initForm())
+const count = computed(() => equipList.value.length)
 
 /* (optional) 담당자 모달 & 이미지 프리뷰 */
 const isModalOpen = ref(false)
@@ -218,11 +190,7 @@ const resetCreateForm = () => {
 }
 
 const fillFormFromRow = (row: EquipItem) => {
-  createForm.value = {
-    ...(row as CreateEquipPayload),
-    inspCycle: row.inspCycle ?? 0,
-    equipStatus: row.equipStatus || '비가동',
-  }
+  createForm.value = { ...row, inspCycle: row.inspCycle ?? 0 }
 }
 // (수정) 클릭/선택 시 상세 먼저 가져와서 폼 채우기
 const onRowClick = async (e: { data: EquipItem }) => {
@@ -296,48 +264,8 @@ onBeforeMount(getEquipList)
     </ComponentCard>
 
     <div class="flex gap-2 mt-2 w-full" style="height: 550px">
-      <!-- 목록 -->
-      <ComponentCard title="목록" class="shadow-sm w-1/2">
-        <template #header-right>
-          <div class="flex justify-end">
-            <button class="btn-common btn-color" :disabled="!selectedRow" @click="deleteOne">
-              삭제
-            </button>
-          </div>
-        </template>
-
-        <template #body-content>
-          <DataTable
-            :value="equipList"
-            showGridlines
-            v-model:selection="selectedRow"
-            dataKey="equipCode"
-            scrollable
-            scrollHeight="390px"
-            class="text-sm"
-            :rows="20"
-            size="small"
-            @row-click="onRowClick"
-            @selection-change="onSelectionChange"
-          >
-            <DataCol selectionMode="single" headerStyle="width: 2.5rem" />
-            <DataCol field="equipCode" header="설비코드" />
-            <DataCol field="equipName" header="설비명" />
-            <DataCol field="equipType" header="설비유형" sortable />
-            <DataCol field="manager" header="담당자" sortable />
-            <DataCol field="equipStatus" header="설비상태" sortable />
-            <DataCol
-              field="inspCycle"
-              header="점검주기"
-              sortable
-              style="width: 110px; text-align: center"
-            />
-          </DataTable>
-        </template>
-      </ComponentCard>
-
       <!-- 등록/수정 -->
-      <ComponentCard title="등록/수정" class="shadow-sm w-1/2">
+      <ComponentCard title="등록/수정">
         <template #header-right>
           <div class="flex justify-end gap-2">
             <button @click="saveEquip" class="btn-common btn-color">저장</button>
@@ -379,29 +307,19 @@ onBeforeMount(getEquipList)
                   <th class="border border-gray-300 bg-gray-50 text-sm text-left p-2">담당자</th>
                   <td class="border border-gray-300 p-2">
                     <div class="relative">
-                      <template v-if="!selectedRow">
-                        <input
-                          type="text"
-                          placeholder="담당자를 선택해주세요"
-                          v-model="empinfo.emp_name"
-                          readonly
-                        />
-                        <button
-                          type="button"
-                          class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500"
-                          @click="openModal"
-                          title="담당자 찾기"
-                        >
-                          <span class="pi pi-search"></span>
-                        </button>
-                      </template>
-                      <template v-else>
-                        <input
-                          v-model="createForm.manager"
-                          type="text"
-                          :class="inputStyle + ' pr-10'"
-                        />
-                      </template>
+                      <input
+                        v-model="createForm.manager"
+                        type="text"
+                        :class="inputStyle + ' pr-10'"
+                      />
+                      <button
+                        type="button"
+                        class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500"
+                        @click="openModal"
+                        title="담당자 찾기"
+                      >
+                        🔍
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -437,7 +355,7 @@ onBeforeMount(getEquipList)
                       :class="inputStyle"
                       placeholder="https://..."
                     /> -->
-                    <input @change="onFileChange" type="file" :class="fileStyle" id="inspFile" />
+                    <input type="file" :class="fileStyle" id="inspFile" />
                   </td>
                 </tr>
 
@@ -467,19 +385,9 @@ onBeforeMount(getEquipList)
                 <tr>
                   <th class="border border-gray-300 bg-gray-50 text-sm text-left p-2">설비상태</th>
                   <td class="border border-gray-300 p-2" colspan="3">
-                    <!-- 신규 등록 시: 비가동 고정, 수정 시: 선택 가능 -->
-                    <template v-if="!selectedRow">
-                      <select v-model="createForm.equipStatus" :class="inputStyle" disabled>
-                        <option value="비가동">비가동</option>
-                      </select>
-                    </template>
-
-                    <template v-else>
-                      <select v-model="createForm.equipStatus" :class="inputStyle">
-                        <option value="가동중">가동중</option>
-                        <option value="비가동">비가동</option>
-                      </select>
-                    </template>
+                    <select v-model="createForm.equipStatus" :class="inputStyle">
+                      <option value="j2" readonly>비가동</option>
+                    </select>
                   </td>
                 </tr>
               </tbody>

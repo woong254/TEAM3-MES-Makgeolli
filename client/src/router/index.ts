@@ -295,11 +295,27 @@ const router = createRouter({
 
     // 설비
     {
-      path: '/equipment',
+      path: '/equipmaster',
       name: 'EquipMaster',
       component: () => import('../views/Department/equipment/EquipMaster.vue'),
       meta: {
         title: '설비관리',
+      },
+    },
+    {
+      path: '/downtimelist',
+      name: 'DownTimeList',
+      component: () => import('../views/Department/equipment/DowntimeList.vue'),
+      meta: {
+        title: '비가동 설비 조회',
+      },
+    },
+    {
+      path: '/downtimeregister',
+      name: 'DownTimeRegister',
+      component: () => import('../views/Department/equipment/DowntimeRegister.vue'),
+      meta: {
+        title: '비가동 설비 관리',
       },
     },
   ],

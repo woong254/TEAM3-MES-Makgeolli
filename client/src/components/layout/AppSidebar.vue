@@ -326,9 +326,9 @@ const menuGroups: MenuGroup[] = [
         icon: PlugInIcon,
         name: '설비',
         subItems: [
-          { name: '설비관리', path: '/equipment', pro: false },
-          { name: '비가동 설비조회', path: '/', pro: false },
-          { name: '비가동 설비관리', path: '/', pro: false },
+          { name: '설비관리', path: '/equipmaster', pro: false },
+          { name: '비가동 설비조회', path: '/downtimelist', pro: false },
+          { name: '비가동 설비관리', path: '/downtimeregister', pro: false },
           { name: '점검관리', path: '/', pro: false },
           { name: '점검항목조회', path: '/', pro: false },
           { name: '수리관리', path: '/signup', pro: false },

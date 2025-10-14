@@ -136,8 +136,9 @@ async function create(payload = {}) {
   const equipType = toNullTrim(pick(payload, "equip_type", "equipType"));
   const manager = toNullTrim(pick(payload, "manager", "manager"));
 
-  const equipStatus = toNumOrNull(pick(payload, "equip_status", "equipStatus"));
-  const inspCycle = toNumOrNull(pick(payload, "insp_cycle", "inspCycle"));
+  const equipStatus =
+    toNullTrim(pick(payload, "equip_status", "equipStatus")) || "비가동";
+  const inspCycle = toNullTrim(pick(payload, "insp_cycle", "inspCycle"));
 
   const installDate = toYmdOrNull(pick(payload, "install_date", "installDate")); // 'YYYY-MM-DD'
   const modelName = toNullTrim(pick(payload, "model_name", "modelName"));
@@ -202,11 +203,9 @@ async function update(equip_code, payload = {}) {
   const equip_name = toNullTrim(pick(payload, "equip_name", "equipName"));
   const equip_type = toNullTrim(pick(payload, "equip_type", "equipType"));
   const manager = toNullTrim(pick(payload, "manager", "manager"));
-  const equip_status = toNumOrNull(
-    pick(payload, "equip_status", "equipStatus")
-  );
-  const insp_cycle = toNumOrNull(pick(payload, "insp_cycle", "inspCycle"));
-
+  const equip_status =
+    toNullTrim(pick(payload, "equip_status", "equipStatus")) || "비가동";
+  const insp_cycle = toNullTrim(pick(payload, "insp_cycle", "inspCycle")); // DB varchar
   const maker = toNullTrim(pick(payload, "maker", "maker"));
   const model_name = toNullTrim(pick(payload, "model_name", "modelName"));
   const equip_image = toNullTrim(pick(payload, "equip_image", "equipImage"));
