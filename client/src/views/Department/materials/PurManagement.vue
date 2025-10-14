@@ -69,10 +69,9 @@ const validateBeforeSave = () => {
 
   if (!purChaseMat.value.length) requiredAlert('발주자재를 한 행 이상 추가하세요.')
   for (const [i, r] of purChaseMat.value.entries()) {
-    if (!r.mat_code) requiredAlert(`자재코드가 비었습니다. (행 ${i + 1})`)
+    if (!r.mat_code) requiredAlert(`자재코드가 비었습니다.`)
     const qty = Number(r.pur_qty || 0)
-    if (!Number.isFinite(qty) || qty < 1)
-      requiredAlert(`발주수량은 1 이상이어야 합니다. (행 ${i + 1})`)
+    if (!Number.isFinite(qty) || qty < 1) requiredAlert(`발주수량을 입력해주세요.`)
   }
 }
 
@@ -176,7 +175,7 @@ const onSelectMat = (payload) => {
       mat_name: r.mat_name,
       stock_qty: r.stock_qty,
       safe_stock: r.safe_stock,
-      pur_qty: 1,
+      pur_qty: r.pur_qty,
       mat_spec: r.mat_spec,
       mat_unit: r.mat_unit,
       remark: '',
@@ -276,7 +275,7 @@ onMounted(async () => {
       <ComponentCard title="발주서">
         <template #header-right>
           <div class="flex justify-end space-x-2 mb-1">
-            <button type="button" class="btn-white btn-common" @click="resetBtn()">초기화</button>
+            <button type="button" class="btn-white btn-common" @click="resetBtn">초기화</button>
             <button type="button" class="btn-white btn-common" @click="isPurModalOpen = true">
               조회
             </button>
@@ -441,6 +440,9 @@ onMounted(async () => {
             scrollable
             scrollHeight="350px"
           >
+            <template #empty>
+              <div class="text-center">추가된 자재가 없습니다.</div>
+            </template>
             <DataCol selectionMode="multiple" headerStyle="width: 37px" bodyStyle="width: 37px" />
             <DataCol
               field="mat_code"
@@ -491,6 +493,11 @@ onMounted(async () => {
                   min="1"
                   style="text-align: right"
                   :class="baseInputClass"
+                  @blur="
+                    data[field] = (
+                      Number.isFinite(+data[field]) ? Math.max(1, Math.floor(+data[field])) : 1
+                    ).toFixed(2)
+                  "
                 />
               </template>
             </DataCol>

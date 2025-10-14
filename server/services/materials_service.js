@@ -149,10 +149,57 @@ const deletePurList = async (pur_code) => {
   return { ok: affected > 0 }; // 실제로 삭제됐는지 여부만 반환
 };
 
+// 가입고 1행 등록: 조건 맞으면 1행 삽입, 아니면 0행
+const insertIisOne = async ({
+  prod_date,
+  exp_date,
+  pre_receipt_date,
+  bcnc_code,
+  mat_code,
+  receipt_qty,
+}) => {
+  try {
+    const params = [
+      // SELECT 자리
+      prod_date,
+      exp_date,
+      pre_receipt_date,
+      receipt_qty,
+      // WHERE 필터 자리
+      pre_receipt_date,
+      bcnc_code,
+      mat_code,
+      receipt_qty,
+    ];
+
+    const r = await mariadb.query("insertIis", params);
+    const affected = r?.affectedRows ?? r?.affected_rows ?? 0;
+    return { ok: affected === 1 };
+  } catch (err) {
+    console.error(err);
+    return {
+      ok: false,
+      message: err?.sqlMessage || err?.message || "INSERT_IIS_FAILED",
+    };
+  }
+};
+
+// 가입고 목록 조회 (검사대기/검사완료 등 상태별)
+const findIisList = async (insp_status) => {
+  try {
+    const rows = await mariadb.query("iisList", [insp_status]);
+    return rows || [];
+  } catch (err) {
+    console.error(err);
+    return [];
+  }
+};
+
 module.exports = {
   // 목록/검색
   findPurList,
   findPurTarget,
+  findIisList,
   // 단건 조회
   findPurHeaderByCode,
   findPurLinesByCode,
@@ -167,4 +214,5 @@ module.exports = {
   // 저장
   savePurchase,
   deletePurList,
+  insertIisOne,
 };
