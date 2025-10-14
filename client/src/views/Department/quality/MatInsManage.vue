@@ -265,6 +265,7 @@ const fileStyle =
                 <input
                   type="text"
                   :class="inputStyleClick"
+                  readonly
                   class="w-2/3 cursor-pointer hover:bg-gray-100 duration-300"
                 />
                 <button
@@ -280,6 +281,7 @@ const fileStyle =
                 <input
                   type="text"
                   :class="inputStyleClick"
+                  readonly
                   class="w-2/3 cursor-pointer hover:bg-gray-100 duration-300"
                 />
                 <button
@@ -295,6 +297,7 @@ const fileStyle =
                 <input
                   type="text"
                   :class="inputStyleClick"
+                  readonly
                   class="w-2/3 cursor-pointer hover:bg-gray-100 duration-300"
                 />
                 <button
@@ -310,6 +313,7 @@ const fileStyle =
                 <input
                   type="text"
                   :class="inputStyleClick"
+                  readonly
                   class="w-2/3 cursor-pointer hover:bg-gray-100 duration-300"
                 />
                 <button
@@ -325,6 +329,7 @@ const fileStyle =
                 <input
                   type="text"
                   :class="inputStyleClick"
+                  readonly
                   class="w-2/3 cursor-pointer hover:bg-gray-100 duration-300"
                 />
                 <button
@@ -340,6 +345,7 @@ const fileStyle =
                 <input
                   type="text"
                   :class="inputStyleClick"
+                  readonly
                   class="w-2/3 cursor-pointer hover:bg-gray-100 duration-300"
                 />
                 <button
@@ -355,6 +361,7 @@ const fileStyle =
                 <input
                   type="text"
                   :class="inputStyleClick"
+                  readonly
                   class="w-2/3 cursor-pointer hover:bg-gray-100 duration-300"
                 />
                 <button
@@ -370,6 +377,7 @@ const fileStyle =
                 <input
                   type="text"
                   :class="inputStyleClick"
+                  readonly
                   class="w-2/3 cursor-pointer hover:bg-gray-100 duration-300"
                 />
                 <button
@@ -385,6 +393,7 @@ const fileStyle =
                 <input
                   type="text"
                   :class="inputStyleClick"
+                  readonly
                   class="w-2/3 cursor-pointer hover:bg-gray-100 duration-300"
                 />
                 <button
@@ -426,6 +435,7 @@ const fileStyle =
                   <input
                     type="text"
                     :class="inputStyleClick"
+                    readonly
                     class="w-2/3 cursor-pointer hover:bg-gray-100 duration-300"
                   />
                   <button
