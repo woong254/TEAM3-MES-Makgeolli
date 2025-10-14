@@ -339,6 +339,10 @@ ALTER TABLE orderdetail ADD CONSTRAINT FOREIGN KEY(ord_id) REFERENCES orderform(
 ALTER TABLE orderdetail ADD CONSTRAINT FOREIGN KEY(prod_code) REFERENCES prod_master(prod_code);
 ALTER TABLE orderform ADD CONSTRAINT FOREIGN KEY(order_status) REFERENCES comncode_dt(comncode_detailid);
 ALTER TABLE epis ADD CONSTRAINT FOREIGN KEY(eps) REFERENCES comncode_dt(comncode_detailid);
+-- edcts의 ofd_no에 orderdetail의 ofd_no를 foreign키로 넣는 코드
+ALTER TABLE edcts ADD CONSTRAINT FOREIGN KEY(ofd_no) REFERENCES orderdetail(ofd_no);
+-- edcts의 ep_lot에 epis의 ep_lot를 foreign키로 넣는 코드
+ALTER TABLE edcts ADD CONSTRAINT FOREIGN KEY(ep_lot) REFERENCES epis(ep_lot);
 
 -- 테이블 컬럼 추가 코드
 ALTER TABLE proc_insp ADD COLUMN epep_dt date;
@@ -361,6 +365,7 @@ DESC qc_master;
 DESC prod_insp;
 DESC processform;
 DESC epis;
+DESC edcts;
 
 -- 거래처기준관리, 거래처 데이터 삽입
 INSERT INTO bcnc_master(bcnc_code, bcnc_name, bcnc_type, brn, pic, biz_type, bcnc_category, bcnc_tel, writer, write_date)
@@ -436,4 +441,68 @@ SELECT prod_code, prod_name
 FROM prod_master
 WHERE prod_code IN ('PROD-20250101-001','PROD-20250101-002','PROD-20250101-003');
 
+-- 제품 출고 관리 조회1
+SELECT	od.ofd_no,
+		o.ord_name,
+		bm.bcnc_name,
+		od.prod_code,
+		pm.prod_name,
+		pm.prod_spec,
+		pm.prod_unit,
+		od.op_qty,
+		o.due_date,
+		e.ep_lot,
+		e.epep_dt,
+		e.ep_qty,
+		cd.comncode_dtnm
+FROM	orderdetail od
+		JOIN orderform o 
+		ON od.ord_id = o.ord_id
+		JOIN bcnc_master bm 
+		ON o.bcnc_code = bm.bcnc_code
+		JOIN prod_master pm 
+		ON od.prod_code = pm.prod_code
+		JOIN epis e 
+		ON od.prod_code = e.prod_code
+		JOIN comncode_dt cd 
+		ON od.ofd_st = cd.comncode_detailid
+WHERE 	e.epep_dt = (
+		SELECT	MIN(e2.epep_dt)
+		FROM 	epis e2
+		WHERE 	e2.prod_code = od.prod_code
+				AND e2.ep_qty > 0  -- 재고가 0인 LOT 제외
+)
+ORDER BY od.ofd_no, e.epep_dt;
 
+-- 제품 출고 관리 조회2
+SELECT 
+    od.ofd_no,
+    o.ord_name,
+    bm.bcnc_name,
+    od.prod_code,
+    pm.prod_name,
+    pm.prod_spec,
+    pm.prod_unit,
+    od.op_qty,
+    o.due_date,
+    e.ep_lot,
+    e.epep_dt,
+    e.ep_qty,
+    cd.comncode_dtnm
+FROM orderdetail od
+JOIN orderform o ON od.ord_id = o.ord_id
+JOIN bcnc_master bm ON o.bcnc_code = bm.bcnc_code
+JOIN prod_master pm ON od.prod_code = pm.prod_code
+JOIN comncode_dt cd ON od.ofd_st = cd.comncode_detailid
+JOIN (
+    SELECT prod_code, MIN(epep_dt) AS min_epep_dt
+    FROM epis
+    WHERE ep_qty > 0
+    GROUP BY prod_code
+) em ON em.prod_code = od.prod_code
+JOIN epis e ON e.prod_code = em.prod_code AND e.epep_dt = em.min_epep_dt
+ORDER BY od.ofd_no, e.epep_dt;
+
+-- 완제품 출고 관리 출고 버튼 기능
+INSERT INTO edcts(ofd_no, ep_lot, ord_epos_qty, remark)
+VALUES (?,?,?,?);

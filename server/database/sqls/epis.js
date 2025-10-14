@@ -25,10 +25,7 @@ WHERE  1=1
 	AND pf.now_procs = '포장'
        AND pi.final_result = 'p'`;
 
-const insert_epis = `insert_epis(?,?,?,?,?)`;
-
 module.exports = {
   // 사용할 쿼리문의 이름을 여기에 적으세요
   selectEpIsManage,
-  insert_epis,
 };

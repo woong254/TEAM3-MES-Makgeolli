@@ -132,7 +132,7 @@ router.post("/insertEpIs", async (req, res) => {
   }
 });
 
-// 완제품 입고 관리 검색
+// 완제품 출고 관리 검색
 router.get("/viewEpOsManage", async (req, res) => {
   try {
     const {
@@ -164,6 +164,20 @@ router.get("/viewEpOsManage", async (req, res) => {
     console.log(result);
   } catch (err) {
     console.error("viewEpOsManage 조회 오류", err);
+  }
+});
+
+// 완제품 출고 처리
+router.post("/insertEpOs", async (req, res) => {
+  try {
+    const orderform = req.body;
+    console.log("insertEpOs받은 데이터: ", orderform);
+
+    const result = await salesService.insertEpOs(orderform);
+    res.send(result);
+  } catch (err) {
+    console.error(err);
+    res.send({ isSuccessed: false, message: err.message });
   }
 });
 
