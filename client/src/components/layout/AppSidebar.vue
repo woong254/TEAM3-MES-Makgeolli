@@ -183,7 +183,6 @@ import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 
 import {
-  GridIcon,
   CalenderIcon,
   ChevronDownIcon,
   HorizontalDots,
@@ -195,7 +194,6 @@ import {
 
 import BoxCubeIcon from '@/icons/BoxCubeIcon.vue'
 import { useSidebar } from '@/composables/useSidebar'
-import Signin from '@/views/Auth/Signin.vue'
 
 const route = useRoute()
 
@@ -233,12 +231,11 @@ const menuGroups: MenuGroup[] = [
     title: '템플릿 기본 메뉴',
     items: [
       {
-        icon: BoxCubeIcon,
+        icon: PageIcon,
         name: 'Ui Elements',
         subItems: [
           { name: 'Ecommerce', path: '/', pro: false },
           { name: '404 Page', path: '/error-404', pro: false },
-          { name: 'Bar Chart', path: '/bar-chart', pro: false },
           { name: 'Alerts', path: '/alerts', pro: false },
           { name: 'Avatars', path: '/avatars', pro: false },
           { name: 'Badge', path: '/badge', pro: false },
@@ -247,12 +244,6 @@ const menuGroups: MenuGroup[] = [
           { name: 'Videos', path: '/videos', pro: false },
           { name: 'Basic Tables', path: '/basic-tables', pro: false },
           { name: 'Form Elements', path: '/form-elements', pro: false },
-        ],
-      },
-      {
-        icon: PlugInIcon,
-        name: 'Authentication',
-        subItems: [
           { name: 'Signin', path: '/signin', pro: false },
           { name: 'Signup', path: '/signup', pro: false },
         ],
@@ -263,22 +254,14 @@ const menuGroups: MenuGroup[] = [
     title: 'Menu',
     items: [
       {
-        icon: BoxCubeIcon,
+        icon: PageIcon,
         name: '기준정보',
         subItems: [
           { name: 'Ecommerce', path: '/', pro: false },
-          { name: '404 Page', path: '/error-404', pro: false },
-          { name: 'Bar Chart', path: '/bar-chart', pro: false },
-          { name: 'Alerts', path: '/alerts', pro: false },
-          { name: 'Avatars', path: '/avatars', pro: false },
-          { name: 'Badge', path: '/badge', pro: false },
-          { name: 'Buttons', path: '/buttons', pro: false },
-          { name: 'Images', path: '/images', pro: false },
-          { name: 'Videos', path: '/videos', pro: false },
         ],
       },
       {
-        icon: GridIcon,
+        icon: CalenderIcon,
         name: '영업',
         subItems: [
           { name: '주문서조회', path: '/of', pro: false },
@@ -309,7 +292,7 @@ const menuGroups: MenuGroup[] = [
         ],
       },
       {
-        icon: PlugInIcon,
+        icon: TableIcon,
         name: '품질',
         subItems: [
           { name: '품질검사 기준관리', path: '/quamaster', pro: false },
@@ -323,7 +306,7 @@ const menuGroups: MenuGroup[] = [
         ],
       },
       {
-        icon: PlugInIcon,
+        icon: ListIcon,
         name: '설비',
         subItems: [
           { name: '설비관리', path: '/equipment', pro: false },
@@ -331,7 +314,7 @@ const menuGroups: MenuGroup[] = [
           { name: '비가동 설비관리', path: '/', pro: false },
           { name: '점검관리', path: '/', pro: false },
           { name: '점검항목조회', path: '/', pro: false },
-          { name: '수리관리', path: '/signup', pro: false },
+          { name: '수리관리', path: '/Signin', pro: false },
           { name: '수리이력조회', path: '/signup', pro: false },
         ],
       },

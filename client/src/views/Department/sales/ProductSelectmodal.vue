@@ -38,15 +38,12 @@ const submitSearchForm = async () => {
     const result = await axios.get('/api/productsView', {
       params: search.value,
     })
-    console.log('result.data조회 결과:', result.data)
-    console.log('result조회 결과:', result)
 
     if (result.data.length === 0) {
       alert('조회 결과가 없습니다.')
       resetSearchForm()
     }
     prod.value = result.data
-    console.log('prod.value조회 결과:', prod.value)
   } catch (err) {
     console.error('조회 중 오류 발생', err)
   }
@@ -67,7 +64,6 @@ const resetSelectedProducts = () => {
 function selectedProductValue() {
   if (selectedProducts.value) {
     emit('selectedProductValue', selectedProducts.value)
-    console.log(selectedProducts.value)
     resetSelectedProducts()
     resetSearchForm()
     emit('close')
