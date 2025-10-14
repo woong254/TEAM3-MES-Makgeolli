@@ -18,7 +18,7 @@
         <img
           v-if="isExpanded || isHovered || isMobileOpen"
           class="dark:hidden"
-          src="/images/logo/logo.svg"
+          src="/images/logo/logo3.png"
           alt="Logo"
           width="150"
           height="40"
@@ -256,9 +256,7 @@ const menuGroups: MenuGroup[] = [
       {
         icon: PageIcon,
         name: '기준정보',
-        subItems: [
-          { name: 'Ecommerce', path: '/', pro: false },
-        ],
+        subItems: [{ name: 'Ecommerce', path: '/', pro: false }],
       },
       {
         icon: CalenderIcon,

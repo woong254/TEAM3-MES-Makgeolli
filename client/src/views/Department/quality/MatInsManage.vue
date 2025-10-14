@@ -11,6 +11,7 @@ import 'primeicons/primeicons.css'
 import Button from 'primevue/button'
 import flatPickr from 'vue-flatpickr-component'
 import 'flatpickr/dist/flatpickr.css'
+import MatInspTargetSelectModal from './MatInspTargetSelectModal.vue' // 검사대기(가입고) 선택모달
 
 // 1. 페이지 타이틀
 const currentPageTitle = ref('자재입고검사 관리')
@@ -230,7 +231,7 @@ const fileStyle =
         </div>
       </template>
       <template #body-content>
-        <div class="h-[390px] overflow-auto">
+        <div class="h-[420px] overflow-auto">
           <div class="rounded-lg border border-gray-200 shadow-sm p-4 mb-2">
             <h3 class="text-md mb-2 font-medium">기본정보</h3>
             <div class="w-full flex items-center mb-2">
@@ -265,8 +266,9 @@ const fileStyle =
                 <input
                   type="text"
                   :class="inputStyleClick"
-                  readonly
                   class="w-2/3 cursor-pointer hover:bg-gray-100 duration-300"
+                  readonly
+                  @click="openModal"
                 />
                 <button
                   type="button"
@@ -281,8 +283,9 @@ const fileStyle =
                 <input
                   type="text"
                   :class="inputStyleClick"
-                  readonly
                   class="w-2/3 cursor-pointer hover:bg-gray-100 duration-300"
+                  readonly
+                  @click="openModal"
                 />
                 <button
                   type="button"
@@ -297,8 +300,9 @@ const fileStyle =
                 <input
                   type="text"
                   :class="inputStyleClick"
-                  readonly
                   class="w-2/3 cursor-pointer hover:bg-gray-100 duration-300"
+                  readonly
+                  @click="openModal"
                 />
                 <button
                   type="button"
@@ -313,8 +317,9 @@ const fileStyle =
                 <input
                   type="text"
                   :class="inputStyleClick"
-                  readonly
                   class="w-2/3 cursor-pointer hover:bg-gray-100 duration-300"
+                  readonly
+                  @click="openModal"
                 />
                 <button
                   type="button"
@@ -329,8 +334,9 @@ const fileStyle =
                 <input
                   type="text"
                   :class="inputStyleClick"
-                  readonly
                   class="w-2/3 cursor-pointer hover:bg-gray-100 duration-300"
+                  readonly
+                  @click="openModal"
                 />
                 <button
                   type="button"
@@ -345,8 +351,9 @@ const fileStyle =
                 <input
                   type="text"
                   :class="inputStyleClick"
-                  readonly
                   class="w-2/3 cursor-pointer hover:bg-gray-100 duration-300"
+                  readonly
+                  @click="openModal"
                 />
                 <button
                   type="button"
@@ -361,8 +368,9 @@ const fileStyle =
                 <input
                   type="text"
                   :class="inputStyleClick"
-                  readonly
                   class="w-2/3 cursor-pointer hover:bg-gray-100 duration-300"
+                  readonly
+                  @click="openModal"
                 />
                 <button
                   type="button"
@@ -377,8 +385,9 @@ const fileStyle =
                 <input
                   type="text"
                   :class="inputStyleClick"
-                  readonly
                   class="w-2/3 cursor-pointer hover:bg-gray-100 duration-300"
+                  readonly
+                  @click="openModal"
                 />
                 <button
                   type="button"
@@ -393,8 +402,9 @@ const fileStyle =
                 <input
                   type="text"
                   :class="inputStyleClick"
-                  readonly
                   class="w-2/3 cursor-pointer hover:bg-gray-100 duration-300"
+                  readonly
+                  @click="openModal"
                 />
                 <button
                   type="button"
@@ -425,6 +435,10 @@ const fileStyle =
                 />
               </div>
             </div>
+            <MatInspTargetSelectModal
+              :visible="isModalOpen"
+              @close="closeModal"
+            ></MatInspTargetSelectModal>
           </div>
           <div class="rounded-lg border border-gray-200 p-4 shadow-sm mb-2">
             <h3 class="text-md mb-2 font-medium">수량입력</h3>
@@ -435,8 +449,9 @@ const fileStyle =
                   <input
                     type="text"
                     :class="inputStyleClick"
-                    readonly
                     class="w-2/3 cursor-pointer hover:bg-gray-100 duration-300"
+                    readonly
+                    @click="openModal"
                   />
                   <button
                     type="button"
