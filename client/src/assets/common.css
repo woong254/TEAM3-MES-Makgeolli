@@ -52,3 +52,19 @@
   font-size: 16px;
   margin: 0 3px;
 }
+
+/* radio button color */
+:root {
+  --p-radiobutton-checked-background: #213555 !important;
+  --p-radiobutton-checked-border-color: #213555 !important;
+  --p-radiobutton-checked-hover-background: #213555 !important;
+  --p-datatable-row-toggle-button-selected-hover-color: #213555 !important;
+  --p-button-link-hover-color: #213555 !important;
+  --p-button-link-active-color: #213555 !important;
+  --p-radiobutton-hover-border-color: #213555 !important;
+  --p-form-field-hover-border-color: #213555 !important;
+  --p-radiobutton-focus-border-color: #213555 !important;
+  --p-datatable-filter-constraint-selected-color: #213555 !important;
+  --p-datatable-filter-constraint-selected-focus-color: #213555 !important;
+  --p-datatable-row-toggle-button-selected-hover-color: #213555 !important;
+}
