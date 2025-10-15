@@ -10,6 +10,7 @@ const {
   updateEquip, // UPDATE ... SET equip_name=?, equip_type=?, manager=?, equip_status=?, insp_cycle=? WHERE equip_code=?
   deleteEquip, // DELETE FROM equipment WHERE equip_code=?
   selectEquipByCode, // SELECT * FROM equipment WHERE equip_code=?
+  selectInspPlan,
 } = require("../database/sqls/equipform.js");
 
 /* =========================
@@ -51,7 +52,7 @@ function toYmdOrNull(v) {
 
 async function viewList() {
   try {
-    const result = await mariadb.query(selectEquipStatus);
+    const result = await mariadb.query("selectEquipType");
     return result;
   } catch (err) {
     console.error("viewList 오류", err);
@@ -89,6 +90,7 @@ async function list(filters = {}) {
   } = filters;
 
   let sql = searchEquipList;
+
   const params = [];
 
   const _equipCode = toNullTrim(equipCode);
@@ -97,23 +99,23 @@ async function list(filters = {}) {
   const _equipStatus = toNullTrim(equipStatus);
 
   if (_equipCode) {
-    sql += ` AND o.equip_code LIKE ?`;
+    sql += ` AND e.equip_code LIKE ?`;
     params.push(`%${_equipCode}%`);
   }
   if (_equipName) {
-    sql += ` AND o.equip_name LIKE ?`;
+    sql += ` AND e.equip_name LIKE ?`;
     params.push(`%${_equipName}%`);
   }
   if (_equipType) {
-    sql += ` AND o.equip_type = ?`;
+    sql += ` AND e.equip_type = ?`;
     params.push(_equipType);
   }
   if (_equipStatus) {
-    sql += ` AND o.equip_status = ?`;
+    sql += ` AND e.equip_status = ?`;
     params.push(_equipStatus);
   }
 
-  sql += ` ORDER BY o.equip_code`;
+  sql += ` ORDER BY e.equip_code`;
 
   // 페이지네이션 (옵션)
   if (Number.isInteger(Number(limit)) && Number.isInteger(Number(offset))) {
@@ -164,18 +166,20 @@ async function create(payload = {}) {
     equipName,
     equipType,
     manager,
-    equipStatus,
     inspCycle,
     installDate,
     modelName,
     equipImage,
     mfgDt,
     maker,
+    equipStatus,
   ];
+
+  console.log(params);
 
   // 4) DB 실행 + 에러 매핑(중복코드 등)
   try {
-    const result = await mariadb.query(insertEquip, params);
+    const result = await mariadb.query("insertEquip", params);
     return { id: result.insertId, affectedRows: result.affectedRows };
   } catch (err) {
     if (err.code === "ER_DUP_ENTRY") {
@@ -227,7 +231,8 @@ async function update(equip_code, payload = {}) {
     equip_image,
     code,
   ];
-  const result = await mariadb.query(updateEquip, params);
+
+  const result = await mariadb.query("updateEquip", params);
   return { affectedRows: result.affectedRows };
 }
 
@@ -241,8 +246,8 @@ async function remove(equip_code) {
     err.status = 400;
     throw err;
   }
-  const result = await mariadb.query(deleteEquip, [code]);
+  const result = await mariadb.query("deleteEquip", [code]);
   return { affectedRows: result.affectedRows };
 }
 
-module.exports = { list, create, update, remove, getOne };
+module.exports = { list, create, update, remove, getOne, viewList };
