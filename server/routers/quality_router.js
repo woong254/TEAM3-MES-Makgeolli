@@ -41,7 +41,7 @@ router.get("/inspFindMaster", async (req, res) => {
 });
 
 // 1-5. 품질기준관리 검색
-router.get('/inspMaster/search', async (req, res) => {
+router.get("/inspMaster/search", async (req, res) => {
   const list = await qualityService.searchInspMaster(req.query);
   res.json(list);
 });
@@ -51,7 +51,7 @@ router.put("/inspMaster/:id", async (req, res) => {
   const { id } = req.params;
   const result = await qualityService
     .updateInspMaster(id, req.body)
-    .catch((err) => ({ ok:false, message: "서버 오류" }));
+    .catch((err) => ({ ok: false, message: "서버 오류" }));
   res.status(result.ok ? 200 : 400).json(result);
 });
 
@@ -72,7 +72,22 @@ router.get("/inspMaster/:id", async (req, res) => {
   res.status(result.ok ? 200 : 400).json(result);
 });
 
+// 2. 자재입고검사
+// 2-1. 자재입고검사 타겟(가입고) 조회(모달)
+router.get("/matInspTarget", async (req, res) => {
+  let result = await qualityService
+    .findMatInspTarget()
+    .catch((err) => console.error(err));
+  res.send(result);
+});
 
-
+// 2-2. 자재입고검사 타겟 조회 선택시 -> 해당 품질기준관리 조회 + 불량조회
+router.get("/matInspQcMasternNG/:matCode", async (req, res) => {
+  const { matCode } = req.params;
+  let result = await qualityService
+    .getMatInspWithQcMasternNG(matCode)
+    .catch((err) => console.error(err));
+  res.send(result);
+});
 
 module.exports = router;

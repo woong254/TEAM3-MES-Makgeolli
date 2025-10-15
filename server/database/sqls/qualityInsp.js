@@ -136,7 +136,7 @@ WHERE (? = '' OR qcm.insp_item_name LIKE CONCAT('%', ?, '%'))
   AND (? = '' OR COALESCE(p.prod_name, m.mat_name) LIKE CONCAT('%', ?, '%'))
   AND (? = '' OR qct.insp_target_code = ?)   -- a1~a5
   AND (? = '' OR qcm.use_yn = ?)             -- 'Y'|'N'
-ORDER BY qcm.write_date DESC;
+ORDER BY qcm.write_date DESC
 `;
 
 // 품질기준관리 상세 조회
@@ -217,10 +217,65 @@ LEFT JOIN bcnc_master bcm
        ON i.bcnc_code = bcm.bcnc_code
 LEFT JOIN mat_master mat
        ON i.mat_code = mat.mat_code
-WHERE i.insp_status = '검사대기';
+WHERE i.insp_status = '검사대기'
 `;
 
+// 자재입고검사 조회시 -> 불량 조회
+const selectNGMaster = `
+SELECT dmt.def_item_id
+       ,dm.def_item_name
+FROM def_master_target dmt
+ JOIN def_master dm
+   ON dmt.def_item_id = dm.def_item_id
+WHERE dmt.mat_code = ?
+`;
 
+// 자재입고검사 조회시 -> 등록(사용Y)된 품질기준관리 데이터 조회
+// UNIONALL 사용해서 자재/제품 조회하기 (쿼리 하나만 넘겨도 조회가능)
+const selectMatInspQcMaster = `
+SELECT 
+    qt.insp_item_id
+    ,qm.insp_item_name
+    ,qm.insp_type
+    ,qm.max_score
+    ,qm.pass_score
+    ,qm.pass_score_spec
+    ,qm.score_desc
+    ,qr.min_range
+    ,qr.min_range_spec
+    ,qr.max_range
+    ,qr.max_range_spec
+    ,qs.sens_questions  -- 문자열 형태의 JSON 배열(프론트에서 JSON.parse)
+FROM qc_master_target qt
+JOIN qc_master qm
+  ON qt.insp_item_id = qm.insp_item_id
+LEFT JOIN qc_master_ran qr
+  ON qm.insp_item_id = qr.insp_item_id
+LEFT JOIN (
+    SELECT 
+        insp_item_id,
+        CONCAT(
+          '[',
+          GROUP_CONCAT(
+            CONCAT(
+              '{',
+              '"order":', ques_order, ',',
+              '"name":',  JSON_QUOTE(ques_name),
+              '}'
+            )
+            ORDER BY ques_order
+            SEPARATOR ','
+          ),
+          ']'
+        ) AS sens_questions
+    FROM qc_master_sen
+    GROUP BY insp_item_id
+) qs
+  ON qm.insp_item_id = qs.insp_item_id
+WHERE qt.mat_code = ?
+  AND qm.use_yn = 'Y'
+ORDER BY qt.insp_item_id
+`;
 
 module.exports = {
   selectInspTargetList,
@@ -237,5 +292,7 @@ module.exports = {
   selectInspTargetsByItem,
   selectInspQuestionsByItem,
   searchInspMaster,
-  matInspTargetSelect
+  matInspTargetSelect,
+  selectMatInspQcMaster,
+  selectNGMaster,
 };
