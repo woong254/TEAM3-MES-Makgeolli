@@ -43,6 +43,7 @@ const findPurMatList = async () => {
     .catch((err) => console.error(err));
   return list;
 };
+
 const findPurMatTarget = async (mat_name) => {
   let param = [`%${mat_name}%`];
   let list = await mariadb.query("selectPurMatTarget", param).catch((err) => {
@@ -195,11 +196,28 @@ const findIisList = async (insp_status) => {
   }
 };
 
+const deleteIisList = async (ids = []) => {
+  if (!ids.length) return { ok: false, deleted: 0 };
+  const r = await mariadb.query("deleteIis", [ids]).catch(() => null);
+  const deleted = r?.affectedRows ?? r?.affected_rows ?? 0;
+  return { ok: deleted > 0, deleted };
+};
+
+const purMatList = async () => {
+  try {
+    const r = await mariadb.query("selectPurList"[receipt_date]);
+  } catch (err) {
+    console.error(err);
+  }
+  return r;
+};
+
 module.exports = {
   // 목록/검색
   findPurList,
   findPurTarget,
   findIisList,
+  purMatList,
   // 단건 조회
   findPurHeaderByCode,
   findPurLinesByCode,
@@ -215,4 +233,5 @@ module.exports = {
   savePurchase,
   deletePurList,
   insertIisOne,
+  deleteIisList,
 };

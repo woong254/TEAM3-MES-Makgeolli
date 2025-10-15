@@ -11,6 +11,7 @@ import BcncModal from './MatModal/BcncModal.vue'
 import sysdate from 'moment'
 import axios from 'axios'
 import 'flatpickr/dist/flatpickr.css'
+import { Korean } from 'flatpickr/dist/l10n/ko.js'
 import '@/assets/common.css'
 import { ref, onMounted, computed } from 'vue'
 import userDateUtils from '@/utils/useDates.js' // 날짜 유틸
@@ -248,8 +249,8 @@ const flatpickrConfig = computed(() => ({
   altInput: true,
   altFormat: 'Y-m-d',
   altInputClass: `${baseInputClass} text-center px-8`,
-
   minDate: purChase.value[0]?.pur_date || sysdate().format('YYYY-MM-DD'),
+  locale: Korean,
 }))
 
 const deleteSelectedRows = () => {
