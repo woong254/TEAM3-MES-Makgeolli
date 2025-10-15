@@ -231,12 +231,13 @@ WHERE dmt.mat_code = ?
 `;
 
 // 자재입고검사 조회시 -> 등록(사용Y)된 품질기준관리 데이터 조회
-// UNIONALL 사용해서 자재/제품 조회하기 (쿼리 하나만 넘겨도 조회가능)
 const selectMatInspQcMaster = `
 SELECT 
     qt.insp_item_id
     ,qm.insp_item_name
     ,qm.insp_type
+    ,qm.insp_method
+    ,qm.file_name
     ,qm.max_score
     ,qm.pass_score
     ,qm.pass_score_spec
@@ -245,6 +246,7 @@ SELECT
     ,qr.min_range_spec
     ,qr.max_range
     ,qr.max_range_spec
+    ,qr.unit
     ,qs.sens_questions  -- 문자열 형태의 JSON 배열(프론트에서 JSON.parse)
 FROM qc_master_target qt
 JOIN qc_master qm
