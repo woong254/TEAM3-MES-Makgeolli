@@ -433,6 +433,8 @@ DELETE FROM epis
 WHERE  ep_lot = 'EPRO251115251014001';
 DELETE FROM epis;
 TRUNCATE TABLE epis;
+DELETE FROM edcts;
+TRUNCATE TABLE edcts;
 
 SELECT *
 FROM   epis;
@@ -515,6 +517,7 @@ ORDER BY od.ofd_no, e.epep_dt;
 INSERT INTO edcts(ofd_no, ep_lot, ord_epos_qty, remark)
 VALUES (?,?,?,?);
 
+-- 완제품 출고 관리 검색 조회 쿼리문
 SELECT 
     od.ofd_no,
     o.ord_name,
@@ -522,7 +525,7 @@ SELECT
     od.prod_code,
     pm.prod_name,
     pm.prod_spec,
-    pm.prod_unit,
+    cd_pu.comncode_dtnm as prod_unit,
     od.op_qty AS ord_qty,
     IFNULL(SUM(ed.ord_epos_qty), 0) AS shipped_qty,                 -- 누적 출고량
     (od.op_qty - IFNULL(SUM(ed.ord_epos_qty), 0)) AS remain_qty,    -- 미출고량
@@ -540,18 +543,20 @@ FROM orderdetail od
         ON od.prod_code = pm.prod_code
     JOIN comncode_dt cd 
         ON od.ofd_st = cd.comncode_detailid
+	JOIN comncode_dt cd_pu
+		ON pm.prod_unit = cd_pu.comncode_detailid
     JOIN (
         SELECT prod_code, MIN(epep_dt) AS min_epep_dt
         FROM epis
-        WHERE ep_qty > 0
         GROUP BY prod_code
     ) em 
         ON em.prod_code = od.prod_code
     JOIN epis e 
         ON e.prod_code = em.prod_code 
         AND e.epep_dt = em.min_epep_dt
-    LEFT JOIN edcts ed                     -- ✅ 출고이력 조인 추가
+    LEFT JOIN edcts ed                   
         ON od.ofd_no = ed.ofd_no
+	
 GROUP BY 
     od.ofd_no,
     o.ord_name,
@@ -567,8 +572,68 @@ GROUP BY
     e.ep_qty,
     cd.comncode_dtnm
 ORDER BY 
-    od.ofd_no, 
+    o.due_date, 
     e.epep_dt;
 
-select *
-from edcts;
+UPDATE epis
+SET ep_qty = ep_qty - ?,
+    epos_qty = epos_qty + ?
+WHERE prod_code = ? AND ep_lot = ?;
+  
+UPDATE orderdetail od
+SET od.ofd_st = 'o2'
+WHERE od.ofd_no = ?
+  AND (
+    SELECT SUM(od.op_qty - ec.ord_epos_qty)
+    FROM edcts ec
+    WHERE ec.ofd_no = od.ofd_no
+  ) = 0;
+  
+-- 완제품입고관리 테이블-루트 재고수량이 0이면 상태가 출고완료로 전환
+UPDATE 	epis
+SET 	eps = 'm1'
+WHERE 	ep_lot = ?
+AND	 	ep_qty = 0;
+
+-- 출고버튼을 누르면 주문서 상세테이블에 있는 선택한 제품의 상태가 모두 출고완료일경우 주문서 테이블에 있는 선택한 제품의 주문서의 상태도 출고완료로 바뀌게 하기
+UPDATE	orderform
+SET		order_status = 'n2'
+WHERE	ord_id = ?
+AND	NOT EXISTS (
+	SELECT	1
+    FROM	orderdetail od
+    WHERE	
+
+-- 출고완료후 확인해야하는것들
+-- 루트테이블 조회 후 eps값 재고 및 출고수량 잘 들어왔는지
+SELECT	*
+FROM  	epis;
+-- 완제품출고관리테이블 잘 들어갔는지 확인
+SELECT	*
+FROM	edcts;
+-- 주문서상세테이블에 ofd_st상태가 바꼈는지 확인
+SELECT	*
+FROM	orderdetail;
+-- 주문서테이블에 order_status가 바꼈는지 확인
+SELECT	*
+FROM	orderform;
+
+
+
+
+
+SELECT 	comncode_dtnm
+FROM	equip_master e
+		JOIN comncode_dt c
+        ON e.equip_status = c.comncode_detailid;
+        
+        
+SELECT	equip_code,
+		equip_name,
+		equip_type,
+		manager,
+		c.comncode_dtnm as equip_status,
+		insp_cycle
+FROM 	equip_master e
+		JOIN comncode_dt c
+        ON e.equip_status = c.comncode_detailid;

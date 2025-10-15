@@ -38,14 +38,14 @@ interface OrderItem {
   prod_name: string
   prod_spec: string
   prod_unit: string
-  op_qty: number // 주문수량
+  ord_qty: number // 주문수량
   due_date: string
   ep_lot: string
   epep_dt: string
   ep_qty: number
   cur_os_qty: number // 현출고수량
-  ord_eps_qty: number // 기출고수량 = 주문제품출고수량
-  rem_os_qty: number // 미출고수량
+  shipped_qty: number // 기출고수량 = 주문제품출고수량
+  remain_qty: number // 미출고수량
   comncode_dtnm: string
   remark: string
   orig_ord_eps_qty: number // DB에서 가져온 기존 기출고수량
@@ -135,15 +135,15 @@ const getEpOsManage = async (showAlert = true) => {
     }
 
     const computedRows = rows.map((row: OrderItem) => {
-      const ord = row.op_qty || 0 // 주문수량
-      const ord_eps = row.ord_eps_qty || 0 // DB 기준 기출고수량
+      const ord = row.ord_qty || 0 // 주문수량
+      const ord_eps = row.shipped_qty || 0 // DB 기준 기출고수량
 
       return {
         ...row,
         orig_ord_eps_qty: ord_eps, // 기존 누적 기출고량 저장
-        ord_eps_qty: ord_eps, // 현재 화면에 표시할 기출고량
-        rem_os_qty: Math.max(ord - ord_eps, 0), // 미출고수량 = 주문수량 - 기존기출
-        cur_os_qty: 0, // 입력칸 초기화
+        shipped_qty: ord_eps, // 현재 화면에 표시할 기출고량
+        remain_qty: Math.max(ord - ord_eps, 0), // 미출고수량 = 주문수량 - 기존기출
+        cur_os_qty: null, // 입력칸 초기화
       }
     })
 
@@ -171,6 +171,7 @@ const resetSearchForm = () => {
 }
 // 출고할때 필요한 데이터 인터페이스
 interface EpOsRequest {
+  prod_code: string
   ofd_no: number
   ep_lot: string
   ord_epos_qty: number
@@ -179,6 +180,7 @@ interface EpOsRequest {
 // 출고버튼 기능
 const submitEpOs = async () => {
   const obj: EpOsRequest[] = selectedProducts.value.map((item) => ({
+    prod_code: item.prod_code,
     ofd_no: item.ofd_no,
     ep_lot: item.ep_lot,
     ord_epos_qty: item.cur_os_qty,
@@ -191,6 +193,17 @@ const submitEpOs = async () => {
       alert('출고할 주문서 제품을 선택해주세요')
       return
     }
+    // 출고버튼을 눌렀을 때 제품현출고수량이 0이면은 알람이 뜸
+    for (const item of selectedProducts.value) {
+      if (item.cur_os_qty < 1 || item.cur_os_qty === null) {
+        alert('출고할 제품 수량을 입력해주세요')
+        return // submitEpOs 함수 종료
+      }
+      if (item.comncode_dtnm === '출고완료') {
+        alert('출고완료 제품은 출고 할 수 없습니다.')
+        return // submitEpOs 함수 종료
+      }
+    }
     // 저장
     const result = await axios.post('/api/insertEpOs', obj)
     const addRes = result.data
@@ -198,19 +211,11 @@ const submitEpOs = async () => {
     if (!addRes.isSuccessed) {
       alert('출고가 이루어지지 않았습니다. 데이터를 확인해보세요.')
       return
+    } else {
+      alert('출고완료')
     }
-    alert('출고성공')
     getEpOsManage(false)
 
-    // 출고 후 프론트 단에서 누적 출고량 기준으로 다시 계산
-    products.value.forEach((p) => {
-      const selected = selectedProducts.value.find((s) => s.ofd_no === p.ofd_no)
-      if (selected) {
-        p.ord_eps_qty = p.ord_eps_qty // DB에서 반영된 누적 출고량 그대로
-        p.rem_os_qty = p.op_qty - p.ord_eps_qty
-        p.cur_os_qty = 0 // 입력칸 초기화
-      }
-    })
     selectedProducts.value = []
   } catch (err) {
     console.error('추가 중 오류 발생', err)
@@ -229,18 +234,6 @@ const BcncnameClosemodal = () => {
 const BcncSelect = (value: SearchCondition) => {
   console.log(value.bcnc_name)
   search.value.bcnc_name = value.bcnc_name
-}
-
-// cur_os_qty 입력 시 미출고수량 및 기출고수량 자동 계산
-const updateQty = (item: OrderItem) => {
-  // cur_os_qty는 0 ~ 남은 미출고량 사이로 제한
-  item.cur_os_qty = Math.min(Math.max(item.cur_os_qty, 0), item.op_qty - item.orig_ord_eps_qty)
-
-  // 화면상 기출고수량 = 기존기출 + 입력한 현출고
-  item.ord_eps_qty = item.orig_ord_eps_qty + item.cur_os_qty
-
-  // 화면상 미출고수량 = 주문수량 - 화면상 기출
-  item.rem_os_qty = item.op_qty - item.ord_eps_qty
 }
 </script>
 <template>
@@ -317,7 +310,7 @@ const updateQty = (item: OrderItem) => {
                       class="mr-1"
                     />출고완료
                   </label>
-                  <label class="flex items-center text-sm text-gray-800 whitespace-nowrap">
+                  <!-- <label class="flex items-center text-sm text-gray-800 whitespace-nowrap">
                     <input
                       type="checkbox"
                       true-value="출고진행중"
@@ -325,7 +318,7 @@ const updateQty = (item: OrderItem) => {
                       v-model="search.OsIP"
                       class="mr-1"
                     />출고진행중
-                  </label>
+                  </label> -->
                   <label class="flex items-center text-sm text-gray-800 whitespace-nowrap">
                     <input
                       type="checkbox"
@@ -542,7 +535,7 @@ const updateQty = (item: OrderItem) => {
                   style="min-width: 70px"
                 ></Column>
                 <Column
-                  field="op_qty"
+                  field="ord_qty"
                   header="주문수량"
                   :pt="{ columnHeaderContent: 'justify-center' }"
                   style="min-width: 100px; text-align: right"
@@ -582,20 +575,20 @@ const updateQty = (item: OrderItem) => {
                       type="number"
                       :class="baseInputClass"
                       style="text-align: right"
-                      :min="0"
-                      :max="Math.min(data.ep_qty, data.op_qty)"
-                      @change="updateQty(data)"
+                      :max="Math.min(data.ep_qty, data.ord_qty)"
+                      :min="1"
+                      step="1"
                     /> </template
                 ></Column>
                 <Column
-                  field="rem_os_qty"
+                  field="remain_qty"
                   header="주문미출고수량"
                   :pt="{ columnHeaderContent: 'justify-center' }"
                   style="min-width: 110px; text-align: right"
                 >
                 </Column>
                 <Column
-                  field="ord_eps_qty"
+                  field="shipped_qty"
                   header="주문기출고수량"
                   :pt="{ columnHeaderContent: 'justify-center' }"
                   style="min-width: 110px; text-align: right"

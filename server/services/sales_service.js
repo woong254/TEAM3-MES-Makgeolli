@@ -382,7 +382,23 @@ const getEpOsManage = async (data) => {
       if (Os) params.push(Os);
       if (OsIP) params.push(OsIP);
     }
-    sql += `ORDER BY od.ofd_no, e.epep_dt`;
+    sql += `GROUP BY 
+    od.ofd_no,
+    o.ord_name,
+    bm.bcnc_name,
+    od.prod_code,
+    pm.prod_name,
+    pm.prod_spec,
+    pm.prod_unit,
+    od.op_qty,
+    o.due_date,
+    e.ep_lot,
+    e.epep_dt,
+    e.ep_qty,
+    cd.comncode_dtnm
+ORDER BY 
+    o.due_date, 
+    e.epep_dt;`;
 
     const result = await mariadb.query(sql, params);
     const formatted = result.map((row) => ({
@@ -402,6 +418,7 @@ const insertEpOs = async (orderForm) => {
   try {
     await conn.beginTransaction();
 
+    // 출고할때 완제품출고관리 테이블에 등록
     for (const item of orderForm) {
       await conn.query(insertEpOsManage, [
         item.ofd_no,
@@ -409,6 +426,24 @@ const insertEpOs = async (orderForm) => {
         item.ord_epos_qty,
         item.remark,
       ]);
+
+      // 출고할때 주문수량 - 주문제품출고수량 0 이면 주문서 상세에 있는 주문서상세상태를 변경
+      await conn.query(
+        `UPDATE orderdetail od SET od.ofd_st = 'o2' WHERE od.ofd_no = ? AND ( SELECT SUM(od.op_qty - ec.ord_epos_qty) FROM edcts ec WHERE ec.ofd_no = od.ofd_no ) = 0`,
+        [item.ofd_no]
+      );
+
+      // 출고할때 루트제품 재고수량, 출고수량 업데이트
+      await conn.query(
+        `UPDATE epis SET ep_qty = ep_qty - ?, epos_qty = epos_qty + ? WHERE prod_code = ? AND ep_lot = ?`,
+        [item.ord_epos_qty, item.ord_epos_qty, item.prod_code, item.ep_lot]
+      );
+      //
+
+      await conn.query(
+        `UPDATE 	epis SET 	eps = 'm1' WHERE 	ep_lot = ? AND	 	ep_qty = 0;`,
+        [item.ep_lot]
+      );
     }
 
     await conn.commit();
