@@ -278,10 +278,10 @@ const getEpIsManage = async (data) => {
     }
     if (Is && Pass) {
       // 입고완료 OR 입고 안 된 검사완료
-      sql += ` AND (ep.eps = ? OR ep.ep_lot IS NULL)`;
+      sql += ` AND (cd.comncode_dtnm = ? OR ep.ep_lot IS NULL)`;
       params.push(Is);
     } else if (Is) {
-      sql += ` AND ep.eps = ?`;
+      sql += ` AND cd.comncode_dtnm = ?`;
       params.push(Is);
     } else if (Pass) {
       // 검사완료만 → 아직 입고 안 된 것
@@ -464,6 +464,21 @@ const insertEpOs = async (orderForm) => {
   }
 };
 
+// 완제품 출고 eplot제품 조회
+const getEpLot = async (data) => {
+  const { prod_code } = data;
+  try {
+    let params = [prod_code];
+    const result = await mariadb.query("selectEpLot", params);
+    const formatted = result.map((row) => ({
+      ...row,
+      epep_dt: formatDate(new Date(row.epep_dt)),
+    }));
+    return formatted;
+  } catch (err) {
+    console.error("getEpLot service 에러 : ", err);
+  }
+};
 // export
 export {
   viewList,
@@ -478,4 +493,5 @@ export {
   insertEpIs,
   getEpOsManage,
   insertEpOs,
+  getEpLot,
 };
