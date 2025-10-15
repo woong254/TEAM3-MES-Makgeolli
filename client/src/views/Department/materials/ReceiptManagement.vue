@@ -8,10 +8,12 @@ import DataCol from 'primevue/column'
 import sysdate from 'moment'
 import flatPickr from 'vue-flatpickr-component'
 import 'flatpickr/dist/flatpickr.css'
+import { Korean } from 'flatpickr/dist/l10n/ko.js'
 import '@/assets/common.css'
 import { ref, computed, onMounted } from 'vue'
 import BcncModal from './MatModal/BcncModal.vue'
 import RadioMatModal from './MatModal/RadioMatModal.vue'
+import PurMatModal from './MatModal/PurMatModal.vue'
 import TabView from 'primevue/tabview'
 import TabPanel from 'primevue/tabpanel'
 import userDateUtils from '@/utils/useDates.js' // 날짜 유틸
@@ -21,9 +23,11 @@ const currentPageTitle = ref('입고관리')
 import axios from 'axios'
 const isBcncModalOpen = ref(false)
 const isMatModalOpen = ref(false)
+const isPurMatModalOpen = ref(false)
 const selectComplete = ref([])
 const selectPending = ref([])
 const isSavingIis = ref(false)
+const activeTab = ref(0)
 const iis = ref([
   {
     pre_receipt_date: sysdate().format('YYYY-MM-DD'),
@@ -52,6 +56,7 @@ const prodFlatpickrConfig = computed(() => ({
   altFormat: 'Y-m-d',
   altInputClass: `${baseInputClass} text-center px-8`,
   maxDate: iis.value[0]?.pre_receipt_date || sysdate().format('YYYY-MM-DD'),
+  locale: Korean,
 }))
 
 const expFlatpickrConfig = computed(() => ({
@@ -60,11 +65,13 @@ const expFlatpickrConfig = computed(() => ({
   altFormat: 'Y-m-d',
   altInputClass: `${baseInputClass} text-center px-8`,
   minDate: iis.value[0]?.pre_receipt_date || sysdate().format('YYYY-MM-DD'),
+  locale: Korean,
 }))
 
 const handleCloseModal = () => {
   isBcncModalOpen.value = false
   isMatModalOpen.value = false
+  isPurMatModalOpen.value = false
 }
 
 const onSelectMat = (selectedMat) => {
@@ -98,6 +105,7 @@ const resetBtn = async () => {
 }
 
 const onTabChange = async (e) => {
+  activeTab.value = e.index
   selectComplete.value = []
   selectPending.value = []
   if (e.index === 0) await refreshPending()
@@ -108,7 +116,7 @@ const submitIis = async () => {
   if (isSavingIis.value) return
   const r = iis.value?.[0] || {}
 
-  // ====== 필수값 검증 (요구하신 문구 그대로) ======
+  // ====== 필수값 검증 ======
   if (!r.prod_date) return alert('제조일자를 입력해주세요')
   if (!r.exp_date) return alert('유통기한을 입력해주세요')
   if (!r.pre_receipt_date) return alert('가입고일자를 입력해주세요')
@@ -135,7 +143,6 @@ const submitIis = async () => {
     const { data } = await axios.post('/api/iis/insert', payload)
     if (data?.ok) {
       alert('가입고 등록에 성공했습니다.')
-      await resetBtn()
       await refreshBoth()
     } else {
       alert('가입고 등록에 실패했습니다. (조건에 맞는 발주가 없거나 수량 조건 불일치)')
@@ -178,6 +185,27 @@ const refreshBoth = async () => {
 onMounted(async () => {
   await refreshBoth() // 진입 시 두 탭 모두 채우기
 })
+
+const deleteIis = async () => {
+  const ids = (selectPending.value || []).map((r) => r.iis_id)
+  if (!ids.length) return alert('삭제할 행을 선택하세요.')
+  if (!confirm(`${ids.length}건을 삭제하시겠습니까?`)) return
+
+  try {
+    const { data } = await axios.post('/api/iis/delete', { ids })
+    if (data?.ok) {
+      const kill = new Set(ids)
+      pending.value = pending.value.filter((r) => !kill.has(r.iis_id))
+      selectPending.value = []
+      alert(`삭제되었습니다. (${data.deleted ?? ids.length}건)`)
+    } else {
+      alert(data?.msg || '삭제 실패')
+    }
+  } catch (e) {
+    console.error(e)
+    alert('삭제 중 오류가 발생했습니다.')
+  }
+}
 </script>
 <template>
   <AdminLayout>
@@ -186,6 +214,9 @@ onMounted(async () => {
       <ComponentCard title="가입고">
         <template #header-right>
           <div class="flex justify-end space-x-2 mb-1">
+            <button type="button" class="btn-white btn-common" @click="isPurMatModalOpen = true">
+              조회
+            </button>
             <button type="button" class="btn-white btn-common" @click="resetBtn">초기화</button>
             <button type="button" class="btn-color btn-common" @click="submitIis">등록</button>
           </div>
@@ -387,8 +418,15 @@ onMounted(async () => {
         <template #body-content>
           <div class="relative">
             <div class="flex justify-end space-x-2 mb-1 absolute right-0 top-0 z-10">
-              <button type="button" class="btn-color btn-common">등록</button>
-              <button type="button" class="btn-white btn-common">삭제</button>
+              <button v-if="activeTab != 0" type="button" class="btn-color btn-common">등록</button>
+              <button
+                v-if="activeTab != 1"
+                type="button"
+                class="btn-white btn-common"
+                @click="deleteIis"
+              >
+                삭제
+              </button>
             </div>
           </div>
           <TabView
@@ -573,6 +611,7 @@ onMounted(async () => {
       @close="handleCloseModal"
       @select="onSelectMat"
     />
+    <PurMatModal v-model="isPurMatModalOpen" @close="handleCloseModal" />
   </AdminLayout>
 </template>
 <style>

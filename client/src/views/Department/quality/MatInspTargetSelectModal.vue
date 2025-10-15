@@ -7,7 +7,22 @@ import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import axios from 'axios'
 
-// 모달 제어
+// 1. TS 데이터타입 선언
+interface matInspTargetDT {
+  iis_id: string | number
+  pur_code: string
+  pur_name: string
+  pur_date: string
+  bcnc_name: string
+  mat_code: string
+  mat_name: string
+  mat_spec: string
+  mat_unit: string
+  pur_qty: string | number
+  receipt_qty: string | number
+}
+
+// 2. 모달 제어
 const props = defineProps<{
   visible: boolean
 }>()
@@ -16,11 +31,48 @@ const closeModal = () => {
   emit('close')
 }
 
-// 검사대상 데이터
-const allInspData = ref<any[]>([]) // 서버에서 받아온 원본
-const inspData = ref<any[]>([]) // 테이블에 바인딩하는 데이터
+// 3. 데이터 조회
+// 3-1. 검사대상 데이터
+const allInspData = ref<matInspTargetDT[]>([]) // 서버에서 받아온 원본
+const inspTargetData = ref<matInspTargetDT[]>([]) // 테이블에 바인딩하는 데이터
 
-// 모달 열릴 때 데이터 조회
+// 3-2. 날짜데이터 형식 변경 ("pur_date": "2025-10-13T15:00:00.000Z" -> 2025-10-13)
+// 3-2-1. 한국 타임존으로 변경
+const fmtKST = new Intl.DateTimeFormat('ko-KR', {
+  timeZone: 'Asia/Seoul',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+})
+// 3-2-2. 변경된 타임존 -> yyyy-MM-dd 형식으로 날짜 형식 변경
+const toYmdKst = (iso: string) => {
+  const parts = fmtKST.formatToParts(new Date(iso))
+  const y = parts.find((p) => p.type === 'year')!.value
+  const m = parts.find((p) => p.type === 'month')!.value
+  const d = parts.find((p) => p.type === 'day')!.value
+  return `${y}-${m}-${d}`
+}
+
+// 3-3. 실제 데이터 호출 함수 (조회)
+const findMatInspData = async () => {
+  try {
+    const { data } = await axios.get('/api/matInspTarget') //구조분해할당(res.data)
+    allInspData.value = data // 원본데이터 보관
+
+    // 화면용으로 가공: 날짜 KST → YYYY-MM-DD
+    inspTargetData.value = allInspData.value.map((r) => ({
+      ...r,
+      pur_date: toYmdKst(r.pur_date),
+    }))
+    console.log('조회결과:', data) //확인용
+  } catch (err) {
+    console.error('데이터 조회 오류:', err)
+    allInspData.value = []
+    inspTargetData.value = []
+  }
+}
+
+// 3-4. 모달 열릴 때 데이터 조회
 watch(
   () => props.visible, //부모가 내려주는 모달 열림 여부를 감시
   async (newVal) => {
@@ -29,37 +81,22 @@ watch(
       // searchName.value = ''
       // searchType.value = ''
       // checkedData.value = []
-      await findinspData() // 실제 데이터 호출
-      inspData.value = allInspData.value
+      await findMatInspData() // 실제 데이터 호출
     }
   },
 )
 
-// 실제 데이터 호출 함수
-const findinspData = async () => {
-  try {
-    const { data } = await axios.get('/api/inspTarget') //구조분해할당(res.data)
-    // console.log('조회결과:', data) //확인용
-    allInspData.value = data
-  } catch (err) {
-    console.error('데이터 조회 오류:', err)
-    allInspData.value = []
-  }
-}
-
-// 확인버튼 -> 부모로 선택값 전달
-const checkedData = ref<any[]>([])
+// 6. 확인버튼 -> 부모로 선택값 전달
+const checkedData = ref<matInspTargetDT | null>(null)
 const confirmData = () => {
   emit('checked', checkedData.value)
   emit('close')
 }
 
-// stylex
+// style
 const inputStyle =
   'dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-950 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
 const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400'
-const selectStyle =
-  'dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-950 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
 </script>
 
 <template>
@@ -87,9 +124,9 @@ const selectStyle =
         </div>
         <div class="modal-container">
           <DataTable
-            :value="inspData"
+            :value="inspTargetData"
             v-model:selection="checkedData"
-            dataKey="t_id"
+            dataKey="iis_id"
             showGridlines
             scrollable
             size="small"
@@ -108,31 +145,42 @@ const selectStyle =
               style="width: 10px"
             />
             <Column
-              field="t_id"
+              field="iis_id"
               header="가입고번호"
               :pt="{ columnHeaderContent: 'justify-center' }"
+              style="text-align: center; width: 100px"
             />
             <Column
-              field="t_name"
-              header="발주서명"
+              field="pur_name"
+              header="발주명"
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
             <Column
-              field="t_category"
+              field="pur_date"
               header="발주일자"
               :pt="{ columnHeaderContent: 'justify-center' }"
+              style="width: 120px"
             />
             <Column
-              field="t_type_name"
+              field="mat_name"
               header="자재명"
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
-            <Column field="t_spec" header="규격" :pt="{ columnHeaderContent: 'justify-center' }" />
-            <Column field="t_unit" header="단위" :pt="{ columnHeaderContent: 'justify-center' }" />
             <Column
-              field="t_unit"
+              field="mat_spec"
+              header="규격"
+              :pt="{ columnHeaderContent: 'justify-center' }"
+            />
+            <Column
+              field="mat_unit"
+              header="단위"
+              :pt="{ columnHeaderContent: 'justify-center' }"
+            />
+            <Column
+              field="pur_qty"
               header="발주량"
               :pt="{ columnHeaderContent: 'justify-center' }"
+              style="text-align: right"
             />
           </DataTable>
         </div>
