@@ -4,7 +4,6 @@ import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import ComponentCard from '@/components/common/ComponentCardOrder.vue'
 import DataTable from 'primevue/datatable' // datatable 컴포넌트 import
 import Column from 'primevue/column'
-// import InputText from 'primevue/inputtext' // PrimeVue InputText 컴포넌트 import
 import { ref, computed } from 'vue' // computed import 추가
 // flatPickr 달력
 import flatPickr from 'vue-flatpickr-component' // flatPickr 달력 컴포넌트 import
@@ -13,6 +12,9 @@ import { Korean } from 'flatpickr/dist/l10n/ko.js' // 달련 한글 import
 import '@/assets/common.css' // 한솔누나 css import
 import axios from 'axios' // axios 연결
 import BcncnameSelectmodal from './BcncnameSelectmodal.vue' // 거래처, 대표자 클릭시 조회 모달창
+import EpLotmodal from './EpLotmodal.vue'
+import 'primeicons/primeicons.css'
+
 const baseInputClass =
   'dark:bg-dark-900 h-8 w-full rounded-lg border border-gray-300 bg-transparent pl-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
 
@@ -233,6 +235,36 @@ const BcncnameClosemodal = () => {
 const BcncSelect = (value: SearchCondition) => {
   console.log(value.bcnc_name)
   search.value.bcnc_name = value.bcnc_name
+}
+// 제품현출고수량 input box 누를때 해당하는 행
+const selectedRow = ref<OrderItem | null>()
+// 제품선택 모달창 열고 닫기
+const EpLotmodalopen = ref(false)
+const EpLotOpenmodal = (rowData: OrderItem) => {
+  selectedRow.value = rowData
+  EpLotmodalopen.value = true
+}
+const EpLotClosemodal = () => {
+  EpLotmodalopen.value = false
+}
+
+const selectedEpLot = (value: OrderItem[]) => {
+  console.log('선택된 제품:', value)
+  value.forEach((item) => {
+    const newNo = `${new Date().getTime()}_${item.prod_code}`
+    products.value.push({
+      no: newNo,
+      prod_code: item.prod_code,
+      prod_name: item.prod_name,
+      prod_spec: item.prod_spec,
+      prod_unit: item.prod_unit,
+      op_qty: item.op_qty || 1,
+      remark: item.remark,
+    })
+  })
+  console.log('추가 후 products:', products.value)
+  console.log('추가 후 db조회 주문서상세정보 결과:', dbOrderDetailInfo.value)
+  console.log('추가 후 db조회 주문제품 결과:', dbOrderProducts.value)
 }
 </script>
 <template>
@@ -498,10 +530,16 @@ const BcncSelect = (value: SearchCondition) => {
                   frozen
                 ></Column>
                 <Column
+                  field="due_date"
+                  header="납기일자"
+                  :pt="{ columnHeaderContent: 'justify-center' }"
+                  style="min-width: 100px; text-align: center"
+                ></Column>
+                <Column
                   field="ord_name"
                   header="주문서명"
                   :pt="{ columnHeaderContent: 'justify-center' }"
-                  style="min-width: 100px"
+                  style="min-width: 150px"
                 ></Column>
                 <Column
                   field="bcnc_name"
@@ -540,12 +578,57 @@ const BcncSelect = (value: SearchCondition) => {
                   style="min-width: 100px; text-align: right"
                 ></Column>
                 <Column
-                  field="due_date"
-                  header="납기일자"
+                  field="shipped_qty"
+                  header="주문기출고수량"
                   :pt="{ columnHeaderContent: 'justify-center' }"
-                  style="min-width: 100px; text-align: right"
+                  style="min-width: 110px; text-align: right"
                 ></Column>
                 <Column
+                  field="remain_qty"
+                  header="주문미출고수량"
+                  :pt="{ columnHeaderContent: 'justify-center' }"
+                  style="min-width: 110px; text-align: right"
+                >
+                </Column>
+                <Column
+                  field="cur_os_qty"
+                  header="제품현출고수량"
+                  :pt="{ columnHeaderContent: 'justify-center' }"
+                  style="min-width: 130px; text-align: right"
+                >
+                  <template #body="{ data }">
+                    <div class="relative w-full">
+                      <input
+                        v-model="data.cur_os_qty"
+                        type="number"
+                        class="w-full pr-8 text-right border rounded-md focus:ring-1 focus:ring-blue-400"
+                        :max="Math.min(data.ep_qty, data.ord_qty)"
+                        :min="1"
+                        step="1"
+                        readonly
+                        @click="EpLotOpenmodal(data)"
+                      />
+                      <button
+                        type="button"
+                        class="absolute inset-y-0 right-2 flex items-center text-gray-400 hover:text-blue-500"
+                        @click="EpLotOpenmodal(data)"
+                      >
+                        <i class="pi pi-search"></i>
+                      </button>
+                    </div>
+                  </template>
+                </Column>
+
+                <EpLotmodal
+                  :prod_code="selectedRow?.prod_code"
+                  :prod_name="selectedRow?.prod_name"
+                  :remain_qty="selectedRow?.remain_qty"
+                  @selectedProductValue="selectedEpLot"
+                  :visible="EpLotmodalopen"
+                  @close="EpLotClosemodal"
+                />
+
+                <!-- <Column
                   field="ep_lot"
                   header="제품LOT번호"
                   :pt="{ columnHeaderContent: 'justify-center' }"
@@ -556,42 +639,14 @@ const BcncSelect = (value: SearchCondition) => {
                   header="유통기한"
                   :pt="{ columnHeaderContent: 'justify-center' }"
                   style="min-width: 100px; text-align: center"
-                ></Column>
-                <Column
+                ></Column> -->
+                <!-- <Column
                   field="ep_qty"
                   header="제품재고수량"
                   :pt="{ columnHeaderContent: 'justify-center' }"
                   style="min-width: 100px; text-align: right"
-                ></Column>
-                <Column
-                  field="cur_os_qty"
-                  header="제품현출고수량"
-                  :pt="{ columnHeaderContent: 'justify-center' }"
-                  style="min-width: 110px; text-align: right"
-                  ><template #body="{ data }">
-                    <input
-                      v-model="data.cur_os_qty"
-                      type="number"
-                      :class="baseInputClass"
-                      style="text-align: right"
-                      :max="Math.min(data.ep_qty, data.ord_qty)"
-                      :min="1"
-                      step="1"
-                    /> </template
-                ></Column>
-                <Column
-                  field="remain_qty"
-                  header="주문미출고수량"
-                  :pt="{ columnHeaderContent: 'justify-center' }"
-                  style="min-width: 110px; text-align: right"
-                >
-                </Column>
-                <Column
-                  field="shipped_qty"
-                  header="주문기출고수량"
-                  :pt="{ columnHeaderContent: 'justify-center' }"
-                  style="min-width: 110px; text-align: right"
-                ></Column>
+                ></Column> -->
+
                 <Column
                   field="comncode_dtnm"
                   header="출고상태"
@@ -602,7 +657,7 @@ const BcncSelect = (value: SearchCondition) => {
                   field="remark"
                   header="비고"
                   :pt="{ columnHeaderContent: 'justify-center' }"
-                  style="min-width: 170px"
+                  style="min-width: 200px"
                 >
                   <template #body="{ data }">
                     <input v-model="data.remark" type="text" :class="baseInputClass" />

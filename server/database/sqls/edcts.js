@@ -48,8 +48,17 @@ const insertEpOsManage = `
 INSERT INTO edcts(ofd_no, ep_lot, ord_epos_qty, remark)
 VALUES (?,?,?,?)`;
 
+// 완제품 출고 eplot제품 조회
+const selectEpLot = `
+SELECT	ep_lot,
+		epep_dt,
+        ep_qty
+FROM	epis
+WHERE	prod_code = ?`;
+
 module.exports = {
   // 사용할 쿼리문의 이름을 여기에 적으세요
   selectEpOsManage,
   insertEpOsManage,
+  selectEpLot,
 };

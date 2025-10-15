@@ -181,4 +181,19 @@ router.post("/insertEpOs", async (req, res) => {
   }
 });
 
+// 완제품 출고 eplot제품 조회
+router.get("/viewEpLot", async (req, res) => {
+  try {
+    const { prod_code } = req.query;
+
+    const result = await salesService.getEpLot({
+      prod_code,
+    });
+    res.send(result);
+    console.log("viewEpLot:", result);
+  } catch (err) {
+    console.error("viewEpLot 조회 오류:", err);
+  }
+});
+
 module.exports = router;

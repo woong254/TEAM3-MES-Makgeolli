@@ -225,30 +225,31 @@ WHERE  comncode_id = '0B';
 
 -- 완제품검사합격처리된 제품을 입고하기위해 합격된 완제품 조회 / selectEpIsManage
 SELECT pi.insp_id,
-       pi.insp_name,
-       pm.prod_code,
-	pm.prod_name,
-       pm.prod_spec,
-	   cdu.comncode_dtnm AS prod_unit,
-       pi.pass_qty,
-       pi.epep_dt,
-       cd.comncode_dtnm,
-       ep.remark
-FROM   prod_insp pi
-	JOIN processform pf
-       ON pi.procs_no = pf.procs_no
-       JOIN prod_master pm
-       ON pf.prod_code = pm.prod_code
-       LEFT JOIN epis ep
-       ON pi.insp_id = ep.insp_id
-       LEFT JOIN comncode_dt cd
-       ON ep.eps = cd.comncode_detailid
-       JOIN comncode_dt cdu
-       ON pm.prod_unit = cdu.comncode_detailid
-WHERE  1=1
-	AND pf.prog = '100'
-	AND pf.now_procs = '포장'
-       AND pi.final_result = 'p';
+		pi.insp_name,
+		pm.prod_code,
+		pm.prod_name,
+		pm.prod_spec,
+		cdu.comncode_dtnm AS prod_unit,
+		pi.pass_qty,
+		pi.epep_dt,
+        ep.ep_lot,
+		cd.comncode_dtnm AS epis_eps,
+		ep.remark
+FROM	prod_insp pi
+		JOIN processform pf
+		ON pi.procs_no = pf.procs_no
+		JOIN prod_master pm
+		ON pf.prod_code = pm.prod_code
+		LEFT JOIN epis ep
+		ON pi.insp_id = ep.insp_id
+		LEFT JOIN comncode_dt cd
+		ON ep.eps = cd.comncode_detailid
+		JOIN comncode_dt cdu
+		ON pm.prod_unit = cdu.comncode_detailid
+WHERE	1=1
+		AND pf.prog = '100'
+		AND pf.now_procs = '포장'
+		AND pi.final_result = 'p';
        
 -- 완제품 입고 관리 조회 입고버튼 프로시저
 DELIMITER $$
@@ -632,7 +633,7 @@ FROM	orderform;
 -- 삭제
 TRUNCATE TABLE epis;
 DELETE FROM epis
-WHERE  ofd_no = 59;
+WHERE  ep_lot = 'EPRO251109251015002';
 DELETE FROM edcts
 WHERE  epos_no = 12;
 -- 공정실적관리 조회
@@ -670,3 +671,13 @@ FROM 	equip_master e
         
 select * from bom_master;
 select * from bom_detail;
+select * from epis;
+
+-- 20251016
+-- 출고가능제품lot선택 쿼리문
+SELECT	ep_lot,
+		epep_dt,
+        ep_qty
+FROM	epis
+WHERE	prod_code = 'PROD-20250101-005';
+

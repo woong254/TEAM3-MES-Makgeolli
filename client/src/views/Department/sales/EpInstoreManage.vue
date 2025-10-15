@@ -35,9 +35,11 @@ interface OrderItem {
   prod_unit: string
   pass_qty: number
   epep_dt: string
+  ep_lot: string
   comncode_dtnm: string
   remark: string
 }
+// 입고할때 내보내는 값들
 interface EpIsRequest {
   insp_id: string
   prod_code: string
@@ -354,66 +356,69 @@ const rowUnselectHook = () => {
                 <Column selectionMode="multiple" headerStyle="width: 1%" field="insp_id"></Column>
                 <Column
                   field="insp_id"
-                  header="검사코드"
+                  header="검사ID"
                   :pt="{ columnHeaderContent: 'justify-center' }"
-                  headerStyle="width: 10%"
+                  style="min-width: 80px"
                 ></Column>
                 <Column
                   field="insp_name"
                   header="검사명"
                   :pt="{ columnHeaderContent: 'justify-center' }"
-                  headerStyle="width: 10%"
+                  style="min-width: 150px"
                 ></Column>
                 <Column
                   field="prod_code"
                   header="제품코드"
                   :pt="{ columnHeaderContent: 'justify-center' }"
-                  headerStyle="width: 15%"
+                  style="min-width: 200px"
                 ></Column>
                 <Column
                   field="prod_name"
                   header="제품명"
                   :pt="{ columnHeaderContent: 'justify-center' }"
-                  headerStyle="width: 15%"
+                  style="min-width: 200px"
                 ></Column>
                 <Column
                   field="prod_spec"
                   header="규격"
                   :pt="{ columnHeaderContent: 'justify-center' }"
-                  style="text-align: right"
-                  headerStyle="width: 5%"
+                  style="min-width: 50px; text-align: right"
                 ></Column>
                 <Column
                   field="prod_unit"
                   header="단위"
                   :pt="{ columnHeaderContent: 'justify-center' }"
-                  headerStyle="width: 5%"
+                  style="min-width: 80px"
                 ></Column>
                 <Column
                   field="pass_qty"
                   header="수량"
-                  style="text-align: right"
+                  style="min-width: 80px; text-align: right"
                   :pt="{ columnHeaderContent: 'justify-center' }"
-                  headerStyle="width: 5%"
                 ></Column>
                 <Column
                   field="epep_dt"
                   header="유통기한"
                   :pt="{ columnHeaderContent: 'justify-center' }"
-                  headerStyle="width: 10%"
-                  style="text-align: center"
+                  style="min-width: 100px; text-align: center"
+                ></Column>
+                <Column
+                  field="ep_lot"
+                  header="제품lot번호"
+                  :pt="{ columnHeaderContent: 'justify-center' }"
+                  style="min-width: 200px"
                 ></Column>
                 <Column
                   field="comncode_dtnm"
                   header="입고상태"
                   :pt="{ columnHeaderContent: 'justify-center' }"
-                  headerStyle="width: 10%"
+                  style="min-width: 100px"
                 ></Column>
                 <Column
                   field="remark"
                   header="비고"
                   :pt="{ columnHeaderContent: 'justify-center' }"
-                  headerStyle="width: 30%"
+                  style="min-width: 100px"
                 >
                   <template #body="{ data }">
                     <input v-model="data.remark" type="text" :class="baseInputClass" />
