@@ -1,5 +1,10 @@
-const mariadb = require("../database/mapper.js");
+// const mariadb = require("../database/mapper.js");
+// const sqlList = require("../database/sqlList.js");
+import mariadb from "../database/mapper.js";
+import sqlList from "../database/sqlList.js";
 
+const iisModalBcnc = sqlList.iisModalBcnc;
+const iisModalMat = sqlList.iisModalMat;
 // ----- 목록/검색 -----
 const findPurList = async () => {
   let list = await mariadb
@@ -203,27 +208,101 @@ const deleteIisList = async (ids = []) => {
   return { ok: deleted > 0, deleted };
 };
 
-const purIisList = async () => {
+const purIisList = async (receipt_date) => {
   try {
-    const r = await mariadb.query("selectIisMatList"[receipt_date]);
+    const r = await mariadb.query("selectIisMatList", [receipt_date]);
+    return r || [];
   } catch (err) {
     console.error(err);
+    return [];
   }
-  return r;
 };
 
-module.exports = {
+const findPurIisList = async (receipt_date, mat_name = "") => {
+  try {
+    const like = `%${mat_name}%`;
+    const rows = await mariadb.query("selectIisMatTarget", [
+      receipt_date,
+      like,
+    ]);
+    return rows || [];
+  } catch (err) {
+    console.error("[findPurIisList] ERROR:", err?.code, err?.message);
+    return [];
+  }
+};
+
+const findIisBcncList = async (bcncData) => {
+  const { mat_code, bcnc_name } = bcncData;
+  let sql = iisModalBcnc;
+  let params = [];
+
+  if (mat_code) {
+    sql += ` AND pm.mat_code = ?`;
+    params.push(mat_code);
+  }
+  if (bcnc_name) {
+    sql += ` AND b.bcnc_name LIKE ?`;
+    params.push(`%${bcnc_name}%`);
+  }
+  sql += ` GROUP BY pf.bcnc_code, b.bcnc_name, b.bcnc_category ORDER BY pf.bcnc_code`;
+  try {
+    const list = await mariadb.query(sql, params);
+    return list;
+  } catch (err) {
+    console.error(err);
+    return [];
+  }
+};
+
+const findIisMatList = async (matData) => {
+  const { bcnc_code, mat_name } = matData;
+  let sql = iisModalMat;
+  let params = [];
+
+  if (bcnc_code) {
+    sql += ` AND pf.bcnc_code = ?`;
+    params.push(bcnc_code);
+  }
+  if (mat_name) {
+    sql += ` AND m.mat_name LIKE ?`;
+    params.push(`%${mat_name}%`);
+  }
+  sql += ` GROUP BY  pm.mat_code, m.mat_name, m.safe_stock, m.mat_spec, m.mat_unit ORDER BY pm.mat_code`;
+
+  console.log(
+    "[SERVICE:findIisMatList] bcnc_code=",
+    bcnc_code,
+    "mat_name=",
+    mat_name
+  ); // ★ 추가
+  console.log("[SERVICE SQL] ", sql); // ★ 추가
+  console.log("[SERVICE PARAMS] ", params); // ★ 추가
+
+  try {
+    const list = await mariadb.query(sql, params);
+    return list;
+  } catch (err) {
+    console.error(err);
+    return [];
+  }
+};
+
+export {
   // 목록/검색
   findPurList,
   findPurTarget,
   findIisList,
   purIisList,
+  findIisBcncList,
+  findIisMatList,
   // 단건 조회
   findPurHeaderByCode,
   findPurLinesByCode,
   // 자재 목록/검색
   findPurMatList,
   findPurMatTarget,
+  findPurIisList,
   // 매입처 목록/검색
   findBcncList,
   findBcncTarget,

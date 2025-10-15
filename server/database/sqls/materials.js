@@ -257,6 +257,61 @@ JOIN mat_master m ON m.mat_code = pm.mat_code
 JOIN bcnc_master b ON b.bcnc_code = pf.bcnc_code
 WHERE pm.receipt_status IN ('입고대기', '부분입고')
 AND pf.receipt_date = ?
+ORDER BY pm.pur_mat_id DESC
+`;
+
+const selectIisMatTarget = `
+SELECT
+  pm.pur_code,
+  pf.pur_name,
+  pf.bcnc_code,
+  b.bcnc_name,
+  pm.mat_code,
+  m.mat_name,
+  m.mat_spec,
+  m.mat_unit,
+  pm.unreceipt_qty,
+  pm.receipt_status
+FROM pur_mat pm
+JOIN pur_form pf ON pf.pur_code = pm.pur_code
+JOIN mat_master m ON m.mat_code = pm.mat_code
+JOIN bcnc_master b ON b.bcnc_code = pf.bcnc_code
+WHERE pm.receipt_status IN ('입고대기', '부분입고')
+AND pf.receipt_date = ?
+AND m.mat_name LIKE ?
+ORDER BY pm.pur_mat_id DESC
+`;
+
+const iisModalBcnc = `
+SELECT
+  pf.bcnc_code,
+  b.bcnc_name,
+  b.bcnc_category
+FROM pur_mat pm
+JOIN pur_form pf ON pf.pur_code = pm.pur_code
+JOIN mat_master m ON m.mat_code = pm.mat_code
+JOIN bcnc_master b ON b.bcnc_code = pf.bcnc_code
+WHERE pm.receipt_status IN ('입고대기', '부분입고')
+AND pf.receipt_date = CURDATE()
+`;
+
+const iisModalMat = `
+SELECT
+  pm.mat_code,
+  m.mat_name,
+  COALESCE((
+    SELECT SUM(l.receipt_qty - l.release_qty)
+    FROM lot_mat l
+    WHERE l.mat_code = m.mat_code
+  ), 0) AS stock_qty,
+  m.safe_stock,
+  m.mat_spec,
+  m.mat_unit
+FROM pur_mat pm
+JOIN pur_form pf  ON pf.pur_code = pm.pur_code
+JOIN mat_master m ON m.mat_code  = pm.mat_code
+WHERE pm.receipt_status IN ('입고대기', '부분입고')
+  AND pf.receipt_date = CURDATE()
 `;
 
 module.exports = {
@@ -265,12 +320,15 @@ module.exports = {
   selectPurTarget,
   selectIisMatList,
   iisList,
+  iisModalBcnc,
+  iisModalMat,
   // 단건 조회
   selectPurHeaderByCode,
   selectPurLinesByCode,
   // 자재 목록/검색
   selectPurMatList,
   selectPurMatTarget,
+  selectIisMatTarget,
   // 매입처 목록/검색
   selectBcncList,
   searchBcncTarget,

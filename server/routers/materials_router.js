@@ -16,6 +16,22 @@ router.get("/purTarget", async (req, res) => {
     .catch((err) => console.error(err));
   res.send(purList);
 });
+router.get("/iis/matList", async (req, res) => {
+  let receipt_date = req.query.receipt_date;
+  let iis_list = await materialsService
+    .purIisList(receipt_date)
+    .catch((err) => console.error(err));
+  res.send(iis_list);
+});
+
+router.get("/iis/matSearch", async (req, res) => {
+  let receipt_date = req.query.receipt_date;
+  let mat_name = req.query.mat_name;
+  let iis_list = await materialsService
+    .findPurIisList(receipt_date, mat_name)
+    .catch((err) => console.error(err));
+  res.send(iis_list);
+});
 
 // ----- 단건 조회 (모달 선택 시 사용) -----
 router.get("/pur/header", async (req, res) => {
@@ -158,5 +174,20 @@ router.post("/iis/delete", async (req, res) => {
     console.error(e);
     return res.status(500).json({ ok: false, msg: "DELETE_FAILED" });
   }
+});
+
+router.get("/iisBcncList", async (req, res) => {
+  const bcncInfo = await materialsService
+    .findIisBcncList(req.query)
+    .catch((err) => console.error(err));
+  res.send(bcncInfo);
+});
+
+router.get("/iisMatMasterList", async (req, res) => {
+  console.log("[ROUTE:/iisMatMasterList] query =", req.query); // ★ 추가
+  const matInfo = await materialsService
+    .findIisMatList(req.query)
+    .catch((err) => console.error(err));
+  res.send(matInfo);
 });
 module.exports = router;
