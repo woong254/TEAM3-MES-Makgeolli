@@ -716,3 +716,342 @@ ORDER BY write_date DESC;
 
 
 
+-- 가입고 모달 입력시 -> 자동 품질기준관리 검사 데이터 조회 
+SELECT 
+    qt.insp_item_id
+    ,qm.insp_item_name
+    ,qm.insp_type
+    ,qm.max_score
+    ,qm.pass_score
+    ,qm.pass_score_spec
+    ,qm.score_desc
+    ,qr.min_range
+    ,qr.min_range_spec
+    ,qr.max_range
+    ,qr.max_range_spec
+    ,qs.sens_questions  -- 문자열 형태의 JSON 배열(프론트에서 JSON.parse)
+FROM qc_master_target qt
+JOIN qc_master qm
+  ON qt.insp_item_id = qm.insp_item_id
+LEFT JOIN qc_master_ran qr
+  ON qm.insp_item_id = qr.insp_item_id
+LEFT JOIN (
+    SELECT 
+        insp_item_id,
+        CONCAT(
+          '[',
+          GROUP_CONCAT(
+            CONCAT(
+              '{',
+              '"order":', ques_order, ',',
+              '"name":',  JSON_QUOTE(ques_name),
+              '}'
+            )
+            ORDER BY ques_order
+            SEPARATOR ','
+          ),
+          ']'
+        ) AS sens_questions
+    FROM qc_master_sen
+    GROUP BY insp_item_id
+) qs
+  ON qm.insp_item_id = qs.insp_item_id
+WHERE qt.mat_code = 'M-20250201-001'
+  AND qm.use_yn = 'Y'
+ORDER BY qt.insp_item_id;
+
+-- unionall로 자제/제품 두개 합쳐서 조회
+SET @code := 'M-20250201-001';  -- 자재코드 예시 (제품이면 제품코드로 바꾸세요)
+
+-- 자재(mat_code)
+SELECT
+    qt.insp_item_id
+    ,qm.insp_item_name
+    ,qm.insp_type
+    ,qm.max_score
+    ,qm.pass_score
+    ,qm.pass_score_spec
+    ,qm.score_desc
+    ,qr.min_range
+    ,qr.min_range_spec
+    ,qr.max_range
+    ,qr.max_range_spec
+    ,qs.sens_questions
+    ,qt.mat_code  AS target_code
+    ,mm.mat_name  AS target_name
+    ,mm.mat_spec  AS target_spec
+    ,mm.mat_unit  AS target_unit
+FROM qc_master_target qt
+JOIN qc_master qm         ON qt.insp_item_id = qm.insp_item_id
+LEFT JOIN qc_master_ran qr ON qm.insp_item_id = qr.insp_item_id
+LEFT JOIN (
+  SELECT insp_item_id,
+         CONCAT(
+           '[',
+           GROUP_CONCAT(
+             CONCAT('{','"order":',ques_order,',"name":',JSON_QUOTE(ques_name),'}')
+             ORDER BY ques_order SEPARATOR ','
+           ),
+           ']'
+         ) AS sens_questions
+  FROM qc_master_sen
+  GROUP BY insp_item_id
+) qs ON qm.insp_item_id = qs.insp_item_id
+LEFT JOIN mat_master mm ON qt.mat_code = mm.mat_code
+WHERE qm.use_yn = 'Y'
+  AND qt.mat_code = @code
+
+UNION ALL
+
+-- 제품(product_code)
+SELECT
+    qt.insp_item_id
+    ,qm.insp_item_name
+    ,qm.insp_type
+    ,qm.max_score
+    ,qm.pass_score
+    ,qm.pass_score_spec
+    ,qm.score_desc
+    ,qr.min_range
+    ,qr.min_range_spec
+    ,qr.max_range
+    ,qr.max_range_spec
+    ,qs.sens_questions
+    ,qt.product_code AS target_code
+    ,pm.prod_name    AS target_name
+    ,pm.prod_spec    AS target_spec
+    ,pm.prod_unit    AS target_unit
+FROM qc_master_target qt
+JOIN qc_master qm         ON qt.insp_item_id = qm.insp_item_id
+LEFT JOIN qc_master_ran qr ON qm.insp_item_id = qr.insp_item_id
+LEFT JOIN (
+  SELECT insp_item_id,
+         CONCAT(
+           '[',
+           GROUP_CONCAT(
+             CONCAT('{','"order":',ques_order,',"name":',JSON_QUOTE(ques_name),'}')
+             ORDER BY ques_order SEPARATOR ','
+           ),
+           ']'
+         ) AS sens_questions
+  FROM qc_master_sen
+  GROUP BY insp_item_id
+) qs ON qm.insp_item_id = qs.insp_item_id
+LEFT JOIN prod_master pm ON qt.product_code = pm.prod_code
+WHERE qm.use_yn = 'Y'
+  AND qt.product_code = @code
+
+ORDER BY insp_item_id;
+
+
+
+
+
+
+
+
+
+
+-- 불량 샘플 데이터 만들기
+-- def_master : 불량기준관리
+-- def_master_target : 불량기준관리_검사대상
+
+
+-- id : NG-20251015-001
+-- 폐기(d), 재포장(r)
+
+INSERT INTO def_master 
+	(def_item_id -- 불량id
+    ,def_item_name -- 불량 제목
+    ,action -- 폐기(d), 재포장(r)
+    ,writer 
+    ,write_date)
+VALUES
+	('NG-20251015-001'
+    ,'이물질혼입'
+    ,'d'
+    ,'이한솔'
+    ,NOW());
+
+INSERT INTO def_master_target
+	(insp_target_id -- 불량타겟id
+    ,insp_target_type -- 제품, 자재
+    ,insp_target_code -- 주자재(a1), 부자재(a2), 재공품(a3), 반제품(a4), 완제품(a5)
+    ,mat_code -- 'M-20250201-001'
+    ,def_item_id) -- NG-20251015-001
+VALUES
+	('NGT-20251015-001'
+    ,'자재'
+    ,'a1'
+    ,'M-20250201-001'
+    ,'NG-20251015-001');
+    
+INSERT INTO def_master_target
+	(insp_target_id -- 불량타겟id
+    ,insp_target_type -- 제품, 자재
+    ,insp_target_code -- 주자재(a1), 부자재(a2), 재공품(a3), 반제품(a4), 완제품(a5)
+    ,mat_code -- 'M-20250201-001'
+    ,def_item_id) -- NG-20251015-001
+VALUES
+	('NGT-20251015-002'
+    ,'자재'
+    ,'a1'
+    ,'M-20250202-001'
+    ,'NG-20251015-001');
+
+-- -----------------------------------------------------------------
+
+INSERT INTO def_master 
+	(def_item_id -- 불량id
+    ,def_item_name -- 불량 제목
+    ,action -- 폐기(d), 재포장(r)
+    ,writer 
+    ,write_date)
+VALUES
+	('NG-20251015-002'
+    ,'유통기한 경과'
+    ,'d'
+    ,'이한솔'
+    ,NOW());
+
+INSERT INTO def_master_target
+	(insp_target_id -- 불량타겟id
+    ,insp_target_type -- 제품, 자재
+    ,insp_target_code -- 주자재(a1), 부자재(a2), 재공품(a3), 반제품(a4), 완제품(a5)
+    ,mat_code -- 'M-20250201-001'
+    ,def_item_id) -- NG-20251015-001
+VALUES
+	('NGT-20251015-003'
+    ,'자재'
+    ,'a1'
+    ,'M-20250201-001'
+    ,'NG-20251015-002');
+    
+INSERT INTO def_master_target
+	(insp_target_id -- 불량타겟id
+    ,insp_target_type -- 제품, 자재
+    ,insp_target_code -- 주자재(a1), 부자재(a2), 재공품(a3), 반제품(a4), 완제품(a5)
+    ,mat_code -- 'M-20250201-001'
+    ,def_item_id) -- NG-20251015-001
+VALUES
+	('NGT-20251015-004'
+    ,'자재'
+    ,'a1'
+    ,'M-20250202-001'
+    ,'NG-20251015-002');
+
+-- ------------------------------------------------------------------------------------
+
+INSERT INTO def_master 
+	(def_item_id -- 불량id
+    ,def_item_name -- 불량 제목
+    ,action -- 폐기(d), 재포장(r)
+    ,writer 
+    ,write_date)
+VALUES
+	('NG-20251015-003'
+    ,'용기파손'
+    ,'r'
+    ,'이한솔'
+    ,NOW());
+
+INSERT INTO def_master_target
+	(insp_target_id -- 불량타겟id
+    ,insp_target_type -- 제품, 자재
+    ,insp_target_code -- 주자재(a1), 부자재(a2), 재공품(a3), 반제품(a4), 완제품(a5)
+    ,prod_code 
+    ,def_item_id) -- NG-20251015-001
+VALUES
+	('NGT-20251015-005'
+    ,'제품'
+    ,'a4'
+    ,'PROD-20240101-001'
+    ,'NG-20251015-003');
+
+INSERT INTO def_master_target
+	(insp_target_id -- 불량타겟id
+    ,insp_target_type -- 제품, 자재
+    ,insp_target_code -- 주자재(a1), 부자재(a2), 재공품(a3), 반제품(a4), 완제품(a5)
+    ,prod_code 
+    ,def_item_id) -- NG-20251015-001
+VALUES
+	('NGT-20251015-011'
+    ,'제품'
+    ,'a5'
+    ,'PROD-20250101-001'
+    ,'NG-20251015-003');
+    
+UPDATE def_master_target
+SET prod_code = 'PROD-20250101-006'
+   ,insp_target_code = 'a5'
+WHERE insp_target_id = 'NGT-20251015-010';
+
+-- ------------------------------------------------------------------------------
+
+INSERT INTO def_master 
+	(def_item_id -- 불량id
+    ,def_item_name -- 불량 제목
+    ,action -- 폐기(d), 재포장(r)
+    ,writer 
+    ,write_date)
+VALUES
+	('NG-20251015-004'
+    ,'라벨불량'
+    ,'r'
+    ,'이한솔'
+    ,NOW());
+
+INSERT INTO def_master_target
+	(insp_target_id -- 불량타겟id
+    ,insp_target_type -- 제품, 자재
+    ,insp_target_code -- 주자재(a1), 부자재(a2), 재공품(a3), 반제품(a4), 완제품(a5)
+    ,prod_code 
+    ,def_item_id) -- NG-20251015-001
+VALUES
+	('NGT-20251015-014'
+    ,'제품'
+    ,'a5'
+    ,'PROD-20250101-004'
+    ,'NG-20251015-004');
+
+-- ------------------------------------------------------------------------------
+
+INSERT INTO def_master 
+	(def_item_id -- 불량id
+    ,def_item_name -- 불량 제목
+    ,action -- 폐기(d), 재포장(r)
+    ,writer 
+    ,write_date)
+VALUES
+	('NG-20251015-004'
+    ,'라벨불량'
+    ,'r'
+    ,'이한솔'
+    ,NOW());
+
+INSERT INTO def_master_target
+	(insp_target_id -- 불량타겟id
+    ,insp_target_type -- 제품, 자재
+    ,insp_target_code -- 주자재(a1), 부자재(a2), 재공품(a3), 반제품(a4), 완제품(a5)
+    ,prod_code 
+    ,def_item_id) -- NG-20251015-001
+VALUES
+	('NGT-20251015-014'
+    ,'제품'
+    ,'a4'
+    ,'PROD-20250101-004'
+    ,'NG-20251015-004');
+
+
+
+
+
+
+
+-- 자재입고검사 -> 불량 조회
+SELECT dmt.def_item_id
+       ,dm.def_item_name
+FROM def_master_target dmt
+ JOIN def_master dm
+   ON dmt.def_item_id = dm.def_item_id
+WHERE dmt.mat_code = 'M-20250201-001';

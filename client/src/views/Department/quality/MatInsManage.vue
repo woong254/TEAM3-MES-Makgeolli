@@ -1,6 +1,6 @@
 <!-- 자재입고검사 관리 -->
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, reactive, watch } from 'vue'
 import '@/assets/common.css'
 import ComponentCard from '@/components/common/ComponentCardButton.vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
@@ -16,7 +16,8 @@ import MatInspTargetSelectModal from './MatInspTargetSelectModal.vue' // 검사�
 // 1. 페이지 타이틀
 const currentPageTitle = ref('자재입고검사 관리')
 
-// 2. TS
+// 2. TS 데이터타입
+// 2-1. 관능평가 데이터타입(수정필요)
 interface SensoryDetail {
   id: string // 상세행 고유키
   question: string // 질문(세부 평가 항목)
@@ -35,8 +36,23 @@ interface SensoryRow {
   insp_unit: '합격' | '불합격' | '-' // 판정
   details: SensoryDetail[] // ★ 확장행에서 표시할 자식 테이블 데이터
 }
+// 2-2. 검사대상(가입고)
+interface matInspTargetDT {
+  iis_id: number
+  pur_code: string
+  pur_name: string
+  pur_date: string
+  bcnc_name: string
+  mat_code: string
+  mat_name: string
+  mat_spec: string
+  mat_unit: string
+  pur_qty: number
+  receipt_qty: number
+}
 
 // 3. 변수
+// 3-1. 달력 pickr
 const date = ref(null)
 const flatpickrConfig = {
   dateFormat: 'Y-m-d',
@@ -44,7 +60,25 @@ const flatpickrConfig = {
   altFormat: 'F j, Y',
   wrap: true,
 }
-const inspector = ref('이한솔') //검사자
+// 3-2. 검사자
+const inspector = ref('이한솔')
+// 3-3. 검사대상(가입고)
+const matInspTargetData = reactive({
+  iis_id: '',
+  pur_code: '',
+  pur_name: '',
+  pur_date: '',
+  bcnc_name: '',
+  mat_code: '',
+  mat_name: '',
+  mat_spec: '',
+  mat_unit: '',
+  pur_qty: 0,
+  receipt_qty: 0,
+})
+const matInspQty = ref<number>(0) // 검사량
+const matInspNG = ref<number>(0) // 불량량
+const matInspPass = ref<number>(0) // 합격량
 
 // 4. 검사일자
 const dateValue = new Date()
@@ -57,25 +91,28 @@ const hour = String(dateValue.getHours()).padStart(2, '0')
 const minute = String(dateValue.getMinutes()).padStart(2, '0')
 const second = String(dateValue.getSeconds()).padStart(2, '0')
 // 4-3. YYYY-MM-DD HH:mm:ss 형식으로 조합
-const formattedDateTime = `${year}-${month}-${day} ${hour}:${minute}:${second}`
+const matInspTargetDataattedDateTime = `${year}-${month}-${day} ${hour}:${minute}:${second}`
 
 // 5. 테이블 확장
 const expandedRows = ref<Record<string, boolean> | null>(null)
-// 모두 열기/닫기 유틸 (원하시면 버튼으로 연결)
-const expandAll = () => {
-  expandedRows.value = inspDataSen.value.reduce(
-    (acc, row) => {
-      acc[row.id] = true
-      return acc
-    },
-    {} as Record<string, boolean>,
-  )
-}
-const collapseAll = () => {
-  expandedRows.value = null
+
+// 6. 모달에서 선택한 검사대상(가입고) 해당 input에 넣기
+const onInspChecked = (row: matInspTargetDT) => {
+  matInspTargetData.iis_id = String(row.iis_id)
+  matInspTargetData.pur_code = row.pur_code
+  matInspTargetData.pur_name = row.pur_name
+  matInspTargetData.pur_date = row.pur_date
+  matInspTargetData.bcnc_name = row.bcnc_name
+  matInspTargetData.mat_code = row.mat_code
+  matInspTargetData.mat_name = row.mat_name
+  matInspTargetData.mat_spec = row.mat_spec
+  matInspTargetData.mat_unit = row.mat_unit
+  matInspTargetData.pur_qty = row.pur_qty
+  matInspTargetData.receipt_qty = row.receipt_qty
+  isModalOpen.value = false
 }
 
-// 모달 이벤트(open, close)
+// 7. 모달 이벤트(open, close)
 const isModalOpen = ref(false)
 const openModal = () => {
   isModalOpen.value = true
@@ -83,6 +120,21 @@ const openModal = () => {
 const closeModal = () => {
   isModalOpen.value = false
 }
+
+// 8. 검사량, 불량량, 합격량 계산
+// 8-1. 검사량 값 제한(입고량을 넘길수 X)
+const onInspValue = () => {
+  if (matInspQty.value > matInspTargetData.receipt_qty) {
+    alert('검사량은 입고량을 초과할 수 없습니다.')
+    matInspQty.value = matInspTargetData.receipt_qty
+  }
+}
+// 8-2. 합격량 계산
+watch([matInspQty, matInspNG], () => {
+  matInspPass.value = matInspQty.value - matInspNG.value
+})
+
+// 9. 데이터 조회
 
 // 테이블 데이터
 const inspDataRan = ref([
@@ -132,13 +184,7 @@ const inputStyleClick =
   'dark:bg-dark-900 h-7 w-full rounded-sm border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-950 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
 const inputDisabled =
   'dark:bg-dark-900 h-7 w-full rounded-sm border border-gray-300 bg-gray-100 px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30'
-const selectStyle =
-  'dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-950 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
 const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400'
-const textareaStyle =
-  'dark:bg-dark-900 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-950 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 overflow-y-auto'
-const fileStyle =
-  'focus:border-ring-brand-300 h-11 w-full overflow-hidden rounded-lg border border-gray-300 bg-transparent text-sm text-gray-500 shadow-theme-xs transition-colors file:mr-5 file:border-collapse file:cursor-pointer file:rounded-l-lg file:border-0 file:border-r file:border-solid file:border-gray-200 file:bg-gray-50 file:py-3 file:pl-3.5 file:pr-3 file:text-sm file:text-gray-700 placeholder:text-gray-400 hover:file:bg-gray-100 focus:outline-hidden focus:file:ring-brand-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400 dark:text-white/90 dark:file:border-gray-800 dark:file:bg-white/[0.03] dark:file:text-gray-400 dark:placeholder:text-gray-400'
 </script>
 
 <template>
@@ -252,6 +298,7 @@ const fileStyle =
                   class="w-2/3 cursor-pointer hover:bg-gray-100 duration-300"
                   readonly
                   @click="openModal"
+                  v-model="matInspTargetData.iis_id"
                 />
                 <button
                   type="button"
@@ -269,6 +316,7 @@ const fileStyle =
                   class="w-2/3 cursor-pointer hover:bg-gray-100 duration-300"
                   readonly
                   @click="openModal"
+                  v-model="matInspTargetData.pur_code"
                 />
                 <button
                   type="button"
@@ -286,6 +334,7 @@ const fileStyle =
                   class="w-2/3 cursor-pointer hover:bg-gray-100 duration-300"
                   readonly
                   @click="openModal"
+                  v-model="matInspTargetData.pur_name"
                 />
                 <button
                   type="button"
@@ -303,6 +352,7 @@ const fileStyle =
                   class="w-2/3 cursor-pointer hover:bg-gray-100 duration-300"
                   readonly
                   @click="openModal"
+                  v-model="matInspTargetData.pur_date"
                 />
                 <button
                   type="button"
@@ -320,6 +370,7 @@ const fileStyle =
                   class="w-2/3 cursor-pointer hover:bg-gray-100 duration-300"
                   readonly
                   @click="openModal"
+                  v-model="matInspTargetData.bcnc_name"
                 />
                 <button
                   type="button"
@@ -337,6 +388,7 @@ const fileStyle =
                   class="w-2/3 cursor-pointer hover:bg-gray-100 duration-300"
                   readonly
                   @click="openModal"
+                  v-model="matInspTargetData.mat_code"
                 />
                 <button
                   type="button"
@@ -354,6 +406,7 @@ const fileStyle =
                   class="w-2/3 cursor-pointer hover:bg-gray-100 duration-300"
                   readonly
                   @click="openModal"
+                  v-model="matInspTargetData.mat_name"
                 />
                 <button
                   type="button"
@@ -371,6 +424,7 @@ const fileStyle =
                   class="w-2/3 cursor-pointer hover:bg-gray-100 duration-300"
                   readonly
                   @click="openModal"
+                  v-model="matInspTargetData.mat_spec"
                 />
                 <button
                   type="button"
@@ -388,6 +442,7 @@ const fileStyle =
                   class="w-2/3 cursor-pointer hover:bg-gray-100 duration-300"
                   readonly
                   @click="openModal"
+                  v-model="matInspTargetData.mat_unit"
                 />
                 <button
                   type="button"
@@ -398,13 +453,15 @@ const fileStyle =
                 </button>
               </div>
               <div class="w-1/5 flex items-center relative">
-                <label :class="labelStyle" class="w-[120px]"> 주문수량 </label>
+                <label :class="labelStyle" class="w-[120px]"> 발주수량 </label>
                 <input
-                  type="text"
+                  type="number"
                   :class="inputStyleClick"
                   class="w-2/3 cursor-pointer hover:bg-gray-100 duration-300"
                   readonly
                   @click="openModal"
+                  v-model="matInspTargetData.pur_qty"
+                  style="text-align: right; padding-right: 20px"
                 />
                 <button
                   type="button"
@@ -430,7 +487,7 @@ const fileStyle =
                   type="text"
                   :class="inputDisabled"
                   class="w-2/3"
-                  v-model="formattedDateTime"
+                  v-model="matInspTargetDataattedDateTime"
                   disabled
                 />
               </div>
@@ -438,6 +495,7 @@ const fileStyle =
             <MatInspTargetSelectModal
               :visible="isModalOpen"
               @close="closeModal"
+              @checked="onInspChecked"
             ></MatInspTargetSelectModal>
           </div>
           <div class="rounded-lg border border-gray-200 p-4 shadow-sm mb-2">
@@ -447,11 +505,13 @@ const fileStyle =
                 <label :class="labelStyle" class="w-[120px]">입고량 </label>
                 <div class="relative">
                   <input
-                    type="text"
+                    type="number"
                     :class="inputStyleClick"
                     class="w-2/3 cursor-pointer hover:bg-gray-100 duration-300"
                     readonly
                     @click="openModal"
+                    v-model="matInspTargetData.receipt_qty"
+                    style="text-align: right; padding-right: 20px"
                   />
                   <button
                     type="button"
@@ -461,46 +521,73 @@ const fileStyle =
                     <i class="pi pi-search"></i>
                   </button>
                 </div>
-                <div class="text-sm w-[100px] ml-2">단위</div>
+                <div class="text-sm w-[100px] ml-2">{{ matInspTargetData.mat_unit || '단위' }}</div>
               </div>
               <div class="w-1/4 flex items-center">
                 <label :class="labelStyle" class="w-[120px]"> 검사량 </label>
                 <div>
                   <input
-                    type="text"
+                    type="number"
                     :class="inputStyleSM"
                     class="w-2/3"
                     placeholder="검사량을 입력하세요."
+                    v-model="matInspQty"
+                    style="text-align: right"
+                    @input="onInspValue"
                   />
                 </div>
-                <div class="text-sm w-[100px] ml-2">단위</div>
+                <div class="text-sm w-[100px] ml-2">{{ matInspTargetData.mat_unit || '단위' }}</div>
               </div>
               <div class="w-1/4 flex items-center">
                 <label :class="labelStyle" class="w-[120px]"> 불량량 </label>
                 <div>
-                  <input type="text" :class="inputDisabled" class="w-2/3" disabled />
+                  <input
+                    type="number"
+                    :class="inputDisabled"
+                    class="w-2/3"
+                    disabled
+                    style="text-align: right"
+                    v-model="matInspNG"
+                  />
                 </div>
-                <div class="text-sm w-[100px] ml-2">단위</div>
+                <div class="text-sm w-[100px] ml-2">{{ matInspTargetData.mat_unit || '단위' }}</div>
               </div>
               <div class="w-1/4 flex items-center">
                 <label :class="labelStyle" class="w-[120px]"> 합격량 </label>
                 <div>
-                  <input type="text" :class="inputDisabled" class="w-2/3" disabled />
+                  <input
+                    type="number"
+                    :class="inputDisabled"
+                    class="w-2/3"
+                    disabled
+                    style="text-align: right"
+                    v-model="matInspPass"
+                  />
                 </div>
-                <div class="text-sm w-[100px] ml-2">단위</div>
+                <div class="text-sm w-[100px] ml-2">{{ matInspTargetData.mat_unit || '단위' }}</div>
               </div>
             </div>
             <div class="flex flex-wrap mb-2">
               <div class="text-sm w-[95px]">불량유형</div>
               <div class="w-1/4 flex items-center">
                 <label :class="labelStyle" class="w-[180px]">이물질 혼입 </label>
-                <input type="text" :class="inputStyleSM" class="w-2/3" />
-                <div class="text-sm w-[100px] ml-2">단위</div>
+                <input
+                  type="number"
+                  :class="inputStyleSM"
+                  class="w-2/3"
+                  style="text-align: right"
+                />
+                <div class="text-sm w-[100px] ml-2">{{ matInspTargetData.mat_unit || '단위' }}</div>
               </div>
               <div class="w-1/4 flex items-center">
                 <label :class="labelStyle" class="w-[180px]"> 유통기한 경과 </label>
-                <input type="text" :class="inputStyleSM" class="w-2/3" />
-                <div class="text-sm w-[100px] ml-2">단위</div>
+                <input
+                  type="number"
+                  :class="inputStyleSM"
+                  class="w-2/3"
+                  style="text-align: right"
+                />
+                <div class="text-sm w-[100px] ml-2">{{ matInspTargetData.mat_unit || '단위' }}</div>
               </div>
             </div>
             <div class="w-full flex">
@@ -548,7 +635,7 @@ const fileStyle =
                 :pt="{ columnHeaderContent: 'justify-center' }"
                 style="width: 100px"
               >
-                <template #body="{ data }">
+                <template #body>
                   <div class="flex justify-center">
                     <Button
                       icon="pi pi-file"
@@ -566,7 +653,7 @@ const fileStyle =
                 :pt="{ columnHeaderContent: 'justify-center' }"
                 style="width: 100px"
               >
-                <template #body="{ data }">
+                <template #body>
                   <div class="flex justify-center">
                     <Button
                       icon="pi pi-paperclip"
@@ -584,7 +671,7 @@ const fileStyle =
                 :pt="{ columnHeaderContent: 'justify-center' }"
                 style="width: 450px"
               >
-                <template #body="{ data }">
+                <template #body>
                   <div class="flex gap-2 w-full items-center">
                     <input
                       type="text"
@@ -611,7 +698,7 @@ const fileStyle =
                 :pt="{ columnHeaderContent: 'justify-center' }"
                 style="width: 250px"
               >
-                <template #body="{ data }">
+                <template #body>
                   <input type="text" :class="inputStyleSM" placeholder="측정값 입력하세요." />
                 </template>
               </Column>
@@ -664,7 +751,7 @@ const fileStyle =
                 :pt="{ columnHeaderContent: 'justify-center' }"
                 style="width: 120px"
               >
-                <template #body="{ data }">
+                <template #body>
                   <div class="flex justify-center">
                     <Button
                       icon="pi pi-file"
@@ -703,7 +790,7 @@ const fileStyle =
                       :pt="{ columnHeaderContent: 'justify-center' }"
                       style="width: 60px"
                     >
-                      <template #body="{ data }">
+                      <template #body>
                         <div class="flex justify-center">
                           <input type="radio" name="senScore" class="checkboxStyle" />
                         </div>
@@ -715,7 +802,7 @@ const fileStyle =
                       :pt="{ columnHeaderContent: 'justify-center' }"
                       style="width: 60px"
                     >
-                      <template #body="{ data }">
+                      <template #body>
                         <div class="flex justify-center">
                           <input type="radio" name="senScore" class="checkboxStyle" />
                         </div>
@@ -727,7 +814,7 @@ const fileStyle =
                       :pt="{ columnHeaderContent: 'justify-center' }"
                       style="width: 60px"
                     >
-                      <template #body="{ data }">
+                      <template #body>
                         <div class="flex justify-center">
                           <input type="radio" name="senScore" class="checkboxStyle" />
                         </div>
@@ -739,7 +826,7 @@ const fileStyle =
                       :pt="{ columnHeaderContent: 'justify-center' }"
                       style="width: 60px"
                     >
-                      <template #body="{ data }">
+                      <template #body>
                         <div class="flex justify-center">
                           <input type="radio" name="senScore" class="checkboxStyle" />
                         </div>
@@ -751,7 +838,7 @@ const fileStyle =
                       :pt="{ columnHeaderContent: 'justify-center' }"
                       style="width: 60px"
                     >
-                      <template #body="{ data }">
+                      <template #body>
                         <div class="flex justify-center">
                           <input type="radio" name="senScore" class="checkboxStyle" />
                         </div>
