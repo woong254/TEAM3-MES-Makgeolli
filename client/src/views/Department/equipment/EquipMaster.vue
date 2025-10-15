@@ -243,7 +243,7 @@ const fillFormFromRow = (row: EquipItem) => {
   createForm.value = {
     ...(row as CreateEquipPayload),
     inspCycle: row.inspCycle ?? 0,
-    equipStatus: row.equipStatus || '비가동',
+    equipStatus: row.equipStatus || 'j2',
   }
 }
 // (수정) 클릭/선택 시 상세 먼저 가져와서 폼 채우기

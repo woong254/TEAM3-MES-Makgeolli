@@ -10,7 +10,7 @@ const {
   updateEquip, // UPDATE ... SET equip_name=?, equip_type=?, manager=?, equip_status=?, insp_cycle=? WHERE equip_code=?
   deleteEquip, // DELETE FROM equipment WHERE equip_code=?
   selectEquipByCode, // SELECT * FROM equipment WHERE equip_code=?
-  selectInspPlan,
+  selectEquipType,
 } = require("../database/sqls/equipform.js");
 
 /* =========================
@@ -52,7 +52,7 @@ function toYmdOrNull(v) {
 
 async function viewList() {
   try {
-    const result = await mariadb.query("selectEquipType");
+    const result = await mariadb.query(selectEquipType);
     return result;
   } catch (err) {
     console.error("viewList 오류", err);
@@ -179,7 +179,7 @@ async function create(payload = {}) {
 
   // 4) DB 실행 + 에러 매핑(중복코드 등)
   try {
-    const result = await mariadb.query("insertEquip", params);
+    const result = await mariadb.query(insertEquip, params);
     return { id: result.insertId, affectedRows: result.affectedRows };
   } catch (err) {
     if (err.code === "ER_DUP_ENTRY") {
@@ -208,7 +208,7 @@ async function update(equip_code, payload = {}) {
   const equip_type = toNullTrim(pick(payload, "equip_type", "equipType"));
   const manager = toNullTrim(pick(payload, "manager", "manager"));
   const equip_status =
-    toNullTrim(pick(payload, "equip_status", "equipStatus")) || "비가동";
+    toNullTrim(pick(payload, "equip_status", "equipStatus")) || "j2";
   const insp_cycle = toNullTrim(pick(payload, "insp_cycle", "inspCycle")); // DB varchar
   const maker = toNullTrim(pick(payload, "maker", "maker"));
   const model_name = toNullTrim(pick(payload, "model_name", "modelName"));
@@ -221,18 +221,18 @@ async function update(equip_code, payload = {}) {
   }
 
   const params = [
-    equip_name,
-    equip_type,
-    manager,
-    equip_status,
-    insp_cycle,
-    maker,
-    model_name,
-    equip_image,
-    code,
+    equip_status, // ① JOIN용 상태코드
+    equip_name, // ②
+    equip_type, // ③
+    manager, // ④
+    insp_cycle, // ⑤
+    maker, // ⑥
+    model_name, // ⑦
+    equip_image, // ⑧
+    code, // ⑨
   ];
 
-  const result = await mariadb.query("updateEquip", params);
+  const result = await mariadb.query(updateEquip, params);
   return { affectedRows: result.affectedRows };
 }
 
@@ -246,7 +246,7 @@ async function remove(equip_code) {
     err.status = 400;
     throw err;
   }
-  const result = await mariadb.query("deleteEquip", [code]);
+  const result = await mariadb.query(deleteEquip, [code]);
   return { affectedRows: result.affectedRows };
 }
 
