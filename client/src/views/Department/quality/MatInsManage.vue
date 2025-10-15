@@ -12,30 +12,44 @@ import Button from 'primevue/button'
 import flatPickr from 'vue-flatpickr-component'
 import 'flatpickr/dist/flatpickr.css'
 import MatInspTargetSelectModal from './MatInspTargetSelectModal.vue' // 검사대기(가입고) 선택모달
+import axios from 'axios'
 
 // 1. 페이지 타이틀
 const currentPageTitle = ref('자재입고검사 관리')
 
 // 2. TS 데이터타입
-// 2-1. 관능평가 데이터타입(수정필요)
-interface SensoryDetail {
-  id: string // 상세행 고유키
-  question: string // 질문(세부 평가 항목)
-  s1?: number // 평가자1 점수
-  s2?: number // 평가자2 점수
-  s3?: number
-  s4?: number
-  s5?: number
-}
+// 2-1. 관능/범위 데이터타입(수정필요)
 interface SensoryRow {
-  id: string // 부모행 고유키 (dataKey로 씁니다)
-  insp_name: string // 항목
-  insp_method: number // 합격기준점수(평균)
-  file_name: number // 현재점수(평균) - 샘플
-  range_stand: string // 채점기준 설명(파일/문서 버튼로 대체 가능)
-  insp_unit: '합격' | '불합격' | '-' // 판정
-  details: SensoryDetail[] // ★ 확장행에서 표시할 자식 테이블 데이터
+  insp_item_id: string
+  insp_item_name: string
+  pass_score: number // “합격기준점수(평균)”
+  pass_score_spec?: string // (있으면) 범위 코드 등
+  score_desc: any[] // (옵션) 점수설명
+  max_score: number // 동적 점수 컬럼 개수
+  insp_result_value: number
+  r_value: string // 판정(합P/불N)
+  details: SensoryDetail[]
 }
+interface SensoryDetail {
+  id: string // `${insp_item_id}-${order}`
+  order: number // 번호 컬럼에 꽂힘
+  question_name: string // 질문 컬럼에 꽂힘
+  score?: number // 사용자가 고른 점수(1..max_score)
+}
+interface RangeRow {
+  insp_item_id: string
+  insp_item_name: string
+  min_range: string // "12.00"
+  min_label: string // "이상/초과"
+  max_range: string // "25.00"
+  max_label: string // "이하/미만"
+  unit: string // 예: "kg"
+  insp_method: string | null // "-" 등
+  file_name: string | null // "-" 등
+  insp_result_value: number // 사용자 입력값
+  r_value: string // 판정(계산 후 세팅)
+}
+
 // 2-2. 검사대상(가입고)
 interface matInspTargetDT {
   iis_id: number
@@ -49,6 +63,29 @@ interface matInspTargetDT {
   mat_unit: string
   pur_qty: number
   receipt_qty: number
+}
+// 2-3. 불량
+interface ngDT {
+  def_item_id: string
+  def_item_name: string
+}
+// 2-4. 품질기준관리
+interface qcDT {
+  insp_item_id: string
+  insp_item_name: string
+  insp_type: 'S' | 'R'
+  insp_method: string | null
+  file_name: string | null
+  min_range: string | null
+  min_range_spec: string | null
+  max_range: string | null
+  max_range_spec: string | null
+  max_score: string | null
+  unit: string | null
+  pass_score: string | null
+  pass_score_spec: string | null
+  score_desc: string | null //문자열JSON
+  sens_questions: string | null //문자열JSON
 }
 
 // 3. 변수
@@ -97,7 +134,8 @@ const matInspTargetDataattedDateTime = `${year}-${month}-${day} ${hour}:${minute
 const expandedRows = ref<Record<string, boolean> | null>(null)
 
 // 6. 모달에서 선택한 검사대상(가입고) 해당 input에 넣기
-const onInspChecked = (row: matInspTargetDT) => {
+const onInspChecked = async (row: matInspTargetDT) => {
+  // 1) 상단 input 바인딩
   matInspTargetData.iis_id = String(row.iis_id)
   matInspTargetData.pur_code = row.pur_code
   matInspTargetData.pur_name = row.pur_name
@@ -109,7 +147,10 @@ const onInspChecked = (row: matInspTargetDT) => {
   matInspTargetData.mat_unit = row.mat_unit
   matInspTargetData.pur_qty = row.pur_qty
   matInspTargetData.receipt_qty = row.receipt_qty
+  // 2) 모달 닫기
   isModalOpen.value = false
+  // 3) 불량 + 품질기준 조회를 위한 함수 호출 및 매개변수 전달(9번)
+  await findMatInspNgnQcMaster(row.mat_code)
 }
 
 // 7. 모달 이벤트(open, close)
@@ -133,47 +174,155 @@ const onInspValue = () => {
 watch([matInspQty, matInspNG], () => {
   matInspPass.value = matInspQty.value - matInspNG.value
 })
-
-// 9. 데이터 조회
-
-// 테이블 데이터
-const inspDataRan = ref([
-  {
-    insp_name: 'dd',
-    insp_method: '-',
-    file_name: '-',
-    range_stand: 'dd',
-    insp_unit: 'dd',
-    mea_values: 'dd',
-    t_unit: 'dd',
+// 8-3. 불량량 계산
+const ngValues = reactive<Record<string, number>>({}) //불량유형별 수치를 담는 객체
+watch(
+  () => Object.values(ngValues), // 모든 값이 변경될 때 감지
+  (vals) => {
+    const sum = vals.reduce((acc, val) => acc + (val || 0), 0)
+    matInspNG.value = sum
   },
+)
+
+// 9. 데이터 조회 (mat_code로 불량 및 품질기준관리 자동조회)
+const ng = ref<ngDT[]>([]) // 불량
+const qc = ref<qcDT[]>([]) // 품질기준관리
+const safeParse = (s?: string) => {
+  try {
+    return s ? JSON.parse(s) : []
+  } catch {
+    return []
+  }
+}
+const findMatInspNgnQcMaster = async (mat_code: string) => {
+  try {
+    const { data } = await axios.get(`/api/matInspQcMasternNG/${mat_code}`)
+    if (!data?.ok) throw new Error('조회 실패')
+    ng.value = data.ng ?? []
+    qc.value = (data.qc ?? []).map((r: any) => ({
+      ...r,
+      sens_questions: safeParse(r.sens_questions),
+      score_desc: safeParse(r.score_desc),
+    }))
+    processQcToTables()
+    console.log('불량 및 품질기준관리 조회결과:', data)
+  } catch (err) {
+    console.error('데이터 조회 오류:', err)
+    ng.value = []
+    qc.value = []
+    inspDataSen.value = []
+    inspDataRan.value = []
+  }
+}
+
+// 10.
+
+// 15. 테이블 데이터
+// 범위
+const inspDataRan = ref<RangeRow[]>([
+  // {
+  //   insp_name: 'dd',
+  //   insp_method: '-',
+  //   file_name: '-',
+  //   range_stand: 'dd',
+  //   insp_unit: 'dd',
+  //   mea_values: 'dd',
+  //   t_unit: 'dd',
+  // },
 ])
+// 관능
 const inspDataSen = ref<SensoryRow[]>([
-  {
-    id: 'SEN-001',
-    insp_name: '향(아로마)',
-    insp_method: 3.5, // 합격기준 평균
-    file_name: 3.8, // 현재 평균 점수(예시)
-    range_stand: '5점 만점, 평균 3.5 이상',
-    insp_unit: '합격',
-    details: [
-      { id: 'SEN-001-1', question: '잡내 없음', s1: 4, s2: 4, s3: 3, s4: 4, s5: 4 },
-      { id: 'SEN-001-2', question: '곡물 향 유지', s1: 4, s2: 3, s3: 4, s4: 4, s5: 4 },
-    ],
-  },
-  {
-    id: 'SEN-002',
-    insp_name: '맛',
-    insp_method: 3.5,
-    file_name: 3.2,
-    range_stand: '5점 만점, 평균 3.5 이상',
-    insp_unit: '불합격',
-    details: [
-      { id: 'SEN-002-1', question: '쓴맛 없음', s1: 3, s2: 3, s3: 3, s4: 4, s5: 3 },
-      { id: 'SEN-002-2', question: '단맛 균형', s1: 3, s2: 3, s3: 4, s4: 3, s5: 3 },
-    ],
-  },
+  // {
+  //   id: 'SEN-001',
+  //   insp_name: '향(아로마)',
+  //   insp_method: 3.5, // 합격기준 평균
+  //   file_name: 3.8, // 현재 평균 점수(예시)
+  //   range_stand: '5점 만점, 평균 3.5 이상',
+  //   insp_unit: '합격',
+  //   details: [
+  //     { id: 'SEN-001-1', question: '잡내 없음', s1: 4, s2: 4, s3: 3, s4: 4, s5: 4 },
+  //     { id: 'SEN-001-2', question: '곡물 향 유지', s1: 4, s2: 3, s3: 4, s4: 4, s5: 4 },
+  //   ],
+  // },
+  // {
+  //   id: 'SEN-002',
+  //   insp_name: '맛',
+  //   insp_method: 3.5,
+  //   file_name: 3.2,
+  //   range_stand: '5점 만점, 평균 3.5 이상',
+  //   insp_unit: '불합격',
+  //   details: [
+  //     { id: 'SEN-002-1', question: '쓴맛 없음', s1: 3, s2: 3, s3: 3, s4: 4, s5: 3 },
+  //     { id: 'SEN-002-2', question: '단맛 균형', s1: 3, s2: 3, s3: 4, s4: 3, s5: 3 },
+  //   ],
+  // },
 ])
+const specLabel: Record<string, string> = {
+  R1: '이상',
+  R2: '초과',
+  R3: '이하',
+  R4: '미만',
+}
+
+const processQcToTables = () => {
+  if (!qc.value?.length) {
+    inspDataSen.value = []
+    inspDataRan.value = []
+    return
+  }
+
+  const senRows: SensoryRow[] = []
+  const ranRows: RangeRow[] = []
+
+  qc.value.forEach((item) => {
+    if (item.insp_type === 'S') {
+      // 관능
+      const maxScore = Number(item.max_score) || 5
+      const passScore = Number(item.pass_score) || 0
+
+      const questions = Array.isArray(item.sens_questions) ? item.sens_questions : []
+      const details: SensoryDetail[] = questions.map((q: any) => ({
+        id: `${item.insp_item_id}-${q.order}`,
+        order: Number(q.order),
+        question_name: q.name,
+        score: undefined,
+      }))
+
+      senRows.push({
+        insp_item_id: item.insp_item_id,
+        insp_item_name: item.insp_item_name,
+        pass_score: passScore,
+        pass_score_spec: item.pass_score_spec ?? null,
+        score_desc: Array.isArray(item.score_desc) ? item.score_desc : [],
+        max_score: maxScore,
+        insp_result_value: 0,
+        r_value: '-',
+        details,
+      })
+    } else if (item.insp_type === 'R') {
+      // 범위
+      const minLabel = specLabel[item.min_range_spec ?? ''] ?? '단위'
+      const maxLabel = specLabel[item.max_range_spec ?? ''] ?? '단위'
+
+      ranRows.push({
+        insp_item_id: item.insp_item_id,
+        insp_item_name: item.insp_item_name,
+        min_range: item.min_range ?? '',
+        min_label: minLabel,
+        max_range: item.max_range ?? '',
+        max_label: maxLabel,
+        unit: item.unit ?? null,
+        insp_method: item.insp_method ?? '-',
+        file_name: item.file_name ?? '-',
+        insp_result_value: 0,
+        r_value: '',
+      })
+    }
+  })
+
+  inspDataSen.value = senRows
+  inspDataRan.value = ranRows
+}
 
 // style
 const inputStyle =
@@ -569,25 +718,28 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
             </div>
             <div class="flex flex-wrap mb-2">
               <div class="text-sm w-[95px]">불량유형</div>
-              <div class="w-1/4 flex items-center">
-                <label :class="labelStyle" class="w-[180px]">이물질 혼입 </label>
+              <div class="w-1/4 flex items-center" v-for="item in ng" :key="item.def_item_id">
+                <label :class="labelStyle" class="w-[180px]">{{ item.def_item_name }}</label>
                 <input
                   type="number"
+                  v-model.number="ngValues[item.def_item_id]"
                   :class="inputStyleSM"
                   class="w-2/3"
                   style="text-align: right"
                 />
                 <div class="text-sm w-[100px] ml-2">{{ matInspTargetData.mat_unit || '단위' }}</div>
               </div>
-              <div class="w-1/4 flex items-center">
-                <label :class="labelStyle" class="w-[180px]"> 유통기한 경과 </label>
-                <input
-                  type="number"
-                  :class="inputStyleSM"
-                  class="w-2/3"
-                  style="text-align: right"
-                />
-                <div class="text-sm w-[100px] ml-2">{{ matInspTargetData.mat_unit || '단위' }}</div>
+              <!-- 데이터 값이 없을 때 -->
+              <div v-if="ng.length == 0">
+                <div v-if="!matInspTargetData.mat_name">
+                  <span class="text-sm" style="color: #999">불량 항목이 비어 있습니다.</span>
+                </div>
+                <div v-else>
+                  <span class="text-sm" style="color: #999"
+                    >선택한 자재 '{{ matInspTargetData.mat_name }}'에 연결된 불량 항목이 없습니다.
+                    불량 기준을 등록해주세요.
+                  </span>
+                </div>
               </div>
             </div>
             <div class="w-full flex">
@@ -609,12 +761,11 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                 <p class="text-2xl font-bold">최종결과 : 합격</p>
               </div>
             </div>
-            <!-- 범위검사 -->
+            <!-- 범위검사(insp_type: "R") -->
             <DataTable
               :value="inspDataRan"
-              dataKey="t_id"
+              dataKey="insp_item_id"
               showGridlines
-              scrollable
               size="small"
               :rows="5"
               class="text-sm mb-4"
@@ -623,8 +774,9 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
               <template #empty>
                 <div class="text-center">추가된 검사대상이 없습니다.</div>
               </template>
+
               <Column
-                field="insp_name"
+                field="insp_item_name"
                 header="항목"
                 :pt="{ columnHeaderContent: 'justify-center' }"
                 style="width: 300px"
@@ -673,27 +825,38 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
               >
                 <template #body>
                   <div class="flex gap-2 w-full items-center">
+                    <!-- v-moel="min_range" -->
                     <input
                       type="text"
+                      :value="slotProps.data.min_range"
                       :class="inputDisabled"
                       class="text-right w-[100px]"
                       disabled
                     />
-                    <span class="w-[100px]">단위</span>
+                    <!-- min_range_spec -->
+                    <span class="w-[100px]">{{ slotProps.data.min_label || '단위' }}</span>
                     <span class="w-[80px] flex justify-center">- </span>
-                    <input type="text" :class="inputDisabled" class="text-right" disabled />
-                    <span class="w-[100px]">단위</span>
+                    <!-- v-model="max_range" -->
+                    <input
+                      type="text"
+                      :value="slotProps.data.max_range"
+                      :class="inputDisabled"
+                      class="text-right"
+                      disabled
+                    />
+                    <!-- max_range_spec -->
+                    <span class="w-[100px]">{{ slotProps.data.max_label || '단위' }}</span>
                   </div>
                 </template>
               </Column>
               <Column
-                field="insp_unit"
+                field="unit"
                 header="단위"
                 :pt="{ columnHeaderContent: 'justify-center' }"
                 style="width: 100px"
               />
               <Column
-                field="mea_values"
+                field="insp_result_value"
                 header="측정값 입력"
                 :pt="{ columnHeaderContent: 'justify-center' }"
                 style="width: 250px"
@@ -703,50 +866,56 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                 </template>
               </Column>
               <Column
-                field="t_unit"
+                field="r_value"
                 header="판정"
                 :pt="{ columnHeaderContent: 'justify-center' }"
                 class="text-center"
                 style="width: 120px"
               />
             </DataTable>
-            <!-- 관능검사 -->
+            <!-- 관능검사(insp_type: "S") -->
             <h4 class="mb-1.5 text-md">관능 검사</h4>
             <DataTable
               v-model:expandedRows="expandedRows"
               :value="inspDataSen"
-              dataKey="id"
+              dataKey="insp_item_id"
               showGridlines
               scrollable
               size="small"
-              :rows="5"
               class="text-sm mb-4"
             >
               <!-- 데이터가 없을 때 나타낼 방법 #empty슬롯 -->
               <template #empty>
                 <div class="text-center">추가된 검사대상이 없습니다.</div>
               </template>
+
               <Column expander style="width: 3rem" />
               <Column
-                field="insp_name"
+                field="insp_item_name"
                 header="항목"
                 :pt="{ columnHeaderContent: 'justify-center' }"
                 style="width: 400px"
               />
               <Column
-                field="insp_method"
+                field="pass_score"
                 header="합격기준점수(평균)"
                 :pt="{ columnHeaderContent: 'justify-center' }"
                 style="width: 300px"
               />
               <Column
-                field="file_name"
+                field="pass_score_spec"
+                header="합격기준점수 범위"
+                :pt="{ columnHeaderContent: 'justify-center' }"
+                style="width: 300px"
+              />
+              <Column
+                field="insp_result_value"
                 header="현재점수"
                 :pt="{ columnHeaderContent: 'justify-center' }"
                 style="width: 300px"
               />
               <Column
-                field="range_stand"
+                field="score_desc"
                 header="채점기준"
                 :pt="{ columnHeaderContent: 'justify-center' }"
                 style="width: 120px"
@@ -764,23 +933,23 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                 </template>
               </Column>
               <Column
-                field="insp_unit"
+                field="r_value"
                 header="판정"
                 :pt="{ columnHeaderContent: 'justify-center' }"
                 style="width: 120px"
               />
-              <!-- 확장버전 -->
+              <!-- 확장버전(sens_questions 부분이 들어감) -->
               <template #expansion="slotProps">
                 <div class="p-4">
                   <DataTable :value="slotProps.data.details" dataKey="id" size="small">
                     <Column
-                      field="id"
+                      field="order"
                       header="번호"
                       :pt="{ columnHeaderContent: 'justify-center' }"
                       style="width: 120px"
                     />
                     <Column
-                      field="question"
+                      field="question_name"
                       header="질문"
                       :pt="{ columnHeaderContent: 'justify-center' }"
                     />
@@ -789,14 +958,25 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                       header="1"
                       :pt="{ columnHeaderContent: 'justify-center' }"
                       style="width: 60px"
+                      v-for="n in slotProps.data.max_score"
+                      :key="n"
+                      :field="`s${n}`"
+                      :header="String(n)"
                     >
                       <template #body>
                         <div class="flex justify-center">
-                          <input type="radio" name="senScore" class="checkboxStyle" />
+                          <input
+                            type="radio"
+                            name="senScore"
+                            class="checkboxStyle"
+                            :name="`${slotProps.data.insp_item_id}-${detailSlot.data.id}`"
+                            :value="n"
+                            v-model.number="detailSlot.data.score"
+                          />
                         </div>
                       </template>
                     </Column>
-                    <Column
+                    <!-- <Column
                       field="s2"
                       header="2"
                       :pt="{ columnHeaderContent: 'justify-center' }"
@@ -843,7 +1023,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                           <input type="radio" name="senScore" class="checkboxStyle" />
                         </div>
                       </template>
-                    </Column>
+                    </Column> -->
                   </DataTable>
                 </div>
               </template>
