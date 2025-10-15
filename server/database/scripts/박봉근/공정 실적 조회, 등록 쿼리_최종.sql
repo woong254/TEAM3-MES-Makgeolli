@@ -1,3 +1,4 @@
+-- 작업지시목록 쿼리
 SELECT  ml.mk_ord_no "작업지시코드",
 		mf.writing_date "지시일자",
         mf.mk_name "지시명",
@@ -29,3 +30,21 @@ FROM makelist ml JOIN makeform mf
 				   ON ml.mk_list = pcss.mk_list
 -- WHERE ml.mk_ord_no = 'MK-20251014-004' 
 ORDER BY ml.mk_list ASC, md.mk_priority ASC, pd.seq_no ASC;
+
+-- 설비 선택 쿼리
+SELECT  em.equip_code,
+		em.equip_name,
+        comn.comncode_dtnm
+FROM proc_master pm JOIN equip_master em
+					  ON em.equip_type = pm.equip_type
+					JOIN comncode_dt comn
+					  ON em.equip_status = comn.comncode_detailid
+WHERE pm.proc_name = '세미';
+
+-- 작업자 선택
+select *
+from emp_master
+where role = (select  comncode_detailid
+			  from comncode_dt
+			  where comncode_dtnm = '작업자');
+
