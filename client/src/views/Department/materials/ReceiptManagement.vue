@@ -385,11 +385,18 @@ onMounted(async () => {
       </ComponentCard>
       <ComponentWoong style="height: 500px">
         <template #body-content>
-          <div class="flex justify-end space-x-2 mb-1">
-            <button type="button" class="btn-color btn-common">등록</button>
-            <button type="button" class="btn-white btn-common">삭제</button>
+          <div class="relative">
+            <div class="flex justify-end space-x-2 mb-1 absolute right-0 top-0 z-10">
+              <button type="button" class="btn-color btn-common">등록</button>
+              <button type="button" class="btn-white btn-common">삭제</button>
+            </div>
           </div>
-          <TabView @tab-change="onTabChange">
+          <TabView
+            @tab-change="onTabChange"
+            :pt="{
+              navContainer: { class: 'pr-40' },
+            }"
+          >
             <TabPanel header="검사대기">
               <DataTable
                 :value="pending"

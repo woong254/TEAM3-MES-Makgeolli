@@ -392,18 +392,150 @@ DELIMITER ;
 
 -- 품질기준관리 수정 프로시저 (변경된 사항만 수정하는 것보다 재적재 방식이 안전하고 덜복잡)
 DROP PROCEDURE IF EXISTS insp_master_update;
+-- DELIMITER $$
+
+-- CREATE PROCEDURE insp_master_update (
+--   -- [키]
+--   IN p_insp_item_id        VARCHAR(100),
+
+--   -- [공통]
+--   IN p_insp_item_name      VARCHAR(200),
+--   IN p_insp_type           CHAR(1),
+--   IN p_use_yn              CHAR(1),
+--   IN p_insp_method         VARCHAR(1000),
+--   IN p_insp_file_name      VARCHAR(50),
+--   IN p_writer              VARCHAR(100),
+
+--   -- [범위형]
+--   IN p_min_range           DECIMAL(6,2),
+--   IN p_min_range_spec      CHAR(2),
+--   IN p_max_range           DECIMAL(6,2),
+--   IN p_max_range_spec      CHAR(2),
+--   IN p_unit                VARCHAR(5),
+
+--   -- [관능형]
+--   IN p_max_score           INT,
+--   IN p_pass_score          DECIMAL(6,2),
+--   IN p_pass_score_spec     CHAR(2),
+--   IN p_score_desc_json     TEXT,
+
+--   -- [세션키]
+--   IN p_session_questions   VARCHAR(64),
+--   IN p_session_targets     VARCHAR(64)
+-- )
+-- BEGIN
+--   DECLARE done INT DEFAULT 0;
+--   DECLARE v_base_qcs INT DEFAULT 0;  -- 오늘 날짜 기준 QCS- 끝번호
+--   DECLARE v_base_qct INT DEFAULT 0;  -- 오늘 날짜 기준 QCT- 끝번호
+
+--   DECLARE EXIT HANDLER FOR SQLEXCEPTION
+--   BEGIN
+--     ROLLBACK;
+--     RESIGNAL;
+--   END;
+
+--   START TRANSACTION;
+
+--   /* 1) qc_master 업데이트 */
+--   UPDATE qc_master
+--      SET insp_item_name  = p_insp_item_name,
+--          insp_type       = p_insp_type,
+--          use_yn          = IFNULL(p_use_yn,'Y'),
+--          insp_method     = p_insp_method,
+--          file_name       = p_insp_file_name,
+--          max_score       = CASE WHEN p_insp_type='S' THEN p_max_score       ELSE NULL END,
+--          pass_score      = CASE WHEN p_insp_type='S' THEN p_pass_score      ELSE NULL END,
+--          pass_score_spec = CASE WHEN p_insp_type='S' THEN p_pass_score_spec ELSE NULL END,
+--          score_desc      = CASE WHEN p_insp_type='S' THEN p_score_desc_json ELSE NULL END,
+--          writer          = p_writer,
+--          write_date      = NOW()
+--    WHERE insp_item_id = p_insp_item_id;
+
+--   /* 2) 범위형 상세 */
+--   IF p_insp_type = 'R' THEN
+--     INSERT INTO qc_master_ran (insp_item_id, min_range, min_range_spec, max_range, max_range_spec, unit)
+--     VALUES (p_insp_item_id, p_min_range, p_min_range_spec, p_max_range, p_max_range_spec, p_unit)
+--     ON DUPLICATE KEY UPDATE
+--       min_range      = VALUES(min_range),
+--       min_range_spec = VALUES(min_range_spec),
+--       max_range      = VALUES(max_range),
+--       max_range_spec = VALUES(max_range_spec),
+--       unit           = VALUES(unit);
+--   ELSE
+--     DELETE FROM qc_master_ran WHERE insp_item_id = p_insp_item_id;
+--   END IF;
+
+--   /* 3) 관능형 질문 재적재 */
+--   IF p_insp_type = 'S' THEN
+--     -- 기존 싹 지우고 다시 넣는 정책
+--     DELETE FROM qc_master_sen WHERE insp_item_id = p_insp_item_id;
+
+--     /* 오늘 날짜 기준 QCS-의 최대 끝번호를 읽어 v_base_qcs 로 확보 (동시성 대비 FOR UPDATE) */
+--     SELECT IFNULL(MAX(CAST(RIGHT(ques_id, 3) AS UNSIGNED)), 0)
+--       INTO v_base_qcs
+--       FROM qc_master_sen
+--      WHERE SUBSTR(ques_id, 5, 8) = DATE_FORMAT(NOW(), '%Y%m%d')
+--      FOR UPDATE;
+
+--     INSERT INTO qc_master_sen (ques_id, ques_order, ques_name, insp_item_id)
+--     SELECT
+--       CONCAT(
+--         'QCS-',
+--         DATE_FORMAT(NOW(), '%Y%m%d'),
+--         '-',
+--         LPAD(v_base_qcs + ROW_NUMBER() OVER (ORDER BY id), 3, '0')
+--       ) AS ques_id,
+--       ROW_NUMBER() OVER (ORDER BY id) AS ques_order,
+--       ques_name,
+--       p_insp_item_id
+--     FROM tmp_sen_questions
+--     WHERE session_id = p_session_questions;
+--   ELSE
+--     DELETE FROM qc_master_sen WHERE insp_item_id = p_insp_item_id;
+--   END IF;
+
+--   /* 4) 검사대상 재적재 */
+--   DELETE FROM qc_master_target WHERE insp_item_id = p_insp_item_id;
+
+--   /* 오늘 날짜 기준 QCT-의 최대 끝번호 확보 */
+--   SELECT IFNULL(MAX(CAST(RIGHT(insp_target_id, 3) AS UNSIGNED)), 0)
+--     INTO v_base_qct
+--     FROM qc_master_target
+--    WHERE SUBSTR(insp_target_id, 5, 8) = DATE_FORMAT(NOW(), '%Y%m%d')
+--    FOR UPDATE;
+
+--   INSERT INTO qc_master_target (insp_target_id, insp_target_type, insp_target_code, product_code, mat_code, insp_item_id)
+--   SELECT
+--     CONCAT(
+--       'QCT-',
+--       DATE_FORMAT(NOW(), '%Y%m%d'),
+--       '-',
+--       LPAD(v_base_qct + ROW_NUMBER() OVER (ORDER BY id), 3, '0')
+--     ) AS insp_target_id,
+--     insp_target_type,
+--     insp_target_code,
+--     product_code,
+--     mat_code,
+--     p_insp_item_id
+--   FROM tmp_targets
+--   WHERE session_id = p_session_targets;
+
+--   COMMIT;
+-- END $$
+
+-- DELIMITER ;
 DELIMITER $$
 
-CREATE PROCEDURE insp_master_update (
+CREATE DEFINER=`team3`@`%` PROCEDURE `insp_master_update_v2`(
   -- [키]
   IN p_insp_item_id        VARCHAR(100),
 
   -- [공통]
   IN p_insp_item_name      VARCHAR(200),
-  IN p_insp_type           CHAR(1),
+  IN p_insp_type           CHAR(1),          -- 'R' 또는 'S'
   IN p_use_yn              CHAR(1),
   IN p_insp_method         VARCHAR(1000),
-  IN p_insp_file_name      VARCHAR(50),
+  IN p_insp_file_name      VARCHAR(1000),
   IN p_writer              VARCHAR(100),
 
   -- [범위형]
@@ -424,9 +556,9 @@ CREATE PROCEDURE insp_master_update (
   IN p_session_targets     VARCHAR(64)
 )
 BEGIN
-  DECLARE done INT DEFAULT 0;
-  DECLARE v_base_qcs INT DEFAULT 0;  -- 오늘 날짜 기준 QCS- 끝번호
-  DECLARE v_base_qct INT DEFAULT 0;  -- 오늘 날짜 기준 QCT- 끝번호
+  DECLARE v_rows INT DEFAULT 0;
+  DECLARE v_base_qcs INT DEFAULT 0;
+  DECLARE v_base_qct INT DEFAULT 0;
 
   DECLARE EXIT HANDLER FOR SQLEXCEPTION
   BEGIN
@@ -436,7 +568,18 @@ BEGIN
 
   START TRANSACTION;
 
-  /* 1) qc_master 업데이트 */
+  /* 0) 존재 검증: 수정은 기존 키가 반드시 있어야 함 (없으면 에러) */
+  SELECT COUNT(*) INTO v_rows
+    FROM qc_master
+   WHERE insp_item_id = p_insp_item_id
+   FOR UPDATE;              -- 동시성 제어(해당 키 레코드 잠금)
+
+  IF v_rows = 0 THEN
+    SIGNAL SQLSTATE '45000'
+      SET MESSAGE_TEXT = '수정 대상 insp_item_id가 존재하지 않습니다.';
+  END IF;
+
+  /* 1) qc_master UPDATE (여기서 절대 INSERT/키 변경 금지) */
   UPDATE qc_master
      SET insp_item_name  = p_insp_item_name,
          insp_type       = p_insp_type,
@@ -451,7 +594,7 @@ BEGIN
          write_date      = NOW()
    WHERE insp_item_id = p_insp_item_id;
 
-  /* 2) 범위형 상세 */
+  /* 2) 범위형 상세 (R) */
   IF p_insp_type = 'R' THEN
     INSERT INTO qc_master_ran (insp_item_id, min_range, min_range_spec, max_range, max_range_spec, unit)
     VALUES (p_insp_item_id, p_min_range, p_min_range_spec, p_max_range, p_max_range_spec, p_unit)
@@ -461,16 +604,18 @@ BEGIN
       max_range      = VALUES(max_range),
       max_range_spec = VALUES(max_range_spec),
       unit           = VALUES(unit);
-  ELSE
-    DELETE FROM qc_master_ran WHERE insp_item_id = p_insp_item_id;
-  END IF;
 
-  /* 3) 관능형 질문 재적재 */
-  IF p_insp_type = 'S' THEN
-    -- 기존 싹 지우고 다시 넣는 정책
+    /* 관능형 잔재 정리 */
     DELETE FROM qc_master_sen WHERE insp_item_id = p_insp_item_id;
 
-    /* 오늘 날짜 기준 QCS-의 최대 끝번호를 읽어 v_base_qcs 로 확보 (동시성 대비 FOR UPDATE) */
+  /* 3) 관능형 상세 (S) */
+  ELSEIF p_insp_type = 'S' THEN
+    /* 범위형 잔재 정리 */
+    DELETE FROM qc_master_ran WHERE insp_item_id = p_insp_item_id;
+
+    /* === 선택 A: 완전 재적재(현재 구조 유지, ques_id는 매번 새로 생성) === */
+    DELETE FROM qc_master_sen WHERE insp_item_id = p_insp_item_id;
+
     SELECT IFNULL(MAX(CAST(RIGHT(ques_id, 3) AS UNSIGNED)), 0)
       INTO v_base_qcs
       FROM qc_master_sen
@@ -479,25 +624,22 @@ BEGIN
 
     INSERT INTO qc_master_sen (ques_id, ques_order, ques_name, insp_item_id)
     SELECT
-      CONCAT(
-        'QCS-',
-        DATE_FORMAT(NOW(), '%Y%m%d'),
-        '-',
-        LPAD(v_base_qcs + ROW_NUMBER() OVER (ORDER BY id), 3, '0')
-      ) AS ques_id,
-      ROW_NUMBER() OVER (ORDER BY id) AS ques_order,
+      CONCAT('QCS-', DATE_FORMAT(NOW(), '%Y%m%d'), '-', LPAD(v_base_qcs + ROW_NUMBER() OVER (ORDER BY id), 3, '0')),
+      ROW_NUMBER() OVER (ORDER BY id),
       ques_name,
       p_insp_item_id
     FROM tmp_sen_questions
     WHERE session_id = p_session_questions;
-  ELSE
-    DELETE FROM qc_master_sen WHERE insp_item_id = p_insp_item_id;
+
+    /* === 선택 B: 보존형 업서트(ques_id 유지)로 바꾸려면
+         tmp_sen_questions에 기존 ques_id를 함께 올려주고,
+         INSERT ... ON DUPLICATE KEY UPDATE 형태로 구현하세요.
+       (현재 tmp 테이블 스키마가 ques_id를 안 들고 있다면 선택 A 유지) === */
   END IF;
 
-  /* 4) 검사대상 재적재 */
+  /* 4) 검사대상 재적재 (현 구조 유지: id는 매번 새로 생성) */
   DELETE FROM qc_master_target WHERE insp_item_id = p_insp_item_id;
 
-  /* 오늘 날짜 기준 QCT-의 최대 끝번호 확보 */
   SELECT IFNULL(MAX(CAST(RIGHT(insp_target_id, 3) AS UNSIGNED)), 0)
     INTO v_base_qct
     FROM qc_master_target
@@ -506,12 +648,7 @@ BEGIN
 
   INSERT INTO qc_master_target (insp_target_id, insp_target_type, insp_target_code, product_code, mat_code, insp_item_id)
   SELECT
-    CONCAT(
-      'QCT-',
-      DATE_FORMAT(NOW(), '%Y%m%d'),
-      '-',
-      LPAD(v_base_qct + ROW_NUMBER() OVER (ORDER BY id), 3, '0')
-    ) AS insp_target_id,
+    CONCAT('QCT-', DATE_FORMAT(NOW(), '%Y%m%d'), '-', LPAD(v_base_qct + ROW_NUMBER() OVER (ORDER BY id), 3, '0')),
     insp_target_type,
     insp_target_code,
     product_code,
@@ -521,6 +658,61 @@ BEGIN
   WHERE session_id = p_session_targets;
 
   COMMIT;
-END $$
+END$$
 
 DELIMITER ;
+
+
+
+
+-- 조회 수정시 중복 문제 
+-- 품질기준관리 조회(목록) - 아이템당 1행
+SELECT 
+  qcm.insp_item_id,
+  qcm.insp_item_name,
+  -- 대상명들을 한 칸에 모아 보여주기
+  GROUP_CONCAT(
+    DISTINCT COALESCE(p.prod_name, m.mat_name)
+    ORDER BY COALESCE(p.prod_name, m.mat_name)
+    SEPARATOR ', '
+  ) AS target_names,
+  -- 품목구분(공통코드명)도 집계
+  GROUP_CONCAT(
+    DISTINCT c.comncode_dtnm
+    ORDER BY c.comncode_dtnm
+    SEPARATOR ', '
+  ) AS insp_target_names,
+  qcm.use_yn,
+  MAX(qcm.write_date) AS write_date
+FROM qc_master qcm
+LEFT JOIN qc_master_target qct
+       ON qct.insp_item_id = qcm.insp_item_id
+LEFT JOIN comncode_dt c
+       ON c.comncode_detailid = qct.insp_target_code
+      AND c.comncode_id = '0A'             -- ★ 코드군(예: 품목구분) 고정
+LEFT JOIN prod_master AS p
+       ON p.prod_code = qct.product_code
+LEFT JOIN mat_master  AS m
+       ON m.mat_code = qct.mat_code
+GROUP BY qcm.insp_item_id, qcm.insp_item_name, qcm.use_yn
+ORDER BY write_date DESC;
+
+-- 기존 조회 
+-- SELECT qcm.insp_item_id
+--       ,qcm.insp_item_name
+--       ,COALESCE(p.prod_name, m.mat_name) AS target_name
+--       ,c.comncode_dtnm      AS insp_target_name 
+--       ,qcm.use_yn
+-- FROM qc_master qcm
+-- LEFT JOIN qc_master_target qct
+--        ON qct.insp_item_id = qcm.insp_item_id
+-- LEFT JOIN comncode_dt c
+--        ON c.comncode_detailid = qct.insp_target_code 
+-- LEFT JOIN prod_master AS p
+--        ON p.prod_code = qct.product_code
+-- LEFT JOIN mat_master AS m
+--        ON m.mat_code = qct.mat_code
+-- ORDER BY qcm.insp_item_id;
+
+
+

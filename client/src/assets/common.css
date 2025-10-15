@@ -76,3 +76,23 @@
   --p-checkbox-checked-focus-border-color: #213555 !important;
   --p-primary-50: #ebeef3 !important;
 }
+
+/* hover color */
+.menu-item-active {
+  background-color: #f0f2f6 !important;
+  color: #2b4978 !important;
+  font-weight: 700;
+}
+.menu-item-icon-active {
+  color: #2b4978 !important;
+  font-weight: 700;
+}
+.text-brand-500 {
+  color: #2b4978 !important;
+  font-weight: 700;
+}
+.menu-dropdown-item-active {
+  background-color: #f0f2f6 !important;
+  color: #2b4978 !important;
+  font-weight: 700;
+}
