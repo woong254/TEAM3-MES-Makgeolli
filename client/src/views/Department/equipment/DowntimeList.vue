@@ -12,6 +12,8 @@ import DataCol from 'primevue/column'
 import flatPickr from 'vue-flatpickr-component'
 import 'flatpickr/dist/flatpickr.css'
 import equipSelectModal from './equipSelectModal.vue'
+import TabView from 'primevue/tabview'
+import TabPanel from 'primevue/tabpanel'
 
 /* ========================
  * Types
@@ -81,6 +83,30 @@ const searchForm = ref(initSearch())
 const equipList = shallowRef<EquipItem[]>([])
 const selectedRow = ref<EquipItem | null>(null)
 const count = computed(() => equipList.value.length)
+const activeTab = ref(0)
+const selectComplete = ref([])
+const selectPending = ref([])
+
+const refreshPending = async () => {
+  pending.value = await loadIisList('검사대기')
+}
+const refreshComplete = async () => {
+  complete.value = await loadIisList('검사완료')
+}
+const refreshBoth = async () => {
+  await Promise.all([refreshPending(), refreshComplete()])
+}
+onMounted(async () => {
+  await refreshBoth() // 진입 시 두 탭 모두 채우기
+})
+
+const onTabChange = async (e) => {
+  activeTab.value = e.index
+  selectComplete.value = []
+  selectPending.value = []
+  if (e.index === 0) await refreshPending()
+  else await refreshComplete()
+}
 
 /* (optional) 담당자 모달 & 이미지 프리뷰 */
 const isModalOpen = ref(false)
@@ -220,7 +246,9 @@ onBeforeMount(getEquipList)
       <!-- 목록 -->
       <ComponentCard title="설비목록">
         <template #header-right>
-          <div class="flex justify-end"></div>
+          <div class="flex justify-end">
+            <button class="btn-common btn-color">비가동</button>
+          </div>
         </template>
 
         <template #body-content>
@@ -261,6 +289,13 @@ onBeforeMount(getEquipList)
         </template>
 
         <template #body-content>
+           <TabView
+            @tab-change="onTabChange"
+            :pt="{
+              navContainer: { class: 'pr-40' },
+            }"
+          >
+            <TabPanel header="검사대기">
           <DataTable
             :value="equipList"
             showGridlines

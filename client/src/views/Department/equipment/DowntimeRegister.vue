@@ -300,11 +300,15 @@ onBeforeMount(getEquipList)
                 </tr>
 
                 <tr>
-                  <th class="border border-gray-300 bg-gray-50 text-sm text-left p-2">설비유형</th>
+                  <th class="border border-gray-300 bg-gray-50 text-sm text-left p-2">
+                    비가동코드
+                  </th>
                   <td class="border border-gray-300 p-2">
                     <input v-model="createForm.equipType" type="text" :class="inputStyle" />
                   </td>
-                  <th class="border border-gray-300 bg-gray-50 text-sm text-left p-2">담당자</th>
+                  <th class="border border-gray-300 bg-gray-50 text-sm text-left p-2">
+                    비가동유형
+                  </th>
                   <td class="border border-gray-300 p-2">
                     <div class="relative">
                       <input
@@ -325,11 +329,13 @@ onBeforeMount(getEquipList)
                 </tr>
 
                 <tr>
-                  <th class="border border-gray-300 bg-gray-50 text-sm text-left p-2">제조사</th>
+                  <th class="border border-gray-300 bg-gray-50 text-sm text-left p-2">비고</th>
                   <td class="border border-gray-300 p-2">
                     <input v-model="createForm.maker" type="text" :class="inputStyle" />
                   </td>
-                  <th class="border border-gray-300 bg-gray-50 text-sm text-left p-2">설치일자</th>
+                  <th class="border border-gray-300 bg-gray-50 text-sm text-left p-2">
+                    비가동시작일시
+                  </th>
                   <td class="border border-gray-300 p-2">
                     <flat-pickr
                       v-model="createForm.installDate"
@@ -341,7 +347,9 @@ onBeforeMount(getEquipList)
                 </tr>
 
                 <tr>
-                  <th class="border border-gray-300 bg-gray-50 text-sm text-left p-2">모델명</th>
+                  <th class="border border-gray-300 bg-gray-50 text-sm text-left p-2">
+                    비가동종료일시
+                  </th>
                   <td class="border border-gray-300 p-2">
                     <input v-model="createForm.modelName" type="text" :class="inputStyle" />
                   </td>
