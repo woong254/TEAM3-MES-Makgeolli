@@ -223,7 +223,8 @@ SELECT
   i.prod_date,
   i.exp_date,
   i.pre_receipt_date,
-  i.receipt_qty
+  i.receipt_qty,
+  i.pass_qty
 FROM iis i
 JOIN mat_master m ON m.mat_code  = i.mat_code
 JOIN bcnc_master b ON b.bcnc_code = i.bcnc_code
@@ -232,10 +233,37 @@ WHERE i.insp_status = ?
 ORDER BY i.iis_id DESC
 `;
 
+const deleteIis = `
+DELETE
+FROM iis
+WHERE insp_status = '검사대기'
+AND iis_id IN(?)`;
+
+const selectPurMatList `
+SELECT
+  pm.pur_code,
+  pf.pur_name,
+  pf.bcnc_code,
+  b.bcnc_name,
+  pm.mat_code,
+  m.mat_name,
+  m.mat_spec,
+  m.mat_unit,
+  pm.unreceipt_qty,
+  pm.receipt_status
+FROM pur_mat pm
+JOIN pur_form pf ON pf.pur_code = pm.pur_code
+JOIN mat_master m ON m.mat_code = pm.mat_code
+JOIN bcnc_master b ON b.bcnc_code = pf.bcnc_code
+WHERE pm.receipt_status IN ('입고대기', '부분입고')
+AND pf.receipt_date = ?
+`
+
 module.exports = {
   // 목록/검색
   selectPurList,
   selectPurTarget,
+  selectPurMatList,
   iisList,
   // 단건 조회
   selectPurHeaderByCode,
@@ -250,6 +278,7 @@ module.exports = {
   purCode,
   // 삭제
   deletePur,
+  deleteIis,
   // 저장 관련
   existsPurForm,
   upsertPurForm,

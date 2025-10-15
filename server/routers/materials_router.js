@@ -147,4 +147,16 @@ router.get("/iis/list", async (req, res) => {
   res.send(list);
 });
 
+// POST /api/iis/delete  { ids: number[] }
+router.post("/iis/delete", async (req, res) => {
+  const ids = Array.isArray(req.body?.ids) ? req.body.ids : [];
+  if (!ids.length) return res.status(400).json({ ok: false, msg: "EMPTY_IDS" });
+  try {
+    const out = await materialsService.deleteIisList(ids);
+    return res.status(200).json(out); // { ok: true, deleted: n } 등
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ ok: false, msg: "DELETE_FAILED" });
+  }
+});
 module.exports = router;
