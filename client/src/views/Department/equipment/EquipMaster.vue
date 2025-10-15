@@ -70,7 +70,7 @@ const toSnake = (p: CreateEquipPayload) => ({
   equip_name: p.equipName?.trim(),
   equip_type: p.equipType?.trim(),
   manager: p.manager ?? null,
-  equip_status: p.equipStatus || '비가동',
+  equip_status: p.equipStatus || 'j2',
   insp_cycle: p.inspCycle ?? null,
   install_date: p.installDate || null,
   model_name: p.modelName || null,
@@ -83,7 +83,7 @@ const initForm = (): CreateEquipPayload => ({
   equipName: '',
   equipType: '',
   manager: '',
-  equipStatus: '비가동',
+  equipStatus: 'j2',
   inspCycle: 0,
   installDate: '',
   modelName: '',
@@ -109,9 +109,16 @@ const selectedRow = ref<EquipItem | null>(null)
 const createForm = ref<CreateEquipPayload>(initForm())
 
 /* (optional) 담당자 모달 & 이미지 프리뷰 */
+
 const isModalOpen = ref(false)
-const openModal = () => (isModalOpen.value = true)
-const closeModal = () => (isModalOpen.value = false)
+const openModal = () => {
+  isModalOpen.value = true
+}
+
+const closeModal = () => {
+  isModalOpen.value = false
+}
+
 const fileInputEl = ref<HTMLInputElement | null>(null)
 const eqpImageName = ref('선택된 파일 없음')
 const eqpImagePreview = ref('')
@@ -150,6 +157,22 @@ const getEquipList = async () => {
     equipList.value = []
   }
 }
+
+// // 설비유형 공통코드
+// interface ViewType {
+//   comncode_dtnm: string
+// }
+
+// const StatusInfo = ref<ViewType[]>([])
+
+// const viewType = async () => {
+//   try {
+//     const result = await axios.get('/api/equipments')
+//     TypeInfo.value = result.data
+//   } catch (err) {
+//     console.error(err)
+//   }
+// }
 
 //수정/등록 함수
 const saveEquip = async () => {
@@ -272,21 +295,11 @@ onBeforeMount(getEquipList)
           <div class="flex items-center gap-6">
             <div :class="labelStyle">설비상태</div>
             <label class="flex items-center gap-2">
-              <input
-                v-model="searchForm.equipStatus"
-                type="radio"
-                name="equip-using"
-                value="가동중"
-              />
+              <input v-model="searchForm.equipStatus" type="radio" name="equip-using" value="j1" />
               가동중
             </label>
             <label class="flex items-center gap-2">
-              <input
-                v-model="searchForm.equipStatus"
-                type="radio"
-                name="equip-using"
-                value="비가동"
-              />
+              <input v-model="searchForm.equipStatus" type="radio" name="equip-using" value="j2" />
               비가동
             </label>
           </div>
@@ -327,7 +340,7 @@ onBeforeMount(getEquipList)
             <DataCol field="equipStatus" header="설비상태" sortable />
             <DataCol
               field="inspCycle"
-              header="점검주기"
+              header="점검예정일"
               sortable
               style="width: 110px; text-align: center"
             />
@@ -469,14 +482,14 @@ onBeforeMount(getEquipList)
                     <!-- 신규 등록 시: 비가동 고정, 수정 시: 선택 가능 -->
                     <template v-if="!selectedRow">
                       <select v-model="createForm.equipStatus" :class="inputStyle" disabled>
-                        <option value="비가동">비가동</option>
+                        <option value="j2">비가동</option>
                       </select>
                     </template>
 
                     <template v-else>
                       <select v-model="createForm.equipStatus" :class="inputStyle">
-                        <option value="가동중">가동중</option>
-                        <option value="비가동">비가동</option>
+                        <option value="j1">가동중</option>
+                        <option value="j2">비가동</option>
                       </select>
                     </template>
                   </td>
