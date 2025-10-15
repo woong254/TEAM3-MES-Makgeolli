@@ -38,7 +38,7 @@ interface OrderItem {
   prod_name: string
   prod_spec: string
   prod_unit: string
-  op_qty: number
+  op_qty: number // 주문수량
   due_date: string
   ep_lot: string
   epep_dt: string
@@ -582,7 +582,7 @@ const updateQty = (item: OrderItem) => {
                       type="number"
                       :class="baseInputClass"
                       style="text-align: right"
-                      :min="1"
+                      :min="0"
                       :max="Math.min(data.ep_qty, data.op_qty)"
                       @change="updateQty(data)"
                     /> </template

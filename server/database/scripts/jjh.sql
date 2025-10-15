@@ -330,7 +330,7 @@ FROM   processform;
 SELECT *
 FROM   epis;
 SELECT *
-FROM   edcts;
+FROM   edcts;	
 
 
 -- 테이블 foreign키 넣는 코드
@@ -483,26 +483,92 @@ SELECT
     pm.prod_name,
     pm.prod_spec,
     pm.prod_unit,
-    od.op_qty,
+    od.op_qty AS ord_qty,
+  IFNULL(SUM(e.ord_epos_qty), 0) AS shipped_qty,   -- 누적 출고량
+  (od.op_qty - IFNULL(SUM(e.ord_epos_qty), 0)) AS remain_qty, -- 미출고량
     o.due_date,
     e.ep_lot,
     e.epep_dt,
     e.ep_qty,
     cd.comncode_dtnm
 FROM orderdetail od
-JOIN orderform o ON od.ord_id = o.ord_id
-JOIN bcnc_master bm ON o.bcnc_code = bm.bcnc_code
-JOIN prod_master pm ON od.prod_code = pm.prod_code
-JOIN comncode_dt cd ON od.ofd_st = cd.comncode_detailid
-JOIN (
-    SELECT prod_code, MIN(epep_dt) AS min_epep_dt
-    FROM epis
-    WHERE ep_qty > 0
-    GROUP BY prod_code
-) em ON em.prod_code = od.prod_code
-JOIN epis e ON e.prod_code = em.prod_code AND e.epep_dt = em.min_epep_dt
+	JOIN orderform o 
+    ON od.ord_id = o.ord_id
+	JOIN bcnc_master bm 
+    ON o.bcnc_code = bm.bcnc_code
+	JOIN prod_master pm 
+    ON od.prod_code = pm.prod_code
+	JOIN comncode_dt cd 
+    ON od.ofd_st = cd.comncode_detailid
+	JOIN (
+		SELECT prod_code, MIN(epep_dt) AS min_epep_dt
+		FROM epis
+		WHERE ep_qty > 0
+		GROUP BY prod_code
+	) em 
+    ON em.prod_code = od.prod_code
+	JOIN epis e 
+    ON e.prod_code = em.prod_code AND e.epep_dt = em.min_epep_dt
 ORDER BY od.ofd_no, e.epep_dt;
 
 -- 완제품 출고 관리 출고 버튼 기능
 INSERT INTO edcts(ofd_no, ep_lot, ord_epos_qty, remark)
 VALUES (?,?,?,?);
+
+SELECT 
+    od.ofd_no,
+    o.ord_name,
+    bm.bcnc_name,
+    od.prod_code,
+    pm.prod_name,
+    pm.prod_spec,
+    pm.prod_unit,
+    od.op_qty AS ord_qty,
+    IFNULL(SUM(ed.ord_epos_qty), 0) AS shipped_qty,                 -- 누적 출고량
+    (od.op_qty - IFNULL(SUM(ed.ord_epos_qty), 0)) AS remain_qty,    -- 미출고량
+    o.due_date,
+    e.ep_lot,
+    e.epep_dt,
+    e.ep_qty,
+    cd.comncode_dtnm
+FROM orderdetail od
+    JOIN orderform o 
+        ON od.ord_id = o.ord_id
+    JOIN bcnc_master bm 
+        ON o.bcnc_code = bm.bcnc_code
+    JOIN prod_master pm 
+        ON od.prod_code = pm.prod_code
+    JOIN comncode_dt cd 
+        ON od.ofd_st = cd.comncode_detailid
+    JOIN (
+        SELECT prod_code, MIN(epep_dt) AS min_epep_dt
+        FROM epis
+        WHERE ep_qty > 0
+        GROUP BY prod_code
+    ) em 
+        ON em.prod_code = od.prod_code
+    JOIN epis e 
+        ON e.prod_code = em.prod_code 
+        AND e.epep_dt = em.min_epep_dt
+    LEFT JOIN edcts ed                     -- ✅ 출고이력 조인 추가
+        ON od.ofd_no = ed.ofd_no
+GROUP BY 
+    od.ofd_no,
+    o.ord_name,
+    bm.bcnc_name,
+    od.prod_code,
+    pm.prod_name,
+    pm.prod_spec,
+    pm.prod_unit,
+    od.op_qty,
+    o.due_date,
+    e.ep_lot,
+    e.epep_dt,
+    e.ep_qty,
+    cd.comncode_dtnm
+ORDER BY 
+    od.ofd_no, 
+    e.epep_dt;
+
+select *
+from edcts;
