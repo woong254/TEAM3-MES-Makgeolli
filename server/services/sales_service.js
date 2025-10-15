@@ -426,6 +426,7 @@ const insertEpOs = async (orderForm) => {
         item.ord_epos_qty,
         item.remark,
       ]);
+      console.log("item:", item);
 
       // 출고할때 주문수량 - 주문제품출고수량 0 이면 주문서 상세에 있는 주문서상세상태를 변경
       await conn.query(
@@ -438,11 +439,17 @@ const insertEpOs = async (orderForm) => {
         `UPDATE epis SET ep_qty = ep_qty - ?, epos_qty = epos_qty + ? WHERE prod_code = ? AND ep_lot = ?`,
         [item.ord_epos_qty, item.ord_epos_qty, item.prod_code, item.ep_lot]
       );
-      //
 
+      // 루트테이블에 제품 재고가 0이면 출고완료=m1으로 표시
       await conn.query(
         `UPDATE 	epis SET 	eps = 'm1' WHERE 	ep_lot = ? AND	 	ep_qty = 0;`,
         [item.ep_lot]
+      );
+
+      // 출고버튼을 누르면 주문서 상세테이블에 있는 선택한 제품의 상태가 모두 출고완료일경우 주문서 테이블에 있는 선택한 제품의 주문서의 상태도 출고완료로 바뀌게 하기 / o2 출고완료 n2 출고완료
+      await conn.query(
+        `UPDATE	orderform o SET		o.order_status = 'n2' WHERE	o.ord_id = ( SELECT	ord_id FROM	orderdetail WHERE	ofd_no = ?) AND	NOT EXISTS ( 	SELECT	1    FROM	orderdetail od    WHERE	od.ord_id = o.ord_id 	AND		od.ofd_st <> 'o2')`,
+        [item.ofd_no]
       );
     }
 

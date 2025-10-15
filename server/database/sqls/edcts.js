@@ -9,7 +9,7 @@ SELECT
     od.prod_code,
     pm.prod_name,
     pm.prod_spec,
-    pm.prod_unit,
+    cd_pu.comncode_dtnm as prod_unit,
     od.op_qty AS ord_qty,
     IFNULL(SUM(ed.ord_epos_qty), 0) AS shipped_qty,                
     (od.op_qty - IFNULL(SUM(ed.ord_epos_qty), 0)) AS remain_qty,   
@@ -27,6 +27,8 @@ FROM orderdetail od
         ON od.prod_code = pm.prod_code
     JOIN comncode_dt cd 
         ON od.ofd_st = cd.comncode_detailid
+    JOIN comncode_dt cd_pu
+		    ON pm.prod_unit = cd_pu.comncode_detailid
     JOIN (
         SELECT prod_code, MIN(epep_dt) AS min_epep_dt
         FROM epis        

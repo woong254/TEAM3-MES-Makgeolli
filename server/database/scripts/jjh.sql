@@ -198,33 +198,38 @@ CREATE PROCEDURE search_products(
     IN p_unit VARCHAR(20)
 )
 BEGIN
-    SELECT prod_code,
-		   prod_name,
-           prod_spec,
-           prod_unit           
-    FROM   prod_master
-    WHERE (p_name IS NULL OR prod_name LIKE CONCAT('%', p_name, '%'))
-      AND (p_spec IS NULL OR prod_spec LIKE CONCAT('%', p_spec, '%'))
-      AND (p_unit IS NULL OR prod_unit = p_unit);
+    SELECT pm.prod_code,
+		   pm.prod_name,
+           pm.prod_spec,
+           cd.comncode_dtnm AS prod_unit
+    FROM   prod_master pm
+		   JOIN comncode_dt cd
+           ON pm.prod_unit = cd.comncode_detailid
+    WHERE (p_name IS NULL OR pm.prod_name LIKE CONCAT('%', p_name, '%'))
+      AND (p_spec IS NULL OR pm.prod_spec LIKE CONCAT('%', p_spec, '%'))
+      AND (p_unit IS NULL OR prod_unit = p_unit)
+      AND cd.comncode_dtnm <> '병';
 END $$
 DELIMITER ;
 -- 제품 조회 프로시저 실행
 CALL search_products(null,null,null);
 -- add_form 삭제       
 DROP PROCEDURE IF EXISTS search_products;      
+
+
        
 -- 제품단위 구분코드 조회
 SELECT comncode_dtnm
 FROM   comncode_dt
 WHERE  comncode_id = '0B';
 
--- 완제품검사합격처리된 제품을 입고하기위해 합격된 완제품 조회 
+-- 완제품검사합격처리된 제품을 입고하기위해 합격된 완제품 조회 / selectEpIsManage
 SELECT pi.insp_id,
        pi.insp_name,
        pm.prod_code,
 	pm.prod_name,
        pm.prod_spec,
-	pm.prod_unit,
+	   cdu.comncode_dtnm AS prod_unit,
        pi.pass_qty,
        pi.epep_dt,
        cd.comncode_dtnm,
@@ -238,6 +243,8 @@ FROM   prod_insp pi
        ON pi.insp_id = ep.insp_id
        LEFT JOIN comncode_dt cd
        ON ep.eps = cd.comncode_detailid
+       JOIN comncode_dt cdu
+       ON pm.prod_unit = cdu.comncode_detailid
 WHERE  1=1
 	AND pf.prog = '100'
 	AND pf.now_procs = '포장'
@@ -270,7 +277,7 @@ BEGIN
 
     -- 데이터 INSERT
     INSERT INTO epis(ep_lot, insp_id, prod_code, epis_qty, ep_qty, epep_dt, remark)
-    VALUES(target_ep_lot, p_insp_id, p_prod_code, p_pass_qty, p_pass_qty, p_epep_dt, p_remark);
+    VALUES(target_ep_lot, p_insp_id, p_prod_code, p_pass_qty, p_pass_qty, p_epep_dt, p_remark);	
 END $$
 DELIMITER ;
 
@@ -317,6 +324,8 @@ SELECT *
 FROM   orderdetail;
 SELECT *
 FROM   prod_master;
+SELECT *
+FROM   comncode;
 SELECT *
 FROM   comncode_dt;
 SELECT *
@@ -556,7 +565,6 @@ FROM orderdetail od
         AND e.epep_dt = em.min_epep_dt
     LEFT JOIN edcts ed                   
         ON od.ofd_no = ed.ofd_no
-	
 GROUP BY 
     od.ofd_no,
     o.ord_name,
@@ -595,14 +603,18 @@ SET 	eps = 'm1'
 WHERE 	ep_lot = ?
 AND	 	ep_qty = 0;
 
--- 출고버튼을 누르면 주문서 상세테이블에 있는 선택한 제품의 상태가 모두 출고완료일경우 주문서 테이블에 있는 선택한 제품의 주문서의 상태도 출고완료로 바뀌게 하기
-UPDATE	orderform
-SET		order_status = 'n2'
-WHERE	ord_id = ?
+-- 출고버튼을 누르면 주문서 상세테이블에 있는 선택한 제품의 상태가 모두 출고완료일경우 주문서 테이블에 있는 선택한 제품의 주문서의 상태도 출고완료로 바뀌게 하기 / o2 출고완료
+UPDATE	orderform o
+SET		o.order_status = 'n2'
+WHERE	o.ord_id = (
+	SELECT	ord_id
+	FROM	orderdetail 
+    WHERE	ofd_no = ?)
 AND	NOT EXISTS (
 	SELECT	1
     FROM	orderdetail od
-    WHERE	
+    WHERE	od.ord_id = o.ord_id
+	AND		od.ofd_st <> 'o2');
 
 -- 출고완료후 확인해야하는것들
 -- 루트테이블 조회 후 eps값 재고 및 출고수량 잘 들어왔는지
@@ -617,8 +629,25 @@ FROM	orderdetail;
 -- 주문서테이블에 order_status가 바꼈는지 확인
 SELECT	*
 FROM	orderform;
-
-
+-- 삭제
+DELETE FROM orderdetail
+WHERE  ofd_no = 59;
+DELETE FROM edcts
+WHERE  epos_no = 1;
+-- 공정실적관리 조회
+SELECT *
+FROM   processform;
+-- 공정실적관리 임시 데이터 추가
+INSERT INTO processform(procs_no, mk_list, equip_code, emp_no, prod_code, inpt_qty, mk_qty, fail_qty, pass_qty, prog,now_procs)
+VALUES
+    (113, 100, 'EQP-MK015','EMP-20250616-0001','PROD-20250101-005',500,500,0,500,'100','포장');
+-- 완제품검사 조회
+SELECT *
+FROM   prod_insp;
+-- 완제품검사 임시 데이터
+INSERT INTO prod_insp (insp_id, insp_name, pass_qty, procs_no, epep_dt, final_result)
+VALUES
+  ('test14', '테스트14', 500, 113, '2025-11-09', 'P');
 
 
 

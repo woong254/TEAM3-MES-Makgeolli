@@ -186,7 +186,6 @@ const submitEpOs = async () => {
     ord_epos_qty: item.cur_os_qty,
     remark: item.remark || '',
   }))
-  console.log(obj)
 
   try {
     if (selectedProducts.value.length === 0) {
@@ -520,7 +519,7 @@ const BcncSelect = (value: SearchCondition) => {
                   field="prod_name"
                   header="제품명"
                   :pt="{ columnHeaderContent: 'justify-center' }"
-                  style="min-width: 170px"
+                  style="min-width: 200px"
                 ></Column>
                 <Column
                   field="prod_spec"
