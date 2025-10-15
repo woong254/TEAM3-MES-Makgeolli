@@ -239,7 +239,7 @@ FROM iis
 WHERE insp_status = '검사대기'
 AND iis_id IN(?)`;
 
-const selectPurMatList `
+const selectIisMatList = `
 SELECT
   pm.pur_code,
   pf.pur_name,
@@ -257,13 +257,13 @@ JOIN mat_master m ON m.mat_code = pm.mat_code
 JOIN bcnc_master b ON b.bcnc_code = pf.bcnc_code
 WHERE pm.receipt_status IN ('입고대기', '부분입고')
 AND pf.receipt_date = ?
-`
+`;
 
 module.exports = {
   // 목록/검색
   selectPurList,
   selectPurTarget,
-  selectPurMatList,
+  selectIisMatList,
   iisList,
   // 단건 조회
   selectPurHeaderByCode,
