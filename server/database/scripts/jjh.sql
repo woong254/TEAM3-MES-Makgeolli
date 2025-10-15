@@ -443,10 +443,10 @@ WHERE  ep_lot = 'EPRO251115251014001';
 DELETE FROM epis;
 TRUNCATE TABLE epis;
 DELETE FROM edcts;
-TRUNCATE TABLE edcts;
+TRUNCATE TABLE prod_insp;
 
 SELECT *
-FROM   epis;
+FROM   prod_insp;
 
 SELECT prod_code, prod_name
 FROM prod_master
@@ -630,10 +630,11 @@ FROM	orderdetail;
 SELECT	*
 FROM	orderform;
 -- 삭제
-DELETE FROM orderdetail
+TRUNCATE TABLE epis;
+DELETE FROM epis
 WHERE  ofd_no = 59;
 DELETE FROM edcts
-WHERE  epos_no = 1;
+WHERE  epos_no = 12;
 -- 공정실적관리 조회
 SELECT *
 FROM   processform;
@@ -666,3 +667,6 @@ SELECT	equip_code,
 FROM 	equip_master e
 		JOIN comncode_dt c
         ON e.equip_status = c.comncode_detailid;
+        
+select * from bom_master;
+select * from bom_detail;
