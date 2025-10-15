@@ -203,9 +203,9 @@ const deleteIisList = async (ids = []) => {
   return { ok: deleted > 0, deleted };
 };
 
-const purMatList = async () => {
+const purIisList = async () => {
   try {
-    const r = await mariadb.query("selectPurList"[receipt_date]);
+    const r = await mariadb.query("selectIisMatList"[receipt_date]);
   } catch (err) {
     console.error(err);
   }
@@ -217,7 +217,7 @@ module.exports = {
   findPurList,
   findPurTarget,
   findIisList,
-  purMatList,
+  purIisList,
   // 단건 조회
   findPurHeaderByCode,
   findPurLinesByCode,
