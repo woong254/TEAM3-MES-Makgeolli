@@ -344,7 +344,7 @@ const rowUnselectHook = () => {
                 @row-unselect="rowUnselectHook"
                 showGridlines
                 scrollable
-                scrollHeight="500px"
+                scrollHeight="480px"
                 size="small"
                 class="text-sm"
               >
@@ -416,17 +416,7 @@ const rowUnselectHook = () => {
                   headerStyle="width: 30%"
                 >
                   <template #body="{ data }">
-                    <input
-                      v-model="data.remark"
-                      type="text"
-                      :class="baseInputClass"
-                      :style="{
-                        height: '2rem',
-                        backgroundColor: data.comncode_dtnm === '입고완료' ? '#e5e7eb' : '', // Tailwind bg-gray-200 색상값
-                        cursor: data.comncode_dtnm === '입고완료' ? 'not-allowed' : 'text',
-                      }"
-                      :disabled="data.comncode_dtnm === '입고완료'"
-                    />
+                    <input v-model="data.remark" type="text" :class="baseInputClass" />
                   </template>
                 </Column>
               </DataTable>

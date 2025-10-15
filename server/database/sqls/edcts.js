@@ -9,25 +9,37 @@ SELECT
     od.prod_code,
     pm.prod_name,
     pm.prod_spec,
-    pm.prod_unit,
-    od.op_qty,
+    cd_pu.comncode_dtnm as prod_unit,
+    od.op_qty AS ord_qty,
+    IFNULL(SUM(ed.ord_epos_qty), 0) AS shipped_qty,                
+    (od.op_qty - IFNULL(SUM(ed.ord_epos_qty), 0)) AS remain_qty,   
     o.due_date,
     e.ep_lot,
     e.epep_dt,
     e.ep_qty,
     cd.comncode_dtnm
 FROM orderdetail od
-JOIN orderform o ON od.ord_id = o.ord_id
-JOIN bcnc_master bm ON o.bcnc_code = bm.bcnc_code
-JOIN prod_master pm ON od.prod_code = pm.prod_code
-JOIN comncode_dt cd ON od.ofd_st = cd.comncode_detailid
-JOIN (
-    SELECT prod_code, MIN(epep_dt) AS min_epep_dt
-    FROM epis
-    WHERE ep_qty > 0
-    GROUP BY prod_code
-) em ON em.prod_code = od.prod_code
-JOIN epis e ON e.prod_code = em.prod_code AND e.epep_dt = em.min_epep_dt
+    JOIN orderform o 
+        ON od.ord_id = o.ord_id
+    JOIN bcnc_master bm 
+        ON o.bcnc_code = bm.bcnc_code
+    JOIN prod_master pm 
+        ON od.prod_code = pm.prod_code
+    JOIN comncode_dt cd 
+        ON od.ofd_st = cd.comncode_detailid
+    JOIN comncode_dt cd_pu
+		    ON pm.prod_unit = cd_pu.comncode_detailid
+    JOIN (
+        SELECT prod_code, MIN(epep_dt) AS min_epep_dt
+        FROM epis        
+        GROUP BY prod_code
+    ) em 
+        ON em.prod_code = od.prod_code
+    JOIN epis e 
+        ON e.prod_code = em.prod_code 
+        AND e.epep_dt = em.min_epep_dt
+    LEFT JOIN edcts ed                   
+        ON od.ofd_no = ed.ofd_no
 WHERE 1=1
 `;
 

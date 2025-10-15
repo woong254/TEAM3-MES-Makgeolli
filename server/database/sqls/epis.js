@@ -6,7 +6,7 @@ SELECT pi.insp_id,
        pm.prod_code,
 	pm.prod_name,
        pm.prod_spec,
-	pm.prod_unit,
+	cdu.comncode_dtnm AS prod_unit,
        pi.pass_qty,
        pi.epep_dt,
        cd.comncode_dtnm,
@@ -20,6 +20,8 @@ FROM   prod_insp pi
        ON pi.insp_id = ep.insp_id
        LEFT JOIN comncode_dt cd
        ON ep.eps = cd.comncode_detailid
+       JOIN comncode_dt cdu
+       ON pm.prod_unit = cdu.comncode_detailid
 WHERE  1=1
 	AND pf.prog = '100'
 	AND pf.now_procs = '포장'
