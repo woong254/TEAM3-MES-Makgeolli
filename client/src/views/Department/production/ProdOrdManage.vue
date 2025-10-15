@@ -5,12 +5,13 @@ import ComponentCard from '@/components/common/ComponentCardOrder.vue'
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import '@/assets/common.css';
-import { defineProps, ref, computed } from 'vue';
+import {  ref, computed } from 'vue';
 
 // 달력 import
 import flatPickr from 'vue-flatpickr-component';
 import 'flatpickr/dist/flatpickr.css';
 import { Korean } from 'flatpickr/dist/l10n/ko.js';
+import { ChipPassThroughAttributes } from 'primevue/chip';
 
 
 // 지시사항 검색 조건
@@ -30,8 +31,8 @@ interface MakeOrderDetail {
   prod_name: string         // 제품명
   prod_spec: string         // 제품규격
   prod_unit: string         // 관리단위
-  make_qty: number          // 생산 수량, 초기값 100에 맞춰 number 타입으로 설정
-  make_priority: number     // 우선 순위 -> 공정 순서
+  make_qty: number          // 생산수량, 초기값 100에 맞춰 number 타입으로 설정
+  make_priority: number     // 우선순위 -> 공정 순서
   flow_id: string           // 공정코드
   proc_id: string           // 공정명
 }
@@ -40,12 +41,14 @@ interface ChooseEquip {
   no: number              // 순서
   equip_code: string      // 설비 코드
   equip_name: string      // 설비명
-  equip_status: string    // 설비 상태
+  equip_status: string    // 설비상태
 }
 
 interface ChooseEmp {
-  emp_name: string
+  emp_id: string      // 사원번호
+  emp_name: string    // 사원명
 }
+
 
 // 검색 조건 초기화
 const searchMakeOrder = ref<SearchMakeOrder>({
@@ -54,6 +57,16 @@ const searchMakeOrder = ref<SearchMakeOrder>({
   make_order_start_date: '',
   make_order_end_date: '',
 });
+
+// 라디오 버튼으로 선택한 값 저장하는 배열
+const makeRows = ref<MakeOrderDetail[]>([]);
+const equipRows = ref<ChooseEquip[]>([]);
+const empRows   = ref<ChooseEmp[]>([]);
+
+// 라디오 버튼
+const selectMake = ref<MakeOrderDetail | null>(null);
+const selectEquip = ref<ChooseEquip | null>(null);
+const selectEmp = ref<ChooseEmp | null>(null);
 
 // 지시일 범위 시작
 const startDateRange = computed(() => ({
@@ -84,7 +97,7 @@ const baseInputClass = "dark:bg-dark-900 h-8 w-full rounded-lg border border-gra
 <template>
   <AdminLayout>
     <PageBreadcrumb :pageTitle="currentPageTitle" />
-    <div class="space-y-5 sm:space-y-6">
+    <div class="space-y-5 sm:space-y-1 mt-2">
       <ComponentCard title="지시제품검색">
         <template #header-right>
           <div class="">
@@ -193,15 +206,14 @@ const baseInputClass = "dark:bg-dark-900 h-8 w-full rounded-lg border border-gra
           <ComponentCard title="작업지시목록">
             <template #header-right>
               <div class="flex items-center">
-                <button type="button" class="btn-color btn-common" @focus="ProductOpenmodal">
+                <button type="button" class="btn-color btn-common">
                   작업 지시
                 </button>
               </div>
             </template>
             <template #body-content>
-              <div ref="tableWrapper" class="order-table-wrapper h-70">
+              <div ref="tableWrapper" class="order-table-wrapper h-63">
                 <DataTable
-
                   dataKey="no"
                   tableStyle="max-width: 100%;"
                   class="fixed-data"
@@ -210,6 +222,8 @@ const baseInputClass = "dark:bg-dark-900 h-8 w-full rounded-lg border border-gra
                   scrollHeight="250px"
                   editMode="cell"
                   size="small"
+                  :value="makeRows"
+                  v-model:selection="selectMake"
                 >
                   <Column selectionMode="single" headerStyle="width: 1%" field="no" />
 
@@ -297,29 +311,77 @@ const baseInputClass = "dark:bg-dark-900 h-8 w-full rounded-lg border border-gra
             </template>
           </ComponentCard>
         </div>
-        <!-- 설비 선택 -->
-        <div class="space-y-5 sm:space-y-6 mt-2">
-          <ComponentCard title="설비 선택">
+        <div class="flex gap-2 mt-2 width-full">
+          <!-- 설비 선택 -->
+          <ComponentCard title="설비 선택" className="shadow-sm w-3/5">
             <template #body-content>
-              <DataTable
-                dataKey="no"
-                tableStyle="max-width: 100%;"
-                class="fixed-data"
-                showGridlines
-                scrollable
-                scrollHeight="250px"
-                editMode="cell"
-                size="small"
-              >
-                <Column selection-mode="single" />
-                <Column 
-                  field="no"
-                  header="순번"
-                  :pt="{ columnHeaderContent: 'justify-center' }"
-                />
-              </DataTable>
-                  
-                
+              <div ref="tableWrapper" class="order-table-wrapper h-47">
+                <DataTable
+                  dataKey="no"
+                  tableStyle="max-width: 100%;"
+                  class="fixed-data"
+                  showGridlines
+                  scrollable
+                  scrollHeight="250px"
+                  editMode="cell"
+                  size="small"
+                  :value="equipRows"
+                  v-model:selection="selectEquip"
+                >
+                  <Column selectionMode="single" />
+                  <Column 
+                    field="no"
+                    header="순번"
+                    :pt="{ columnHeaderContent: 'justify-center' }"
+                  />
+                  <Column 
+                    field="equip_code"
+                    header="설비코드"
+                    :pt="{ columnHeaderContent: 'justify-center' }"
+                  />
+                  <Column 
+                    field="equip_name"
+                    header="설비명"
+                    :pt="{ columnHeaderContent: 'justify-center' }"
+                  />
+                  <Column 
+                    field="equip_status"
+                    header="설비상태"
+                    :pt="{ columnHeaderContent: 'justify-center' }"
+                  />
+                </DataTable>
+              </div>
+            </template>
+          </ComponentCard>
+          <!-- 작업자 선택 -->
+          <ComponentCard title="작업자 선택" className="shadow-sm w-2/5">
+            <template #body-content>
+              <div ref="tableWrapper" class="order-table-wrapper h-47">
+                <DataTable
+                  dataKey="no"
+                  tableStyle="max-width: 100%;"
+                  class="fixed-data"
+                  showGridlines
+                  scrollable
+                  scrollHeight="250px"
+                  editMode="cell"
+                  size="small"
+                  :value="empRows"
+                  v-model:selection="selectEmp"
+                >
+                  <Column selectionMode="single" />
+                  <Column 
+                    field="emp_id"
+                    header="사원번호"
+                    :pt="{ columnHeaderContent: 'justify-center' }"
+                  />
+                  <Column 
+                    field="string"
+                    header="사원명"
+                    :pt="{ columnHeaderContent: 'justify-center' }"
+                  />
+                </DataTable>
+              </div>
             </template>
           </ComponentCard>
         </div>
