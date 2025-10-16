@@ -11,12 +11,9 @@ SELECT
     pm.prod_spec,
     cd_pu.comncode_dtnm as prod_unit,
     od.op_qty AS ord_qty,
-    IFNULL(SUM(ed.ord_epos_qty), 0) AS shipped_qty,                
-    (od.op_qty - IFNULL(SUM(ed.ord_epos_qty), 0)) AS remain_qty,   
+    IFNULL(SUM(ed.ord_epos_qty), 0) AS shipped_qty,                 
+    (od.op_qty - IFNULL(SUM(ed.ord_epos_qty), 0)) AS remain_qty,    
     o.due_date,
-    e.ep_lot,
-    e.epep_dt,
-    e.ep_qty,
     cd.comncode_dtnm
 FROM orderdetail od
     JOIN orderform o 
@@ -27,17 +24,8 @@ FROM orderdetail od
         ON od.prod_code = pm.prod_code
     JOIN comncode_dt cd 
         ON od.ofd_st = cd.comncode_detailid
-    JOIN comncode_dt cd_pu
-		    ON pm.prod_unit = cd_pu.comncode_detailid
-    JOIN (
-        SELECT prod_code, MIN(epep_dt) AS min_epep_dt
-        FROM epis        
-        GROUP BY prod_code
-    ) em 
-        ON em.prod_code = od.prod_code
-    JOIN epis e 
-        ON e.prod_code = em.prod_code 
-        AND e.epep_dt = em.min_epep_dt
+	JOIN comncode_dt cd_pu
+		ON pm.prod_unit = cd_pu.comncode_detailid
     LEFT JOIN edcts ed                   
         ON od.ofd_no = ed.ofd_no
 WHERE 1=1
@@ -54,7 +42,8 @@ SELECT	ep_lot,
 		epep_dt,
         ep_qty
 FROM	epis
-WHERE	prod_code = ?`;
+WHERE	prod_code = ?
+AND     ep_qty <> 0`;
 
 module.exports = {
   // 사용할 쿼리문의 이름을 여기에 적으세요

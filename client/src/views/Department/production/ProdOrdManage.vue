@@ -1,55 +1,62 @@
 <script setup lang="ts">
-import AdminLayout from '@/components/layout/AdminLayout.vue';
-import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue';
+import AdminLayout from '@/components/layout/AdminLayout.vue'
+import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import ComponentCard from '@/components/common/ComponentCardOrder.vue'
-import DataTable from 'primevue/datatable';
-import Column from 'primevue/column';
-import '@/assets/common.css';
-import {  ref, computed, onMounted } from 'vue';
-import axios from 'axios';
+import DataTable from 'primevue/datatable'
+import Column from 'primevue/column'
+import '@/assets/common.css'
+import { ref, computed, onMounted } from 'vue'
+import axios from 'axios'
 
 // 달력 import
-import flatPickr from 'vue-flatpickr-component';
-import 'flatpickr/dist/flatpickr.css';
-import { Korean } from 'flatpickr/dist/l10n/ko.js';
+import flatPickr from 'vue-flatpickr-component'
+import 'flatpickr/dist/flatpickr.css'
+import { Korean } from 'flatpickr/dist/l10n/ko.js'
+import ProcessControl from './ProcessControl.vue'
 
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+
+const goToProcessControl = () => {
+  router.push({ name: 'processControl' }) // 라우트 이름을 사용
+}
 
 // 지시사항 검색 조건
 interface SearchMakeOrder {
-  prod_name: string               // 제품명
-  proc_name: string               // 공정명
-  make_order_start_date: string   // 지시서 작성일
-  make_order_end_date: string     // 지시서 작성일
+  prod_name: string // 제품명
+  proc_name: string // 공정명
+  make_order_start_date: string // 지시서 작성일
+  make_order_end_date: string // 지시서 작성일
 }
 
 // 지시 상품들
 interface MakeOrderDetail {
-  no: number              // 선택을 위한 임의 번호
-  mk_ord_no: string       // 지시코드
-  writing_date: string    // 지시날짜
-  mk_name: string         // 지시명
-  prod_code: string       // 제품코드
-  prod_name: string       // 제품명
-  prod_spec: string       // 제품규격
-  comncode_dtnm: string   // 관리단위
-  mk_num: number          // 생산수량, 초기값 100에 맞춰 number 타입으로 설정
-  seq_no: number          // 우선순위 -> 공정 순서
-  proc_id: string         // 공정코드
-  proc_name: string         // 공정명
-  procs_st: string        // 실적상태
+  no: number // 선택을 위한 임의 번호
+  mk_ord_no: string // 지시코드
+  writing_date: string // 지시날짜
+  mk_name: string // 지시명
+  prod_code: string // 제품코드
+  prod_name: string // 제품명
+  prod_spec: string // 제품규격
+  comncode_dtnm: string // 관리단위
+  mk_num: number // 생산수량, 초기값 100에 맞춰 number 타입으로 설정
+  seq_no: number // 우선순위 -> 공정 순서
+  proc_id: string // 공정코드
+  proc_name: string // 공정명
+  procs_st: string // 실적상태
 }
 
 interface ChooseEquip {
-  equip_code: string      // 설비 코드
-  equip_name: string      // 설비명
-  comncode_dtnm: string    // 설비상태
+  equip_code: string // 설비 코드
+  equip_name: string // 설비명
+  comncode_dtnm: string // 설비상태
 }
 
 interface ChooseEmp {
-  emp_id: string      // 사원번호
-  emp_name: string    // 사원명
+  emp_id: string // 사원번호
+  emp_name: string // 사원명
 }
-
 
 // 검색 조건 초기화
 const searchMakeOrder = ref<SearchMakeOrder>({
@@ -57,17 +64,17 @@ const searchMakeOrder = ref<SearchMakeOrder>({
   proc_name: '',
   make_order_start_date: '',
   make_order_end_date: '',
-});
+})
 
 // 라디오 버튼으로 선택한 값 저장하는 배열
-const makeRows = ref<MakeOrderDetail[]>([]);
-const equipRows = ref<ChooseEquip[]>([]);
-const empRows   = ref<ChooseEmp[]>([]);
+const makeRows = ref<MakeOrderDetail[]>([])
+const equipRows = ref<ChooseEquip[]>([])
+const empRows = ref<ChooseEmp[]>([])
 
 // 라디오 버튼
-const selectMake = ref<MakeOrderDetail | null>(null);
-const selectEquip = ref<ChooseEquip | null>(null);
-const selectEmp = ref<ChooseEmp | null>(null);
+const selectMake = ref<MakeOrderDetail | null>(null)
+const selectEquip = ref<ChooseEquip | null>(null)
+const selectEmp = ref<ChooseEmp | null>(null)
 
 // 지시일 범위 시작
 const startDateRange = computed(() => ({
@@ -76,7 +83,7 @@ const startDateRange = computed(() => ({
   wrap: true,
   maxDate: searchMakeOrder.value.make_order_end_date,
   locale: Korean,
-}));
+}))
 
 // 지시일 범위 끝
 const endDateRange = computed(() => ({
@@ -85,36 +92,35 @@ const endDateRange = computed(() => ({
   wrap: true,
   minDate: searchMakeOrder.value.make_order_start_date,
   locale: Korean,
-}));
+}))
 
 const loadProcDetail = async ({ data }) => {
-  const { proc_id, proc_name } = data;
+  const { proc_id, proc_name } = data
 
-  const res = await axios.get('/api/prodOrdManage', { params: { procId: proc_id } });
-  equipRows.value = res.data.equipRows;
-  empRows.value   = res.data.workerRows;
+  const res = await axios.get('/api/prodOrdManage', { params: { procId: proc_id } })
+  equipRows.value = res.data.equipRows
+  empRows.value = res.data.workerRows
 
   await axios.post('/api/prodOrdManage/selection', {
     procName: proc_name,
-  });
-};
-
-
+  })
+}
 
 onMounted(async () => {
-  const res = await axios.get('/api/prodOrdManage');
-  makeRows.value = res.data.makeRows;
-  empRows.value = res.data.empRows;
-  console.log('makeRows.value:', makeRows.value);
-  console.log('empRows.value:', empRows.value);
-});
+  const res = await axios.get('/api/prodOrdManage')
+  makeRows.value = res.data.makeRows
+  empRows.value = res.data.empRows
+  console.log('makeRows.value:', makeRows.value)
+  console.log('empRows.value:', empRows.value)
+})
 
+const currentPageTitle = ref('공정 실적 관리')
 
-const currentPageTitle = ref('공정 실적 관리');
-
-const inputStyle = "dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800";
-const labelStyle = "block text-sm font-medium text-gray-700 dark:text-gray-400 mb-2";
-const baseInputClass = "dark:bg-dark-900 h-8 w-full rounded-lg border border-gray-300 bg-transparent pl-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800";
+const inputStyle =
+  'dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
+const labelStyle = 'block text-sm font-medium text-gray-700 dark:text-gray-400 mb-2'
+const baseInputClass =
+  'dark:bg-dark-900 h-8 w-full rounded-lg border border-gray-300 bg-transparent pl-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
 </script>
 
 <template>
@@ -124,20 +130,14 @@ const baseInputClass = "dark:bg-dark-900 h-8 w-full rounded-lg border border-gra
       <ComponentCard title="지시제품검색">
         <template #header-right>
           <div class="">
-            <button type="button" class="btn-white btn-common" >
-              초기화
-            </button>
-            <button type="button" class="btn-color btn-common" >
-              조회
-            </button>
+            <button type="button" class="btn-white btn-common">초기화</button>
+            <button type="button" class="btn-color btn-common">조회</button>
           </div>
         </template>
         <template #body-content>
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
-              <label :class="labelStyle">
-                제품명
-              </label>
+              <label :class="labelStyle"> 제품명 </label>
               <input
                 type="text"
                 :class="inputStyle"
@@ -146,20 +146,11 @@ const baseInputClass = "dark:bg-dark-900 h-8 w-full rounded-lg border border-gra
               />
             </div>
             <div>
-              <label :class="labelStyle">
-                공정명
-              </label>
-              <input
-                type="text"
-                :class="inputStyle"
-                placeholder="공정을 입력해주세요"
-                required
-              />
+              <label :class="labelStyle"> 공정명 </label>
+              <input type="text" :class="inputStyle" placeholder="공정을 입력해주세요" required />
             </div>
             <div>
-              <label :class="labelStyle">
-                지시날짜
-              </label>
+              <label :class="labelStyle"> 지시날짜 </label>
               <div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
                 <div class="relative w-45">
                   <flat-pickr
@@ -229,7 +220,7 @@ const baseInputClass = "dark:bg-dark-900 h-8 w-full rounded-lg border border-gra
           <ComponentCard title="작업지시목록">
             <template #header-right>
               <div class="flex items-center">
-                <button type="button" class="btn-color btn-common">
+                <button type="button" class="btn-color btn-common" @click="goToProcessControl">
                   공정 제어
                 </button>
               </div>
@@ -246,19 +237,19 @@ const baseInputClass = "dark:bg-dark-900 h-8 w-full rounded-lg border border-gra
                   editMode="cell"
                   size="small"
                   :value="makeRows"
-                  selectionMode = "single"
+                  selectionMode="single"
                   @row-select="loadProcDetail"
                   v-model:selection="selectMake"
                 >
                   <template #empty>
                     <div class="text-center">지시건이 없습니다</div>
                   </template>
-                  
-                  <Column 
-                  selectionMode="single" 
-                  headerStyle="width: 1%" 
-                  field="no"
-                  :pt="{ columnHeaderContent: 'justify-center' }" 
+
+                  <Column
+                    selectionMode="single"
+                    headerStyle="width: 1%"
+                    field="no"
+                    :pt="{ columnHeaderContent: 'justify-center' }"
                   />
 
                   <Column
@@ -291,7 +282,6 @@ const baseInputClass = "dark:bg-dark-900 h-8 w-full rounded-lg border border-gra
                     header="제품명"
                     :pt="{ columnHeaderContent: 'justify-center' }"
                     headerStyle="width: 15%"
-
                   />
                   <Column
                     field="prod_spec"
@@ -299,7 +289,6 @@ const baseInputClass = "dark:bg-dark-900 h-8 w-full rounded-lg border border-gra
                     style="text-align: right"
                     :pt="{ columnHeaderContent: 'justify-center' }"
                     headerStyle="width: 5%"
-
                   />
                   <Column
                     field="comncode_dtnm"
@@ -307,7 +296,6 @@ const baseInputClass = "dark:bg-dark-900 h-8 w-full rounded-lg border border-gra
                     style="text-align: right"
                     :pt="{ columnHeaderContent: 'justify-center' }"
                     headerStyle="width: 5%"
-
                   />
                   <Column
                     field="mk_num"
@@ -332,28 +320,24 @@ const baseInputClass = "dark:bg-dark-900 h-8 w-full rounded-lg border border-gra
                     :pt="{ columnHeaderContent: 'justify-center' }"
                     class="dense-table"
                     headerStyle="width: 7%"
-
                   />
                   <Column
                     field="proc_id"
                     header="공정코드"
                     :pt="{ columnHeaderContent: 'justify-center' }"
                     headerStyle="width: 7%"
-
                   />
                   <Column
                     field="proc_name"
                     header="공정명"
                     :pt="{ columnHeaderContent: 'justify-center' }"
                     headerStyle="width: 7%"
-
                   />
                   <Column
                     field="procs_st"
                     header="실적상태"
                     :pt="{ columnHeaderContent: 'justify-center' }"
                     headerStyle="width: 7%"
-
                   />
                 </DataTable>
               </div>
@@ -380,21 +364,18 @@ const baseInputClass = "dark:bg-dark-900 h-8 w-full rounded-lg border border-gra
                   <template #empty>
                     <div class="text-center">지시 목록을 선택해주세요</div>
                   </template>
-                  <Column 
-                    selectionMode="single" 
-                    :pt="{ columnHeaderContent: 'justify-center' }" 
-                  />
-                  <Column 
+                  <Column selectionMode="single" :pt="{ columnHeaderContent: 'justify-center' }" />
+                  <Column
                     field="equip_code"
                     header="설비코드"
                     :pt="{ columnHeaderContent: 'justify-center' }"
                   />
-                  <Column 
+                  <Column
                     field="equip_name"
                     header="설비명"
                     :pt="{ columnHeaderContent: 'justify-center' }"
                   />
-                  <Column 
+                  <Column
                     field="comncode_dtnm"
                     header="설비상태"
                     :pt="{ columnHeaderContent: 'justify-center' }"
@@ -422,17 +403,14 @@ const baseInputClass = "dark:bg-dark-900 h-8 w-full rounded-lg border border-gra
                   <template #empty>
                     <div class="text-center">사원이 없습니다</div>
                   </template>
-                  <Column 
-                    selectionMode="single" 
-                    :pt="{ columnHeaderContent: 'justify-center' }" 
-                  />
+                  <Column selectionMode="single" :pt="{ columnHeaderContent: 'justify-center' }" />
 
-                  <Column 
+                  <Column
                     field="emp_id"
                     header="사원번호"
                     :pt="{ columnHeaderContent: 'justify-center' }"
                   />
-                  <Column 
+                  <Column
                     field="emp_name"
                     header="사원명"
                     :pt="{ columnHeaderContent: 'justify-center' }"
@@ -448,21 +426,20 @@ const baseInputClass = "dark:bg-dark-900 h-8 w-full rounded-lg border border-gra
 </template>
 
 <style>
-.dense-table .p-datatable-thead > tr > th { 
-  padding: 0.25rem 0.5rem; 
+.dense-table .p-datatable-thead > tr > th {
+  padding: 0.25rem 0.5rem;
   margin: 0;
-  font-size: 14px; 
+  font-size: 14px;
   line-height: 1.2;
 }
-.dense-table .p-datatable-tbody > tr > td { 
-  padding: 0.25rem 0.5rem; 
-  font-size: 12px; 
+.dense-table .p-datatable-tbody > tr > td {
+  padding: 0.25rem 0.5rem;
+  font-size: 12px;
   line-height: 1.2;
 }
 /* 헤더 높이 추가 축소 시 */
-.dense-table .p-datatable-header { 
-  padding: 0.25rem 0.5rem; 
-  font-size: 12px; 
+.dense-table .p-datatable-header {
+  padding: 0.25rem 0.5rem;
+  font-size: 12px;
 }
-
 </style>

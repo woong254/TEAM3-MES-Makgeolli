@@ -42,20 +42,21 @@ interface OrderItem {
   prod_unit: string
   ord_qty: number // 주문수량
   due_date: string
-  ep_lot: string
-  epep_dt: string
-  ep_qty: number
+  ep_lot: string // 제품에 대해 선택된 LOT 번호를 콤마(,)로 합쳐서 문자열로 저장하는 용도 / 예: "LOT001,LOT002,LOT003"
+  // epep_dt: string
+  ep_qty: number // 재품재고수량
   cur_os_qty: number // 현출고수량
   shipped_qty: number // 기출고수량 = 주문제품출고수량
   remain_qty: number // 미출고수량
   comncode_dtnm: string
   remark: string
-  orig_ord_eps_qty: number // DB에서 가져온 기존 기출고수량
+  // orig_ord_eps_qty: number // DB에서 가져온 기존 기출고수량
+  selectedLots: EpLot[]
 }
 
 // 선택한 제품들
 const selectedProducts = ref<OrderItem[]>([])
-// products ref에 OrderItem[] 타입을 명시적으로 지정
+// 표 테이블에 들어가는 제품들
 const products = ref<OrderItem[]>([])
 // 주문서조회검색 input태그 데이터 초기값
 const search = ref<SearchCondition>({
@@ -91,26 +92,6 @@ const dueEndDateConfig = computed(() => ({
   wrap: true,
   // 시작일이 설정되어 있으면 해당 날짜를 최소 날짜로 설정하여 범위를 제한
   minDate: search.value.due_start_date,
-  locale: Korean,
-}))
-
-// 납기일자 시작일 설정 (종료일이 있다면 maxDate 설정)
-const epStartDateConfig = computed(() => ({
-  dateFormat: 'Y-m-d',
-  altInput: false,
-  wrap: true,
-  // 종료일이 설정되어 있으면 해당 날짜를 최대 날짜로 설정하여 범위를 제한
-  maxDate: search.value.ep_end_date,
-  locale: Korean,
-}))
-
-// 납기일자 종료일 설정 (시작일이 있다면 minDate 설정)
-const epEndDateConfig = computed(() => ({
-  dateFormat: 'Y-m-d',
-  altInput: false,
-  wrap: true,
-  // 시작일이 설정되어 있으면 해당 날짜를 최소 날짜로 설정하여 범위를 제한
-  minDate: search.value.ep_start_date,
   locale: Korean,
 }))
 
@@ -179,33 +160,41 @@ interface EpOsRequest {
   ord_epos_qty: number
   remark: string
 }
+
 // 출고버튼 기능
 const submitEpOs = async () => {
+  if (selectedProducts.value.length === 0) {
+    alert('출고할 주문서 제품을 선택해주세요')
+    return
+  }
+
+  // 입력값 체크
+  for (const item of selectedProducts.value) {
+    if (!item.cur_os_qty || item.cur_os_qty < 1) {
+      alert('출고할 제품 수량을 입력해주세요')
+      return
+    }
+    if (item.comncode_dtnm === '출고완료') {
+      alert('출고완료 제품은 출고 할 수 없습니다.')
+      return
+    }
+    if (!item.selectedLots || item.selectedLots.length === 0) {
+      alert('제품 LOT을 선택해주세요')
+      return
+    }
+  }
+
+  // 서버 전송용 데이터 구성
   const obj: EpOsRequest[] = selectedProducts.value.map((item) => ({
-    prod_code: item.prod_code,
-    ofd_no: item.ofd_no,
-    ep_lot: item.ep_lot,
+    prod_code: item.prod_code, // 제품코드
+    ofd_no: item.ofd_no, // 주문서상세번호
+    ep_lot: item.selectedLots.map((l) => l.lot_no).join(','), // LOT 번호 콤마로 합치기
     ord_epos_qty: item.cur_os_qty,
     remark: item.remark || '',
+    lot_details: item.selectedLots, // LOT별 수량까지 서버로 전송 가능
   }))
 
   try {
-    if (selectedProducts.value.length === 0) {
-      alert('출고할 주문서 제품을 선택해주세요')
-      return
-    }
-    // 출고버튼을 눌렀을 때 제품현출고수량이 0이면은 알람이 뜸
-    for (const item of selectedProducts.value) {
-      if (item.cur_os_qty < 1 || item.cur_os_qty === null) {
-        alert('출고할 제품 수량을 입력해주세요')
-        return // submitEpOs 함수 종료
-      }
-      if (item.comncode_dtnm === '출고완료') {
-        alert('출고완료 제품은 출고 할 수 없습니다.')
-        return // submitEpOs 함수 종료
-      }
-    }
-    // 저장
     const result = await axios.post('/api/insertEpOs', obj)
     const addRes = result.data
 
@@ -215,9 +204,9 @@ const submitEpOs = async () => {
     } else {
       alert('출고완료')
     }
-    getEpOsManage(false)
 
-    selectedProducts.value = []
+    getEpOsManage(false) // 테이블 갱신
+    selectedProducts.value = [] // 선택 초기화
   } catch (err) {
     console.error('추가 중 오류 발생', err)
     alert('서버 요청 중 오류가 발생했습니다.')
@@ -236,35 +225,90 @@ const BcncSelect = (value: SearchCondition) => {
   console.log(value.bcnc_name)
   search.value.bcnc_name = value.bcnc_name
 }
+
 // 제품현출고수량 input box 누를때 해당하는 행
 const selectedRow = ref<OrderItem | null>()
+// 모달창에서 이미 선택된 lot들의 출고수량 모음을 예시: { LOT001: 30, LOT002: 10 } 요런모양으로 저장
+const modalUsedLots = ref<Record<string, number>>({})
+
 // 제품선택 모달창 열고 닫기
 const EpLotmodalopen = ref(false)
 const EpLotOpenmodal = (rowData: OrderItem) => {
+  if (rowData.comncode_dtnm === '출고완료') {
+    alert('출고완료 제품은 출고 할 수 없습니다.')
+    return
+  }
+
   selectedRow.value = rowData
   EpLotmodalopen.value = true
+
+  // 다른 주문서에서 선택된 lot들의 출고수량 모음
+  const usedLots: Record<string, number> = {}
+
+  products.value.forEach((p) => {
+    if (p.selectedLots) {
+      p.selectedLots.forEach((lot) => {
+        const key = String(lot.ep_lot)
+        usedLots[key] = (usedLots[key] || 0) + lot.lot_cur_os_qty
+      })
+    }
+  })
+
+  modalUsedLots.value = usedLots
+  console.log('모달 열 때 usedLots:', modalUsedLots.value) // 확인용 로그
 }
 const EpLotClosemodal = () => {
   EpLotmodalopen.value = false
 }
 
-const selectedEpLot = (value: OrderItem[]) => {
-  console.log('선택된 제품:', value)
-  value.forEach((item) => {
-    const newNo = `${new Date().getTime()}_${item.prod_code}`
-    products.value.push({
-      no: newNo,
-      prod_code: item.prod_code,
-      prod_name: item.prod_name,
-      prod_spec: item.prod_spec,
-      prod_unit: item.prod_unit,
-      op_qty: item.op_qty || 1,
-      remark: item.remark,
-    })
+// 선택 제품 정의
+interface EpLot {
+  ep_lot: string
+  lot_no: string // 실제 개별 LOT 고유번호
+  lot_cur_os_qty: number
+  ep_qty: number
+}
+
+// 선택된 제품lot을 받는 함수
+const handleSelectedEpLot = (payload: { lots: EpLot[]; totalQty: number }) => {
+  payload.lots.forEach((lot) => {
+    if (!lot.lot_no) {
+      console.error('LOT 값이 비어있습니다!', lot)
+    }
   })
-  console.log('추가 후 products:', products.value)
-  console.log('추가 후 db조회 주문서상세정보 결과:', dbOrderDetailInfo.value)
-  console.log('추가 후 db조회 주문제품 결과:', dbOrderProducts.value)
+  // selectedRow 현재 클릭된 행
+  if (!selectedRow.value) return
+  // 선택된 행의
+  selectedRow.value.ep_lot = payload.lots.map((l) => l.lot_no).join(',')
+  selectedRow.value.cur_os_qty = payload.totalQty
+  selectedRow.value.selectedLots = payload.lots // 서버 전송용
+  console.log('모달에서 받은 LOT:', payload.lots)
+}
+
+// 전체선택 기본값 false
+const selectAll = ref(false)
+// comncode_dtnm가 없는 행 선택
+const isSelectableRow = (row: OrderItem) =>
+  !row.comncode_dtnm || row.comncode_dtnm.trim() !== '출고완료'
+
+// comncode_dtnm가 있는 행은 비활성화
+const rowClassHook = (row: OrderItem) => {
+  return row.comncode_dtnm && row.comncode_dtnm.trim() == '출고완료' ? 'disabled-row' : ''
+}
+
+// 전체 선택 변경
+const selectAllChangeHook = (event: { checked: boolean }) => {
+  selectAll.value = event.checked
+  if (event.checked) {
+    selectedProducts.value = products.value.filter(isSelectableRow)
+  } else {
+    selectedProducts.value = []
+  }
+}
+
+// 한 행 선택 해제 시 전체 체크 해제
+const rowUnselectHook = () => {
+  selectAll.value = false
 }
 </script>
 <template>
@@ -425,70 +469,6 @@ const selectedEpLot = (value: OrderItem[]) => {
                   </div>
                 </div>
               </div>
-              <div>
-                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                  유통기한
-                </label>
-                <div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
-                  <!-- 유통기한 시작일 -->
-                  <div class="relative w-45">
-                    <flat-pickr
-                      v-model="search.ep_start_date"
-                      :config="epStartDateConfig"
-                      class="dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pl-4 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                      placeholder="시작일"
-                    />
-                    <span
-                      class="absolute text-gray-500 -translate-y-1/2 pointer-events-none right-3 top-1/2 dark:text-gray-400"
-                    >
-                      <svg
-                        class="fill-current"
-                        width="20"
-                        height="20"
-                        viewBox="0 0 20 20"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          fill-rule="evenodd"
-                          clip-rule="evenodd"
-                          d="M6.66659 1.5415C7.0808 1.5415 7.41658 1.87729 7.41658 2.2915V2.99984H12.5833V2.2915C12.5833 1.87729 12.919 1.5415 13.3333 1.5415C13.7475 1.5415 14.0833 1.87729 14.0833 2.2915V2.99984L15.4166 2.99984C16.5212 2.99984 17.4166 3.89527 17.4166 4.99984V7.49984V15.8332C17.4166 16.9377 16.5212 17.8332 15.4166 17.8332H4.58325C3.47868 17.8332 2.58325 16.9377 2.58325 15.8332V7.49984V4.99984C2.58325 3.89527 3.47868 2.99984 4.58325 2.99984L5.91659 2.99984V2.2915C5.91659 1.87729 6.25237 1.5415 6.66659 1.5415ZM6.66659 4.49984H4.58325C4.30711 4.49984 4.08325 4.7237 4.08325 4.99984V6.74984H15.9166V4.99984C15.9166 4.7237 15.6927 4.49984 15.4166 4.49984H13.3333H6.66659ZM15.9166 8.24984H4.08325V15.8332C4.08325 16.1093 4.30711 16.3332 4.58325 16.3332H15.4166C15.6927 16.3332 15.9166 16.1093 15.9166 15.8332V8.24984Z"
-                          fill=""
-                        />
-                      </svg>
-                    </span>
-                  </div>
-                  <span>ㅡ</span>
-                  <!-- 유통기한 종료일 -->
-                  <div class="relative w-45">
-                    <flat-pickr
-                      v-model="search.ep_end_date"
-                      :config="epEndDateConfig"
-                      class="dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pl-4 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                      placeholder="종료일"
-                    />
-                    <span
-                      class="absolute text-gray-500 -translate-y-1/2 pointer-events-none right-3 top-1/2 dark:text-gray-400"
-                    >
-                      <svg
-                        class="fill-current"
-                        width="20"
-                        height="20"
-                        viewBox="0 0 20 20"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          fill-rule="evenodd"
-                          clip-rule="evenodd"
-                          d="M6.66659 1.5415C7.0808 1.5415 7.41658 1.87729 7.41658 2.2915V2.99984H12.5833V2.2915C12.5833 1.87729 12.919 1.5415 13.3333 1.5415C13.7475 1.5415 14.0833 1.87729 14.0833 2.2915V2.99984L15.4166 2.99984C16.5212 2.99984 17.4166 3.89527 17.4166 4.99984V7.49984V15.8332C17.4166 16.9377 16.5212 17.8332 15.4166 17.8332H4.58325C3.47868 17.8332 2.58325 16.9377 2.58325 15.8332V7.49984V4.99984C2.58325 3.89527 3.47868 2.99984 4.58325 2.99984L5.91659 2.99984V2.2915C5.91659 1.87729 6.25237 1.5415 6.66659 1.5415ZM6.66659 4.49984H4.58325C4.30711 4.49984 4.08325 4.7237 4.08325 4.99984V6.74984H15.9166V4.99984C15.9166 4.7237 15.6927 4.49984 15.4166 4.49984H13.3333H6.66659ZM15.9166 8.24984H4.08325V15.8332C4.08325 16.1093 4.30711 16.3332 4.58325 16.3332H15.4166C15.6927 16.3332 15.9166 16.1093 15.9166 15.8332V8.24984Z"
-                          fill=""
-                        />
-                      </svg>
-                    </span>
-                  </div>
-                </div>
-              </div>
             </div>
           </template>
         </ComponentCard>
@@ -519,6 +499,10 @@ const selectedEpLot = (value: OrderItem[]) => {
                 scrollHeight="390px"
                 size="small"
                 class="text-sm"
+                :rowClass="rowClassHook"
+                :select-all="selectAll"
+                @select-all-change="selectAllChangeHook"
+                @row-unselect="rowUnselectHook"
               >
                 <template #empty>
                   <div class="text-center">조회를 먼저해주세요!</div>
@@ -528,6 +512,7 @@ const selectedEpLot = (value: OrderItem[]) => {
                   headerStyle="width: 1%"
                   field="ofd_no"
                   frozen
+                  :selectionDisabled="(rowData: OrderItem) => rowData.comncode_dtnm === '출고완료'"
                 ></Column>
                 <Column
                   field="due_date"
@@ -591,7 +576,7 @@ const selectedEpLot = (value: OrderItem[]) => {
                 >
                 </Column>
                 <Column
-                  field="cur_os_qty"
+                  field=""
                   header="제품현출고수량"
                   :pt="{ columnHeaderContent: 'justify-center' }"
                   style="min-width: 130px; text-align: right"
@@ -623,30 +608,11 @@ const selectedEpLot = (value: OrderItem[]) => {
                   :prod_code="selectedRow?.prod_code"
                   :prod_name="selectedRow?.prod_name"
                   :remain_qty="selectedRow?.remain_qty"
-                  @selectedProductValue="selectedEpLot"
+                  @selectedEpLot="handleSelectedEpLot"
                   :visible="EpLotmodalopen"
                   @close="EpLotClosemodal"
+                  :usedLots="modalUsedLots"
                 />
-
-                <!-- <Column
-                  field="ep_lot"
-                  header="제품LOT번호"
-                  :pt="{ columnHeaderContent: 'justify-center' }"
-                  style="min-width: 100px"
-                ></Column>
-                <Column
-                  field="epep_dt"
-                  header="유통기한"
-                  :pt="{ columnHeaderContent: 'justify-center' }"
-                  style="min-width: 100px; text-align: center"
-                ></Column> -->
-                <!-- <Column
-                  field="ep_qty"
-                  header="제품재고수량"
-                  :pt="{ columnHeaderContent: 'justify-center' }"
-                  style="min-width: 100px; text-align: right"
-                ></Column> -->
-
                 <Column
                   field="comncode_dtnm"
                   header="출고상태"

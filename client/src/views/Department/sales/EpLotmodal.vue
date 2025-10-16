@@ -12,13 +12,16 @@ const props = defineProps<{
   visible: boolean
   prod_code?: string
   prod_name?: string
-  remain_qty: number
+  remain_qty?: number
+  usedLots?: Record<string, number> // 메인에서 lot제품 모으기 위한 정의
 }>()
 // 2. 부모에게 알릴 'close' 이벤트를 정의합니다, emit을 여기서 선언하는거
 // emit은 상위 컴포넌트에 보내는 방법중 하나 defineEmits을 import해줘야함
 const emit = defineEmits(['close', 'selectedEpLot'])
 // 모달 내부에서 닫기 동작 시 호출될 함수
 const closeModal = () => {
+  selectedProducts.value = [] // 선택 LOT 초기화
+  search.value.cur_os_qty = 0 // 총출고수량 초기화
   emit('close') // 'close' 이벤트를 부모에게 발생시켜 닫아달라고 요청합니다.
 }
 
@@ -31,29 +34,46 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
 const search = ref({
   prod_code: '',
   prod_name: '',
-  cur_os_qty: '',
+  cur_os_qty: 0,
 })
 
 // 선택된 제품lot들 저장 장소
-const selectedProducts = ref([])
+const selectedProducts = ref<EpLot[]>([])
+
 // 선택한 제품lot들 지우는 함수
-const resetSelectedProducts = () => {
-  selectedProducts.value = []
-}
+// const resetSelectedProducts = () => {
+//   selectedProducts.value = []
+// }
+
 // 선택한 제품lot들정보를 주문서조회에 보내는 함수
 function selectedEpLot() {
-  if (selectedProducts.value) {
-    emit('selectedEpLot', selectedProducts.value)
-    resetSelectedProducts()
-
-    emit('close')
+  if (!selectedProducts.value || selectedProducts.value.length === 0) {
+    alert('출고할 LOT를 선택해주세요.')
+    return
   }
+
+  const validLots = selectedProducts.value
+    .filter((lot) => lot && lot.lot_cur_os_qty > 0 && lot.ep_lot) // null/undefined 체크 추가
+    .map((lot) => ({
+      ep_lot: lot.ep_lot,
+      lot_cur_os_qty: lot.lot_cur_os_qty,
+      ep_qty: lot.ep_qty,
+    }))
+
+  if (validLots.length === 0) {
+    alert('출고수량이 0인 LOT는 선택할 수 없습니다.')
+    return
+  }
+
+  emit('selectedEpLot', { lots: validLots, totalQty: search.value.cur_os_qty })
+  emit('close')
 }
+
 interface EpLot {
   ep_lot: string
   epep_dt: string
-  ep_qty: number
-  lot_cur_os_qty: number
+  ep_qty: number // 재고수량
+  lot_cur_os_qty: number // 출고수량
 }
 
 const EpLots = ref<EpLot[]>([])
@@ -74,38 +94,67 @@ watch(
   () => props.visible,
   async (newVal) => {
     if (newVal) {
-      // 부모에서 받은 제품코드/이름을 세팅
-      search.value.prod_code = props.prod_code ?? '' // undefined이면 빈 문자열
+      // 부모에서 받은 제품코드/이름 세팅
+      search.value.prod_code = props.prod_code ?? ''
       search.value.prod_name = props.prod_name ?? ''
 
+      // 선택 LOT 초기화
+      selectedProducts.value = []
+
+      // EpLots 초기화
+      EpLots.value = []
+
+      // 총출고수량 초기화
+      search.value.cur_os_qty = 0
+
+      // 조회 실행
       await viewEpLot()
     }
   },
 )
 // 출고수량이 변하는 만큼 총출고수량 값이 실시간으로 바뀌도록
 watch(
-  EpLots,
+  selectedProducts,
   (newVal) => {
     const total = newVal.reduce((sum, lot) => sum + (lot.lot_cur_os_qty || 0), 0)
-    search.value.cur_os_qty = total.toString()
-    if (total > props.remain_qty) {
+
+    if (total > (props.remain_qty ?? 0)) {
       alert('주문미출고수량보다 큰 수량입니다. 다시 입력해주세요')
-      // 모든 출고수량 0으로 초기화
-      EpLots.value.forEach((lot) => (lot.lot_cur_os_qty = 0))
-      search.value.cur_os_qty = '0'
+      // 선택된 LOT만 초기화하고, 전체 EpLots는 그대로 두고 싶다면 아래처럼:
+      newVal.forEach((lot) => (lot.lot_cur_os_qty = 0))
+      search.value.cur_os_qty = 0
       return
     }
+
+    search.value.cur_os_qty = total
   },
-  { deep: true }, // 내부 값까지 감시
-)
+  { deep: true },
+) // immediate: true → 모달 열릴 때 초기값 계산
+
 // 출고수량 input박스 포커스를 잃었을때 재고수량보다 많으면 알람창 및 조정
 const onBlurCheck = (row: EpLot) => {
+  console.log('현재 LOT:', row.ep_lot, 'props.usedLots:', props.usedLots)
   if (!row.lot_cur_os_qty) row.lot_cur_os_qty = 0 // 빈 값 처리
+  // 개별 lot재고 초과 막는코드
   if (row.lot_cur_os_qty > row.ep_qty) {
     alert(`출고수량은 재고수량(${row.ep_qty})보다 클 수 없습니다!`)
     row.lot_cur_os_qty = row.ep_qty // 최대값으로 자동 조정
   } else if (row.lot_cur_os_qty < 0) {
     row.lot_cur_os_qty = 0 // 음수 입력 방지
+  }
+
+  // 전체 LOT 기준 검사 추가
+  const alreadyUsed = props.usedLots?.[String(row.ep_lot)] || 0
+  const totalPlanned = alreadyUsed + row.lot_cur_os_qty
+
+  if (totalPlanned > row.ep_qty) {
+    const remain = row.ep_qty - alreadyUsed
+    alert(
+      `이 LOT(${row.ep_lot})은 이미 ${alreadyUsed}개 출고 예정입니다.\n` +
+        `남은 재고 ${remain}개까지만 출고 가능합니다.`,
+    )
+
+    row.lot_cur_os_qty = remain > 0 ? remain : 0
   }
 }
 </script>
@@ -143,6 +192,7 @@ const onBlurCheck = (row: EpLot) => {
                 id="pic"
                 :class="inputStyle"
                 v-model="search.cur_os_qty"
+                style="text-align: right"
                 readonly
               />
             </div>

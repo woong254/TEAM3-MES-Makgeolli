@@ -35,6 +35,7 @@ interface SearchCondition {
   due_start_date: string // 납기일자 시작일
   due_end_date: string // 납기일자 시작일
 }
+
 // 주문제품 테이블 인터페이스 (Product 인터페이스를 대체)
 interface OrderItem {
   no: string
@@ -58,13 +59,15 @@ interface OrderInfoInterface {
   remark: string // 비고
 }
 
-// 주문서 저장할때 사용하는 타입
+// 주문서 저장할때 사용하는 제품 타입
 interface OrderProduct {
   no: number
   prod_code: string
   op_qty: number
   remark: string
 }
+
+// 주문서 저장할때 상세정보 타입
 interface OrderRequest {
   ord_id: string | null
   ord_name: string
@@ -81,8 +84,10 @@ interface OrderRequest {
 
 // 선택된 제품들
 const selectedProducts = ref<OrderItem[]>([])
+
 // products ref에 OrderItem[] 타입을 명시적으로 지정
 const products = ref<OrderItem[]>([])
+
 // 주문서조회검색 input태그 데이터 초기화
 const search = ref<SearchCondition>({
   ord_name: '',
@@ -91,6 +96,7 @@ const search = ref<SearchCondition>({
   ord_start_date: '',
   ord_end_date: '',
 })
+
 // 주문서상세정보 iunput태그 데이터 초기화
 const orderinfo = ref<OrderInfoInterface>({
   ord_id: '', // 주문서번호
@@ -811,6 +817,7 @@ const deleteOrder = async () => {
                 행삭제
               </button>
               <ProductSelectmodal
+                :disabledProdCodes="products.map((p) => p.prod_code)"
                 @selectedProductValue="ProductSelect"
                 :visible="productModalOpen"
                 @close="Productclosemodal"
