@@ -78,4 +78,30 @@ router.delete("/equipment/:equip_code", async (req, res) => {
   }
 });
 
+// 비가동 시작(등록)
+router.post("/downtime", async (req, res) => {
+  try {
+    const result = await equipmentService.startDowntime(req.body); // create
+    res.status(201).json(result); // { downtime_code, ... }
+  } catch (err) {
+    res.status(err.status || 500).json({ message: err.message || "등록 오류" });
+  }
+});
+
+// 종료(업데이트)
+router.put("/downtime/:code/end", async (req, res) => {
+  try {
+    const result = await equipmentService.endDowntime(
+      req.params.code,
+      req.body
+    ); // update
+    if (result.affectedRows === 0)
+      return res.status(404).json({ message: "대상 없음" });
+    res.status(200).json(result);
+  } catch (err) {
+    res
+      .status(err.status || 500)
+      .json({ message: err.message || "종료 처리 오류" });
+  }
+});
 module.exports = router;

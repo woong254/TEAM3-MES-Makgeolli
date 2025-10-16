@@ -4,30 +4,31 @@ import DataTable from 'primevue/datatable'
 import DataCol from 'primevue/column'
 import { watch, ref, computed } from 'vue'
 import axios from 'axios'
-
-const props = defineProps({
-  modelValue: Boolean,
-  blockedCodes: { type: Array, default: () => [] },
-  blockedNames: { type: Array, default: () => [] },
-})
-const emit = defineEmits(['update:modelValue', 'close', 'select'])
-const close = () => emit('close')
-
 const modalMat = ref([])
 const searchName = ref('')
 const selectModalMat = ref(null)
-
 const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400'
 const baseInputClass =
   'dark:bg-dark-900 h-8 w-full rounded-lg border border-gray-300 bg-transparent pl-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
 
 const blockedCodeSet = computed(() => new Set(props.blockedCodes ?? []))
 const blockedNameSet = computed(() => new Set(props.blockedNames ?? []))
-const displayed = computed(() =>
-  modalMat.value.filter(
+
+const props = defineProps({
+  modelValue: Boolean,
+  bcncCode: { type: String, default: '' },
+  blockedCodes: { type: Array, default: () => [] },
+  blockedNames: { type: Array, default: () => [] },
+})
+const emit = defineEmits(['update:modelValue', 'close', 'select'])
+const close = () => emit('close')
+
+const displayed = computed(() => {
+  const arr = Array.isArray(modalMat.value) ? modalMat.value : []
+  return arr.filter(
     (r) => !blockedCodeSet.value.has(r?.mat_code) && !blockedNameSet.value.has(r?.mat_name),
-  ),
-)
+  )
+})
 
 watch([blockedCodeSet, blockedNameSet], () => {
   if (
@@ -41,7 +42,12 @@ watch([blockedCodeSet, blockedNameSet], () => {
 
 const getMatList = async () => {
   try {
-    const response = await axios.get('/api/purMatList')
+    let response
+    if (props.bcncCode) {
+      response = await axios.get('/api/iisMatMasterList', { params: { bcnc_code: props.bcncCode } })
+    } else {
+      response = await axios.get('/api/iisMatMasterList')
+    }
     modalMat.value = response.data
   } catch (error) {
     console.error('Error fetching data:', error)
@@ -53,14 +59,18 @@ const searchMatList = async () => {
   try {
     let response
     if (q) {
-      response = await axios.get('/api/purMatTarget', { params: { mat_name: q } })
+      response = await axios.get('/api/iisMatMasterList', {
+        params: { mat_name: q, bcnc_code: props.bcncCode || undefined },
+      })
       if (!response.data || response.data.length === 0) {
         alert('조회 결과가 없습니다.')
         await getMatList()
         return
       }
     } else {
-      response = await axios.get('/api/purMatList')
+      response = await axios.get('/api/iisMatMasterList', {
+        params: { bcnc_code: props.bcncCode || undefined },
+      })
     }
     modalMat.value = response.data
   } catch (error) {
@@ -130,6 +140,10 @@ const selectMat = () => {
           :rows="8"
         >
           <DataCol selectionMode="single" headerStyle="width: 37px" bodyStyle="width: 37px" />
+          <template #empty>
+            <div class="text-center">오늘 입고될 자재가 없습니다.</div>
+          </template>
+
           <DataCol
             field="mat_code"
             header="자재코드"

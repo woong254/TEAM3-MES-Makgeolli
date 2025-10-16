@@ -11,20 +11,50 @@ router.get('/makeList', async(req, res) => {
   // let empId = req.body.empId;
   let empId = 'EMP-20250616-0002';
   
-  let prodOrdList = await prodOrdService
+  const prodOrdList = await prodOrdService
     .findByEmpId(empId)
     .catch(err => console.error(err));
 
   res.send(prodOrdList);
 })
 
+// 작업지시관리
 router.post('/prodOrd', async(req, res) => {
   const { header, details } = req.body || {};
   const prodOrd = await prodOrdService
     .addMakeForm(header, details)
-    .catch(err => console.err(err));
+    .catch(err => console.error(err));
   res.json(prodOrd);
 });
+
+// 공정실적관리
+router.get('/prodOrdManage2', async(req, res) => {
+  let params = req.query;
+  console.log(params);
+
+  const prodOrdManage = await prodOrdService
+    .chooseAboutWork
+    .catch(err => console.error(err));
+  res.json(prodOrdManage);
+})
+
+// 목록 조회
+router.get('/prodOrdManage', async (req, res, next) => {
+  try {
+    const data = await prodOrdService.findAllMakeList();
+    res.json(data);
+  } catch (e) { next(e); }
+});
+
+// 행 선택 후 설비/작업자만 조회
+router.post('/prodOrdManage/selection', async (req, res, next) => {
+  try {
+    const { procName } = req.params;
+    const data = await prodOrdService.chooseAboutEquip(procName);
+    res.json(data);
+  } catch (e) { next(e); }
+});
+
 
 
 

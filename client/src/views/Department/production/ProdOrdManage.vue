@@ -5,43 +5,44 @@ import ComponentCard from '@/components/common/ComponentCardOrder.vue'
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import '@/assets/common.css';
-import {  ref, computed } from 'vue';
+import {  ref, computed, onMounted } from 'vue';
+import axios from 'axios';
 
 // 달력 import
 import flatPickr from 'vue-flatpickr-component';
 import 'flatpickr/dist/flatpickr.css';
 import { Korean } from 'flatpickr/dist/l10n/ko.js';
-import { ChipPassThroughAttributes } from 'primevue/chip';
 
 
 // 지시사항 검색 조건
 interface SearchMakeOrder {
-  prod_name: string         // 제품명
-  proc_name: string         // 공정명
+  prod_name: string               // 제품명
+  proc_name: string               // 공정명
   make_order_start_date: string   // 지시서 작성일
-  make_order_end_date: string   // 지시서 작성일
+  make_order_end_date: string     // 지시서 작성일
 }
 
 // 지시 상품들
 interface MakeOrderDetail {
-  make_code: string         // 지시코드
-  make_order_date: string   // 지시날짜
-  make_name: string         // 지시명
-  prod_code: string         // 제품코드
-  prod_name: string         // 제품명
-  prod_spec: string         // 제품규격
-  prod_unit: string         // 관리단위
-  make_qty: number          // 생산수량, 초기값 100에 맞춰 number 타입으로 설정
-  make_priority: number     // 우선순위 -> 공정 순서
-  flow_id: string           // 공정코드
-  proc_id: string           // 공정명
+  no: number              // 선택을 위한 임의 번호
+  mk_ord_no: string       // 지시코드
+  writing_date: string    // 지시날짜
+  mk_name: string         // 지시명
+  prod_code: string       // 제품코드
+  prod_name: string       // 제품명
+  prod_spec: string       // 제품규격
+  comncode_dtnm: string   // 관리단위
+  mk_num: number          // 생산수량, 초기값 100에 맞춰 number 타입으로 설정
+  seq_no: number          // 우선순위 -> 공정 순서
+  proc_id: string         // 공정코드
+  proc_name: string         // 공정명
+  procs_st: string        // 실적상태
 }
 
 interface ChooseEquip {
-  no: number              // 순서
   equip_code: string      // 설비 코드
   equip_name: string      // 설비명
-  equip_status: string    // 설비상태
+  comncode_dtnm: string    // 설비상태
 }
 
 interface ChooseEmp {
@@ -85,6 +86,28 @@ const endDateRange = computed(() => ({
   minDate: searchMakeOrder.value.make_order_start_date,
   locale: Korean,
 }));
+
+const loadProcDetail = async ({ data }) => {
+  const { proc_id, proc_name } = data;
+
+  const res = await axios.get('/api/prodOrdManage', { params: { procId: proc_id } });
+  equipRows.value = res.data.equipRows;
+  empRows.value   = res.data.workerRows;
+
+  await axios.post('/api/prodOrdManage/selection', {
+    procName: proc_name,
+  });
+};
+
+
+
+onMounted(async () => {
+  const res = await axios.get('/api/prodOrdManage');
+  makeRows.value = res.data.makeRows;
+  empRows.value = res.data.empRows;
+  console.log('makeRows.value:', makeRows.value);
+  console.log('empRows.value:', empRows.value);
+});
 
 
 const currentPageTitle = ref('공정 실적 관리');
@@ -207,7 +230,7 @@ const baseInputClass = "dark:bg-dark-900 h-8 w-full rounded-lg border border-gra
             <template #header-right>
               <div class="flex items-center">
                 <button type="button" class="btn-color btn-common">
-                  작업 지시
+                  공정 제어
                 </button>
               </div>
             </template>
@@ -216,43 +239,58 @@ const baseInputClass = "dark:bg-dark-900 h-8 w-full rounded-lg border border-gra
                 <DataTable
                   dataKey="no"
                   tableStyle="max-width: 100%;"
-                  class="fixed-data"
+                  class="fixed-data dense-table"
                   showGridlines
                   scrollable
                   scrollHeight="250px"
                   editMode="cell"
                   size="small"
                   :value="makeRows"
+                  selectionMode = "single"
+                  @row-select="loadProcDetail"
                   v-model:selection="selectMake"
                 >
-                  <Column selectionMode="single" headerStyle="width: 1%" field="no" />
+                  <template #empty>
+                    <div class="text-center">지시건이 없습니다</div>
+                  </template>
+                  
+                  <Column 
+                  selectionMode="single" 
+                  headerStyle="width: 1%" 
+                  field="no"
+                  :pt="{ columnHeaderContent: 'justify-center' }" 
+                  />
 
                   <Column
-                    field="make_code"
+                    field="mk_ord_no"
                     header="작업지시코드"
                     :pt="{ columnHeaderContent: 'justify-center' }"
+                    headerStyle="width: 10%"
                   />
                   <Column
-                    field="make_order_date"
+                    field="writing_date"
                     header="지시일자"
                     :pt="{ columnHeaderContent: 'justify-center' }"
+                    style="text-align: center"
+                    headerStyle="width: 7%"
                   />
                   <Column
-                    field="make_name"
+                    field="mk_name"
                     header="작업지시명"
                     :pt="{ columnHeaderContent: 'justify-center' }"
-                    style="text-align: right"
+                    headerStyle="width: 10%"
                   />
                   <Column
                     field="prod_code"
                     header="제품코드"
                     :pt="{ columnHeaderContent: 'justify-center' }"
+                    headerStyle="width: 15%"
                   />
                   <Column
                     field="prod_name"
                     header="제품명"
-                    style="text-align: right"
                     :pt="{ columnHeaderContent: 'justify-center' }"
+                    headerStyle="width: 15%"
 
                   />
                   <Column
@@ -260,21 +298,23 @@ const baseInputClass = "dark:bg-dark-900 h-8 w-full rounded-lg border border-gra
                     header="규격"
                     style="text-align: right"
                     :pt="{ columnHeaderContent: 'justify-center' }"
+                    headerStyle="width: 5%"
 
                   />
                   <Column
-                    field="prod_unit"
+                    field="comncode_dtnm"
                     header="단위"
                     style="text-align: right"
                     :pt="{ columnHeaderContent: 'justify-center' }"
+                    headerStyle="width: 5%"
 
                   />
                   <Column
-                    field="make_qty"
+                    field="mk_num"
                     header="지시수량"
-                    style="text-align: left"
+                    style="text-align: right"
                     :pt="{ columnHeaderContent: 'justify-center' }"
-                    headerStyle="width: 30%"
+                    headerStyle="width: 7%"
                   >
                     <template #body="{ data }">
                       <input
@@ -286,24 +326,33 @@ const baseInputClass = "dark:bg-dark-900 h-8 w-full rounded-lg border border-gra
                     </template>
                   </Column>
                   <Column
-                    field="make_priority"
+                    field="seq_no"
                     header="공정순서"
                     style="text-align: right"
                     :pt="{ columnHeaderContent: 'justify-center' }"
-
-                  />
-                  <Column
-                    field="flow_id"
-                    header="공정코드"
-                    style="text-align: right"
-                    :pt="{ columnHeaderContent: 'justify-center' }"
+                    class="dense-table"
+                    headerStyle="width: 7%"
 
                   />
                   <Column
                     field="proc_id"
-                    header="공정명"
-                    style="text-align: right"
+                    header="공정코드"
                     :pt="{ columnHeaderContent: 'justify-center' }"
+                    headerStyle="width: 7%"
+
+                  />
+                  <Column
+                    field="proc_name"
+                    header="공정명"
+                    :pt="{ columnHeaderContent: 'justify-center' }"
+                    headerStyle="width: 7%"
+
+                  />
+                  <Column
+                    field="procs_st"
+                    header="실적상태"
+                    :pt="{ columnHeaderContent: 'justify-center' }"
+                    headerStyle="width: 7%"
 
                   />
                 </DataTable>
@@ -317,9 +366,9 @@ const baseInputClass = "dark:bg-dark-900 h-8 w-full rounded-lg border border-gra
             <template #body-content>
               <div ref="tableWrapper" class="order-table-wrapper h-47">
                 <DataTable
-                  dataKey="no"
+                  dataKey="equip_code"
                   tableStyle="max-width: 100%;"
-                  class="fixed-data"
+                  class="fixed-data dense-table"
                   showGridlines
                   scrollable
                   scrollHeight="250px"
@@ -328,11 +377,12 @@ const baseInputClass = "dark:bg-dark-900 h-8 w-full rounded-lg border border-gra
                   :value="equipRows"
                   v-model:selection="selectEquip"
                 >
-                  <Column selectionMode="single" />
+                  <template #empty>
+                    <div class="text-center">지시 목록을 선택해주세요</div>
+                  </template>
                   <Column 
-                    field="no"
-                    header="순번"
-                    :pt="{ columnHeaderContent: 'justify-center' }"
+                    selectionMode="single" 
+                    :pt="{ columnHeaderContent: 'justify-center' }" 
                   />
                   <Column 
                     field="equip_code"
@@ -345,7 +395,7 @@ const baseInputClass = "dark:bg-dark-900 h-8 w-full rounded-lg border border-gra
                     :pt="{ columnHeaderContent: 'justify-center' }"
                   />
                   <Column 
-                    field="equip_status"
+                    field="comncode_dtnm"
                     header="설비상태"
                     :pt="{ columnHeaderContent: 'justify-center' }"
                   />
@@ -358,25 +408,32 @@ const baseInputClass = "dark:bg-dark-900 h-8 w-full rounded-lg border border-gra
             <template #body-content>
               <div ref="tableWrapper" class="order-table-wrapper h-47">
                 <DataTable
-                  dataKey="no"
+                  dataKey="emp_id"
                   tableStyle="max-width: 100%;"
-                  class="fixed-data"
+                  class="fixed-data dense-table"
                   showGridlines
                   scrollable
-                  scrollHeight="250px"
+                  scrollHeight="180px"
                   editMode="cell"
                   size="small"
                   :value="empRows"
                   v-model:selection="selectEmp"
                 >
-                  <Column selectionMode="single" />
+                  <template #empty>
+                    <div class="text-center">사원이 없습니다</div>
+                  </template>
+                  <Column 
+                    selectionMode="single" 
+                    :pt="{ columnHeaderContent: 'justify-center' }" 
+                  />
+
                   <Column 
                     field="emp_id"
                     header="사원번호"
                     :pt="{ columnHeaderContent: 'justify-center' }"
                   />
                   <Column 
-                    field="string"
+                    field="emp_name"
                     header="사원명"
                     :pt="{ columnHeaderContent: 'justify-center' }"
                   />
@@ -389,3 +446,23 @@ const baseInputClass = "dark:bg-dark-900 h-8 w-full rounded-lg border border-gra
     </div>
   </AdminLayout>
 </template>
+
+<style>
+.dense-table .p-datatable-thead > tr > th { 
+  padding: 0.25rem 0.5rem; 
+  margin: 0;
+  font-size: 14px; 
+  line-height: 1.2;
+}
+.dense-table .p-datatable-tbody > tr > td { 
+  padding: 0.25rem 0.5rem; 
+  font-size: 12px; 
+  line-height: 1.2;
+}
+/* 헤더 높이 추가 축소 시 */
+.dense-table .p-datatable-header { 
+  padding: 0.25rem 0.5rem; 
+  font-size: 12px; 
+}
+
+</style>

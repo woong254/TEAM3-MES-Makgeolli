@@ -340,5 +340,212 @@ ALTER TABLE pur_mat
   MODIFY receipt_qty    DECIMAL(10,2) NOT NULL DEFAULT 0,
   MODIFY unreceipt_qty  DECIMAL(10,2) NOT NULL DEFAULT 0,
   MODIFY receipt_status VARCHAR(100)  NOT NULL DEFAULT '입고대기';
-
   
+  ALTER TABLE pur_mat DROP COLUMN unreceipt_qty;
+
+ALTER TABLE pur_mat
+ADD COLUMN unreceipt_qty DECIMAL(10,2)
+    GENERATED ALWAYS AS (pur_qty - receipt_qty) STORED;
+    
+SELECT (COUNT(*) > 0) AS has_match
+FROM pur_form f JOIN pur_mat m 
+ON m.pur_code = f.pur_code
+WHERE f.receipt_date = '2025-10-14'
+  AND f.bcnc_code        = '8'
+  AND m.mat_code        = 'M-20250315-001'
+  AND m.unreceipt_qty  >= 50;
+  
+  SELECT *
+  FROM iis;
+
+
+UPDATE iis
+SET pass_qty = 18,
+fail_qty = 2
+WHERE iis_id = 9; 
+
+UPDATE mat_receipt SET receipt_qty = 0 WHERE receipt_qty IS NULL;
+
+ALTER TABLE mat_receipt DROP INDEX uq_mat_receipt_iis_id;
+
+use mes;
+
+select *
+from edcts;
+
+select *
+from pur_form;
+
+UPDATE pur_mat
+SET receipt_qty = 200
+WHERE pur_mat_id = 14;
+
+
+DELIMITER $$
+
+DROP TRIGGER IF EXISTS pur_mat_bu $$
+CREATE TRIGGER pur_mat_bu
+BEFORE UPDATE ON `pur_mat`   -- 🔹 테이블명을 실제와 동일(소문자)하게
+FOR EACH ROW
+BEGIN
+  SET NEW.PUR_QTY     = IFNULL(NEW.PUR_QTY, 0);
+  SET NEW.RECEIPT_QTY = IFNULL(NEW.RECEIPT_QTY, 0);
+
+  IF NEW.RECEIPT_QTY < 0 THEN
+    SIGNAL SQLSTATE '45000'
+      SET MESSAGE_TEXT = 'receipt_qty는 음수일 수 없습니다.';
+  END IF;
+
+  IF NEW.RECEIPT_QTY > NEW.PUR_QTY THEN
+    SIGNAL SQLSTATE '45000'
+      SET MESSAGE_TEXT = '입고량이 발주수량을 초과합니다.';
+  END IF;
+
+  SET NEW.UNRECEIPT_QTY = GREATEST(NEW.PUR_QTY - NEW.RECEIPT_QTY, 0);
+
+  SET NEW.RECEIPT_STATUS =
+    CASE
+      WHEN NEW.RECEIPT_QTY = 0 THEN '입고전'
+      WHEN NEW.RECEIPT_QTY < NEW.PUR_QTY THEN '부분입고'
+      ELSE '입고완료'
+    END;
+END $$
+DELIMITER ;
+
+CREATE INDEX ix_mat_receipt_lot ON mat_receipt(mat_lot);
+CREATE INDEX ix_mat_release_lot ON mat_release(mat_lot);
+
+DELIMITER $$
+
+CREATE OR REPLACE PROCEDURE sp_recompute_lot(IN p_mat_lot VARCHAR(100))
+BEGIN
+  DECLARE v_rcpt DECIMAL(10,2);
+  DECLARE v_rel  DECIMAL(10,2);
+
+  SELECT IFNULL(SUM(receipt_qty),0)
+    INTO v_rcpt
+  FROM mat_receipt
+  WHERE mat_lot = p_mat_lot;
+
+  SELECT IFNULL(SUM(release_qty),0)
+    INTO v_rel
+  FROM mat_release
+  WHERE mat_lot = p_mat_lot;
+
+  UPDATE lot_mat
+     SET receipt_qty = v_rcpt,
+         release_qty = v_rel,
+         stock_qty   = v_rcpt - v_rel
+   WHERE mat_lot = p_mat_lot;
+END$$
+
+DELIMITER ;
+
+DELIMITER $$
+
+CREATE OR REPLACE TRIGGER tr_mat_receipt_ai
+AFTER INSERT ON mat_receipt
+FOR EACH ROW
+BEGIN
+  CALL sp_recompute_lot(NEW.mat_lot);
+END$$
+
+CREATE OR REPLACE TRIGGER tr_mat_receipt_au
+AFTER UPDATE ON mat_receipt
+FOR EACH ROW
+BEGIN
+  IF OLD.mat_lot <> NEW.mat_lot THEN
+    CALL sp_recompute_lot(OLD.mat_lot);
+  END IF;
+  CALL sp_recompute_lot(NEW.mat_lot);
+END$$
+
+CREATE OR REPLACE TRIGGER tr_mat_receipt_ad
+AFTER DELETE ON mat_receipt
+FOR EACH ROW
+BEGIN
+  CALL sp_recompute_lot(OLD.mat_lot);
+END$$
+
+DELIMITER ;
+
+DELIMITER $$
+
+-- 출고 초과 방지
+CREATE OR REPLACE TRIGGER tr_mat_release_bi
+BEFORE INSERT ON mat_release
+FOR EACH ROW
+BEGIN
+  DECLARE v_stock DECIMAL(10,2);
+
+  SELECT IFNULL(stock_qty,0)
+    INTO v_stock
+  FROM lot_mat
+  WHERE mat_lot = NEW.mat_lot;
+
+  IF NEW.release_qty < 0 THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = '출고량은 음수일 수 없습니다.';
+  END IF;
+
+  IF NEW.release_qty > v_stock THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = '출고량이 재고를 초과합니다.';
+  END IF;
+END$$
+
+CREATE OR REPLACE TRIGGER tr_mat_release_bu
+BEFORE UPDATE ON mat_release
+FOR EACH ROW
+BEGIN
+  DECLARE v_stock DECIMAL(10,2);
+  DECLARE v_allow DECIMAL(10,2);
+
+  SELECT IFNULL(stock_qty,0)
+    INTO v_stock
+  FROM lot_mat
+  WHERE mat_lot = NEW.mat_lot;
+
+  SET v_allow = v_stock;
+  IF NEW.mat_lot = OLD.mat_lot THEN
+    SET v_allow = v_stock + IFNULL(OLD.release_qty,0);
+  END IF;
+
+  IF NEW.release_qty < 0 THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = '출고량은 음수일 수 없습니다.';
+  END IF;
+
+  IF NEW.release_qty > v_allow THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = '출고량이 재고를 초과합니다.';
+  END IF;
+END$$
+
+-- 집계 재계산
+CREATE OR REPLACE TRIGGER tr_mat_release_ai
+AFTER INSERT ON mat_release
+FOR EACH ROW
+BEGIN
+  CALL sp_recompute_lot(NEW.mat_lot);
+END$$
+
+CREATE OR REPLACE TRIGGER tr_mat_release_au
+AFTER UPDATE ON mat_release
+FOR EACH ROW
+BEGIN
+  IF OLD.mat_lot <> NEW.mat_lot THEN
+    CALL sp_recompute_lot(OLD.mat_lot);
+  END IF;
+  CALL sp_recompute_lot(NEW.mat_lot);
+END$$
+
+CREATE OR REPLACE TRIGGER tr_mat_release_ad
+AFTER DELETE ON mat_release
+FOR EACH ROW
+BEGIN
+  CALL sp_recompute_lot(OLD.mat_lot);
+END$$
+
+DELIMITER ;
+
+ALTER TABLE mat_receipt
+  ADD UNIQUE KEY uq_receipt_iis (iis_id);
+
+ 

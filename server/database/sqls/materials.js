@@ -230,7 +230,7 @@ JOIN mat_master m ON m.mat_code  = i.mat_code
 JOIN bcnc_master b ON b.bcnc_code = i.bcnc_code
 JOIN pur_form f ON f.pur_code  = i.pur_code  
 WHERE i.insp_status = ?
-ORDER BY i.iis_id DESC
+ORDER BY i.iis_id
 `;
 
 const deleteIis = `
@@ -256,8 +256,8 @@ JOIN pur_form pf ON pf.pur_code = pm.pur_code
 JOIN mat_master m ON m.mat_code = pm.mat_code
 JOIN bcnc_master b ON b.bcnc_code = pf.bcnc_code
 WHERE pm.receipt_status IN ('입고대기', '부분입고')
-AND pf.receipt_date = ?
-ORDER BY pm.pur_mat_id DESC
+AND pf.receipt_date = CURDATE()
+ORDER BY pm.pur_mat_id 
 `;
 
 const selectIisMatTarget = `
@@ -277,9 +277,9 @@ JOIN pur_form pf ON pf.pur_code = pm.pur_code
 JOIN mat_master m ON m.mat_code = pm.mat_code
 JOIN bcnc_master b ON b.bcnc_code = pf.bcnc_code
 WHERE pm.receipt_status IN ('입고대기', '부분입고')
-AND pf.receipt_date = ?
+AND pf.receipt_date = CURDATE()
 AND m.mat_name LIKE ?
-ORDER BY pm.pur_mat_id DESC
+ORDER BY pm.pur_mat_id 
 `;
 
 const iisModalBcnc = `

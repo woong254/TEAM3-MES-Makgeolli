@@ -69,6 +69,42 @@ DELETE FROM equip_master
 WHERE equip_code = ?
 `;
 
+// 비가동 INSERT
+const insertDowntime = `
+  INSERT INTO downtime (
+    downtime_code,
+    equip_name,
+    downtime_type,
+    downtime_start,
+    downtime_end,     -- 시작 시 보통 NULL
+    description,
+    worker_id,
+    progress_status,
+    equip_code
+  )
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+`;
+
+// 비가동 종료(종료시간 + 상태 + 옵션으로 비고 갱신)
+const endDowntime = `
+  UPDATE downtime
+     SET downtime_end   = COALESCE(?, NOW()),
+         description    = COALESCE(?, description),
+         progress_status= ?
+   WHERE downtime_code  = ?
+     AND downtime_end IS NULL   -- 이미 끝난 건 중복 종료 방지
+`;
+
+// // (선택) 진행중/완료 상태 조회 등에 자주 쓰는 쿼리 예시
+// const selectRunningByEquip = `
+//   SELECT *
+//     FROM downtime
+//    WHERE equip_code = ?
+//      AND downtime_end IS NULL
+//    ORDER BY downtime_start DESC
+//   LIMIT 1
+// `;
+
 module.exports = {
   searchEquipList,
   insertEquip,
@@ -76,4 +112,6 @@ module.exports = {
   deleteEquip,
   selectEquipByCode,
   selectEquipType,
+  insertDowntime,
+  endDowntime,
 };

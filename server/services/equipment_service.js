@@ -11,6 +11,8 @@ const {
   deleteEquip, // DELETE FROM equipment WHERE equip_code=?
   selectEquipByCode, // SELECT * FROM equipment WHERE equip_code=?
   selectEquipType,
+  insertDowntime,
+  updateDowntimeEnd,
 } = require("../database/sqls/equipform.js");
 
 /* =========================
@@ -250,4 +252,83 @@ async function remove(equip_code) {
   return { affectedRows: result.affectedRows };
 }
 
-module.exports = { list, create, update, remove, getOne, viewList };
+// 시작 = CREATE
+async function startDowntime(payload = {}) {
+  const equipCode = toNullTrim(pick(payload, "equip_code", "equipCode"));
+  const equipName = toNullTrim(pick(payload, "equip_name", "equipName"));
+  const downtimeType =
+    toNullTrim(pick(payload, "downtime_type", "downtimeType")) || "비계획정지";
+  const description = toNullTrim(pick(payload, "description", "description"));
+  const workerId = toNullTrim(pick(payload, "worker_id", "workerId"));
+  const startAt =
+    toYmdHmsOrNull(pick(payload, "downtime_start", "downtimeStart")) ||
+    toYmdHmsOrNull(new Date());
+
+  // 필수값 체크
+  const missing = [];
+  if (!equipCode) missing.push("equip_code");
+  if (!startAt) missing.push("downtime_start");
+  if (missing.length) {
+    const e = new Error(`필수값: ${missing.join(", ")}`);
+    e.status = 400;
+    throw e;
+  }
+
+  // 비가동코드 (서버 생성 권장)
+  const code =
+    toNullTrim(pick(payload, "downtime_code", "downtimeCode")) ||
+    makeDowntimeCode();
+
+  // 스키마 순서에 맞춰 9개 파라미터 준비
+  // downtime_end: 시작 시 보통 null
+  // progress_status: 시작 시 "진행중"
+  const params = [
+    code, // downtime_code
+    equipName, // equip_name
+    downtimeType, // downtime_type
+    startAt, // downtime_start
+    null, // downtime_end
+    description, // description
+    workerId, // emp_id
+    "진행중", // progress_status
+    equipCode, // equip_code
+  ];
+
+  // 분리해둔 SQL 변수 사용 (예: import { insertDowntime } from "../sql/..." )
+  const r = await mariadb.query(insertDowntime, params);
+  return { downtime_code: code, affectedRows: r.affectedRows };
+}
+// 종료 = UPDATE
+async function endDowntime(code, payload = {}) {
+  if (!code) {
+    const e = new Error("downtime_code 필요");
+    e.status = 400;
+    throw e;
+  }
+
+  const endAt =
+    toYmdHmsOrNull(pick(payload, "downtime_end", "downtimeEnd")) ||
+    toYmdHmsOrNull(new Date());
+  const remark = toNullTrim(pick(payload, "description", "description")); // 옵션
+  const status =
+    toNullTrim(pick(payload, "progress_status", "progressStatus")) || "완료";
+
+  const r = await mariadb.query(updateDowntimeEnd, [
+    endAt,
+    remark,
+    status,
+    code,
+  ]);
+  return { affectedRows: r.affectedRows };
+}
+
+module.exports = {
+  list,
+  create,
+  update,
+  remove,
+  getOne,
+  viewList,
+  startDowntime,
+  endDowntime,
+};
