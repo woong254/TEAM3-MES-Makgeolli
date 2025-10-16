@@ -411,10 +411,10 @@ const submitRegister = async () => {
       return
     }
     // 검사명 입력하지 않았을 때
-    if (!inspName.value) {
-      alert('검사명을 입력해주세요.')
-      return
-    }
+    // if (!inspName.value) {
+    //   alert('검사명을 입력해주세요.')
+    //   return
+    // }
     // 가입고번호 입력하지 않았을 때
     if (!matInspTargetData.iis_id) {
       alert('가입고번호를 선택해주세요.')
@@ -466,7 +466,7 @@ const submitRegister = async () => {
     // 4) 페이로드 구성 (백엔드 registerMatInsp(Info)와 동일 구조)
     const payload = {
       insp_name: inspName.value, // 검사명
-      insp_date: date.value, // 검사일시
+      insp_date: matInspTargetDataattedDateTime, // 검사일시
       insp_qty: Number(matInspQty.value || 0), // 검사량
       pass_qty: Number(matInspPass.value || 0), // 합격량
       fail_qty: Number(matInspNG.value || 0), // 불량량
@@ -520,7 +520,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
         <div class="flex gap-4">
           <div class="w-1/4">
             <label :class="labelStyle"> 검사명 </label>
-            <input type="text" :class="inputStyle" v-model="inspName" />
+            <input type="text" :class="inputStyle" />
           </div>
           <div>
             <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
@@ -591,7 +591,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
       <template #header-right>
         <div class="flex justify-end">
           <button class="btn-common btn-color">PDF</button>
-          <button class="btn-common btn-color">등록</button>
+          <button class="btn-common btn-color" @click="submitRegister">등록</button>
           <button class="btn-common btn-white">삭제</button>
         </div>
       </template>
@@ -606,6 +606,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                 :class="inputStyleSM"
                 class="w-2/3"
                 placeholder="검사명을 입력하세요."
+                v-model="inspName"
               />
             </div>
             <div class="flex flex-wrap justify-between gap-2">
