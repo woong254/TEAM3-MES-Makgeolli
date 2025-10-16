@@ -195,7 +195,11 @@ const selectStyle =
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
             <Column field="t_spec" header="규격" :pt="{ columnHeaderContent: 'justify-center' }" />
-            <Column field="t_unit" header="단위" :pt="{ columnHeaderContent: 'justify-center' }" />
+            <Column
+              field="t_unit_name"
+              header="단위"
+              :pt="{ columnHeaderContent: 'justify-center' }"
+            />
           </DataTable>
         </div>
         <div class="flex justify-center mt-3">

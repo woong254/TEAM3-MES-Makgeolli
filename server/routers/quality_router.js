@@ -90,4 +90,12 @@ router.get("/matInspQcMasternNG/:matCode", async (req, res) => {
   res.send(result);
 });
 
+// 2-3. 자재입고검사 등록
+router.post("/matInspRegister", async (req, res) => {
+  let result = await qualityService
+    .registerMatInsp(req.body)
+    .catch((err) => console.error(err));
+  res.send(result);
+});
+
 module.exports = router;

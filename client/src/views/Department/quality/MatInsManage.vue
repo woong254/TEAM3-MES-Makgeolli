@@ -1,6 +1,6 @@
 <!-- 자재입고검사 관리 -->
 <script setup lang="ts">
-import { ref, reactive, watch } from 'vue'
+import { ref, reactive, watch, computed, nextTick } from 'vue'
 import '@/assets/common.css'
 import ComponentCard from '@/components/common/ComponentCardButton.vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
@@ -13,18 +13,20 @@ import flatPickr from 'vue-flatpickr-component'
 import 'flatpickr/dist/flatpickr.css'
 import MatInspTargetSelectModal from './MatInspTargetSelectModal.vue' // 검사대기(가입고) 선택모달
 import axios from 'axios'
+import InspMethodModal from './MatInspMethodModal.vue' // 검사방법 모달
+import InspRubricModal from './MatInspRubricModal.vue' // 채점기준 모달
 
 // 1. 페이지 타이틀
 const currentPageTitle = ref('자재입고검사 관리')
 
 // 2. TS 데이터타입
-// 2-1. 관능/범위 데이터타입(수정필요)
+// 2-1. 관능/범위 데이터타입
 interface SensoryRow {
   insp_item_id: string
   insp_item_name: string
   pass_score: number // “합격기준점수(평균)”
-  pass_score_spec?: string // (있으면) 범위 코드 등
-  score_desc: any[] // (옵션) 점수설명
+  pass_score_spec: string // (있으면) 범위 코드 등
+  score_desc: scoredescDT[] // 점수설명
   max_score: number // 동적 점수 컬럼 개수
   insp_result_value: number
   r_value: string // 판정(합P/불N)
@@ -32,8 +34,8 @@ interface SensoryRow {
 }
 interface SensoryDetail {
   id: string // `${insp_item_id}-${order}`
-  order: number // 번호 컬럼에 꽂힘
-  question_name: string // 질문 컬럼에 꽂힘
+  order: number
+  question_name: string
   score?: number // 사용자가 고른 점수(1..max_score)
 }
 interface RangeRow {
@@ -48,6 +50,10 @@ interface RangeRow {
   file_name: string | null // "-" 등
   insp_result_value: number // 사용자 입력값
   r_value: string // 판정(계산 후 세팅)
+}
+interface scoredescDT {
+  score: number
+  desc: string
 }
 
 // 2-2. 검사대상(가입고)
@@ -116,6 +122,8 @@ const matInspTargetData = reactive({
 const matInspQty = ref<number>(0) // 검사량
 const matInspNG = ref<number>(0) // 불량량
 const matInspPass = ref<number>(0) // 합격량
+const inspName = ref('') // 검사명
+const remark = ref('') // 비고
 
 // 4. 검사일자
 const dateValue = new Date()
@@ -215,22 +223,9 @@ const findMatInspNgnQcMaster = async (mat_code: string) => {
   }
 }
 
-// 10.
-
-// 15. 테이블 데이터
-// 범위
-const inspDataRan = ref<RangeRow[]>([
-  // {
-  //   insp_name: 'dd',
-  //   insp_method: '-',
-  //   file_name: '-',
-  //   range_stand: 'dd',
-  //   insp_unit: 'dd',
-  //   mea_values: 'dd',
-  //   t_unit: 'dd',
-  // },
-])
-// 관능
+// 10. 테이블에 가져온 데이터 넣기
+// 10-1. 테이블 데이터
+const inspDataRan = ref<RangeRow[]>([]) // 범위
 const inspDataSen = ref<SensoryRow[]>([
   // {
   //   id: 'SEN-001',
@@ -244,84 +239,259 @@ const inspDataSen = ref<SensoryRow[]>([
   //     { id: 'SEN-001-2', question: '곡물 향 유지', s1: 4, s2: 3, s3: 4, s4: 4, s5: 4 },
   //   ],
   // },
-  // {
-  //   id: 'SEN-002',
-  //   insp_name: '맛',
-  //   insp_method: 3.5,
-  //   file_name: 3.2,
-  //   range_stand: '5점 만점, 평균 3.5 이상',
-  //   insp_unit: '불합격',
-  //   details: [
-  //     { id: 'SEN-002-1', question: '쓴맛 없음', s1: 3, s2: 3, s3: 3, s4: 4, s5: 3 },
-  //     { id: 'SEN-002-2', question: '단맛 균형', s1: 3, s2: 3, s3: 4, s4: 3, s5: 3 },
-  //   ],
-  // },
-])
-const specLabel: Record<string, string> = {
-  R1: '이상',
-  R2: '초과',
-  R3: '이하',
-  R4: '미만',
-}
+]) // 관능
 
-const processQcToTables = () => {
-  if (!qc.value?.length) {
-    inspDataSen.value = []
-    inspDataRan.value = []
+// 10-2. 공통코드 한글라벨
+const specLabel = (code?: string | null) => {
+  switch ((code || '').toLowerCase()) {
+    case 'r1':
+      return '이상'
+    case 'r2':
+      return '초과'
+    case 'r3':
+      return '이하'
+    case 'r4':
+      return '미만'
+    default:
+      return ''
+  }
+}
+// 10-3. 숫자/JSON/라벨 유틸
+const toNum = (v: any) => (v === null || v === undefined || v === '' ? null : Number(v))
+const safeArr = <T = any,>(v: any): T[] => (Array.isArray(v) ? v : v ? JSON.parse(v) : [])
+
+// 10-4. 범위형 한 행의 판정 계산
+const judgeRange = (row: RangeRow) => {
+  const val = toNum(row.insp_result_value)
+  if (val === null) {
+    row.r_value = ''
     return
   }
 
-  const senRows: SensoryRow[] = []
-  const ranRows: RangeRow[] = []
+  const min = toNum(row.min_range)
+  const max = toNum(row.max_range)
 
-  qc.value.forEach((item) => {
-    if (item.insp_type === 'S') {
-      // 관능
-      const maxScore = Number(item.max_score) || 5
-      const passScore = Number(item.pass_score) || 0
+  // 하한 체크
+  let okMin = true
+  if (min !== null) {
+    okMin = row.min_label === '이상' ? val >= min : row.min_label === '초과' ? val > min : true
+  }
+  // 상한 체크
+  let okMax = true
+  if (max !== null) {
+    okMax = row.max_label === '이하' ? val <= max : row.max_label === '미만' ? val < max : true
+  }
+  row.r_value = okMin && okMax ? 'P' : 'F'
+}
 
-      const questions = Array.isArray(item.sens_questions) ? item.sens_questions : []
-      const details: SensoryDetail[] = questions.map((q: any) => ({
-        id: `${item.insp_item_id}-${q.order}`,
-        order: Number(q.order),
-        question_name: q.name,
+// 10-5. 관능형 한 행의 판정 계산(평균 >= pass_score 이면 합격으로 가정)
+const judgeSensory = (row: SensoryRow) => {
+  const picked = row.details.map((d) => d.score).filter((n): n is number => typeof n === 'number')
+  if (!picked.length) {
+    row.insp_result_value = 0
+    row.r_value = ''
+    return
+  }
+
+  const avg = picked.reduce((a, b) => a + b, 0) / picked.length
+  const base = row.pass_score
+  const cond = (row.pass_score_spec || 'r1').toLowerCase() // 기본은 '이상(r1)'
+
+  // r1(이상) / r2(초과)만
+  const pass = cond === 'r2' ? avg > base : avg >= base
+
+  row.insp_result_value = Number(avg.toFixed(2))
+  row.r_value = pass ? 'P' : 'F' // ★ DB 저장용 코드로 유지
+}
+
+// 10-3. 테이블에 데이터 넣기
+// qc[] → inspDataRan / inspDataSen 로 변환
+const processQcToTables = () => {
+  const ran: RangeRow[] = []
+  const sen: SensoryRow[] = []
+
+  ;(qc.value || []).forEach((r) => {
+    if (r.insp_type === 'R') {
+      ran.push({
+        insp_item_id: r.insp_item_id,
+        insp_item_name: r.insp_item_name,
+        min_range: r.min_range ?? '',
+        min_label: specLabel(r.min_range_spec),
+        max_range: r.max_range ?? '',
+        max_label: specLabel(r.max_range_spec),
+        unit: r.unit ?? '',
+        insp_method: r.insp_method ?? null,
+        file_name: r.file_name ?? null,
+        insp_result_value: 0,
+        r_value: '',
+      })
+    } else if (r.insp_type === 'S') {
+      const questions = safeArr<any>(r.sens_questions).map((q: any, idx: number) => ({
+        id: `${r.insp_item_id}-${q.order ?? idx + 1}`,
+        order: q.order ?? idx + 1,
+        question_name: q.name ?? q.question ?? q.question_name ?? '',
         score: undefined,
       }))
 
-      senRows.push({
-        insp_item_id: item.insp_item_id,
-        insp_item_name: item.insp_item_name,
-        pass_score: passScore,
-        pass_score_spec: item.pass_score_spec ?? null,
-        score_desc: Array.isArray(item.score_desc) ? item.score_desc : [],
-        max_score: maxScore,
-        insp_result_value: 0,
-        r_value: '-',
-        details,
-      })
-    } else if (item.insp_type === 'R') {
-      // 범위
-      const minLabel = specLabel[item.min_range_spec ?? ''] ?? '단위'
-      const maxLabel = specLabel[item.max_range_spec ?? ''] ?? '단위'
-
-      ranRows.push({
-        insp_item_id: item.insp_item_id,
-        insp_item_name: item.insp_item_name,
-        min_range: item.min_range ?? '',
-        min_label: minLabel,
-        max_range: item.max_range ?? '',
-        max_label: maxLabel,
-        unit: item.unit ?? null,
-        insp_method: item.insp_method ?? '-',
-        file_name: item.file_name ?? '-',
+      sen.push({
+        insp_item_id: r.insp_item_id,
+        insp_item_name: r.insp_item_name,
+        pass_score: Number(r.pass_score ?? 0),
+        pass_score_spec: (r.pass_score_spec ?? '').toLowerCase(), // r1/r2 등
+        score_desc: safeArr<scoredescDT>(r.score_desc),
+        max_score: Number(r.max_score ?? 5),
         insp_result_value: 0,
         r_value: '',
+        details: questions,
       })
     }
   })
 
-  inspDataSen.value = senRows
-  inspDataRan.value = ranRows
+  inspDataRan.value = ran
+  inspDataSen.value = sen
+}
+
+// 10-4. 최종결과 판정 계산
+const finalResult = computed(() => {
+  // 모든 검사결과 모으기
+  const ranOk = inspDataRan.value.every((r) => r.r_value === 'P')
+  const senOk = inspDataSen.value.every((s) => s.r_value === 'P')
+
+  if (inspDataRan.value.length === 0 && inspDataSen.value.length === 0) {
+    return '' // 검사 데이터 없으면 공란
+  }
+  return ranOk && senOk ? '합격' : '불합격'
+})
+
+// 11. 다운로드 버튼 이벤트
+// const downloadFile = (file?: string | null) => {
+//   if (!file) {
+//     alert('첨부된 파일이 없습니다.')
+//     return
+//   }
+//   const url = `/download?file=${encodeURIComponent(file)}`
+//   // window.location.href = url
+//   // 새 탭에서 열어서 다운로드 하고 싶다면
+//   window.open(url, '_blank', 'noopener')
+// }
+
+// 12. 검사방법 모달
+// 12-1. 검사방법 모달 상태
+const isMethodModalOpen = ref(false)
+const selectedMethod = ref<string | null>(null)
+const openMethodModal = async (row: RangeRow) => {
+  selectedMethod.value = row?.insp_method ?? null // ① 값 먼저 세팅
+  await nextTick() // ② DOM/반응성 반영 대기
+  isMethodModalOpen.value = true // ③ 모달 열기
+}
+const closeMethodModal = () => {
+  isMethodModalOpen.value = false
+  selectedMethod.value = null
+}
+
+// 13. 채점기준 모달
+const isScoreDescModalOpen = ref(false)
+const selectedScoreDesc = ref<any>(null)
+const openScoreDescModal = (row: SensoryRow) => {
+  selectedScoreDesc.value = row.score_desc // 문자열이든 배열이든 OK
+  isScoreDescModalOpen.value = true
+}
+const closeScoreDescModal = () => {
+  isScoreDescModalOpen.value = false
+  selectedScoreDesc.value = null
+}
+
+// 14. 등록 및 값 체크(not null 알람창 띄우기)
+const submitRegister = async () => {
+  try {
+    // 1) 알람창
+    // 합격량이 - 값일 때
+    if (matInspPass.value < 0) {
+      alert('합격량은 0보다 작을 수 없습니다.')
+      return
+    }
+    // 검사명 입력하지 않았을 때
+    if (!inspName.value) {
+      alert('검사명을 입력해주세요.')
+      return
+    }
+    // 가입고번호 입력하지 않았을 때
+    if (!matInspTargetData.iis_id) {
+      alert('가입고번호를 선택해주세요.')
+      return
+    }
+    // 검사량을 입력하지 않았을 때
+    if (!matInspQty.value || matInspQty.value <= 0) {
+      alert('검사량을 입력해주세요.')
+      return
+    }
+    // 범위가 있을 경우 -> 측정값 필수
+    // 관능검사가 있을 경우 -> 라디오번호 선택 필수
+
+    // 2) 최종결과(합격/불합격) 코드화 -> P / F
+    const t_result = finalResult.value === '합격' ? 'P' : 'F'
+
+    // 3) 검사 결과 rows(범위형 + 관능형) → mat_insp_result 테이블의 배열로 변환
+    const results: Array<{
+      insp_result_value: number
+      r_value: string
+      insp_item_id: string
+    }> = []
+
+    // 범위형
+    for (const r of inspDataRan.value) {
+      results.push({
+        insp_result_value: Number(r.insp_result_value ?? 0),
+        r_value: r.r_value || '', // 'P' | 'F' | '' (미입력)
+        insp_item_id: r.insp_item_id,
+      })
+    }
+    // 관능형
+    for (const s of inspDataSen.value) {
+      results.push({
+        insp_result_value: Number(s.insp_result_value ?? 0),
+        r_value: s.r_value || '', // 'P' | 'F' | ''
+        insp_item_id: s.insp_item_id,
+      })
+    }
+
+    // 3) 불량 합계(각 불량유형별 수치) → mat_insp_ng 배열로 변환
+    const ngs = Object.entries(ngValues)
+      .filter(([, v]) => Number(v) > 0)
+      .map(([def_item_id, v]) => ({
+        def_item_id,
+        qty: Number(v),
+      }))
+
+    // 4) 페이로드 구성 (백엔드 registerMatInsp(Info)와 동일 구조)
+    const payload = {
+      insp_name: inspName.value, // 검사명
+      insp_date: date.value, // 검사일시
+      insp_qty: Number(matInspQty.value || 0), // 검사량
+      pass_qty: Number(matInspPass.value || 0), // 합격량
+      fail_qty: Number(matInspNG.value || 0), // 불량량
+      remark: remark.value || '', // 비고
+      t_result, // 'P' | 'F'
+      emp_id: inspector.value || 'EMP-20250616-0004', // 로그인 계정으로 대체 가능
+      iis_id: Number(matInspTargetData.iis_id), // 가입고 ID
+      results, // mat_insp_result 테이블 데이터
+      ngs, // mat_insp_ng 테이블 데이터
+    }
+
+    console.log('[FE] payload:', payload)
+
+    // 5) 전송 (프록시가 '^/api' → '/' rewrite라면 프론트는 /api로 호출)
+    const { data } = await axios.post('/api/matInspRegister', payload)
+    if (data?.ok) {
+      alert(`등록되었습니다.\n검사ID: ${data.insp_id ?? ''}`)
+      // TODO: 필요 시 폼 초기화
+    } else {
+      alert(data?.message || '등록 실패')
+    }
+  } catch (e) {
+    console.error('[FE] 등록 오류:', e)
+    alert('서버 오류가 발생했습니다.')
+  }
 }
 
 // style
@@ -350,7 +520,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
         <div class="flex gap-4">
           <div class="w-1/4">
             <label :class="labelStyle"> 검사명 </label>
-            <input type="text" :class="inputStyle" />
+            <input type="text" :class="inputStyle" v-model="inspName" />
           </div>
           <div>
             <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
@@ -744,24 +914,21 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
             </div>
             <div class="w-full flex">
               <label :class="labelStyle" class="w-[85px]">비고 </label>
-              <input type="text" :class="inputStyleSM" />
+              <input type="text" :class="inputStyleSM" v-model="remark" />
             </div>
           </div>
           <div class="rounded-lg border border-gray-200 p-4 shadow-sm">
-            <div class="flex justify-between">
-              <div class="w-[70%]">
-                <h3 class="text-md mb-2 font-medium">검사 기준 항목</h3>
-                <h4 class="mb-1.5 text-md">범위 검사</h4>
-              </div>
-              <!-- 최종합격 -->
-              <div
-                class="w-[30%] flex justify-center items-center m-1.5 rounded-md"
-                style="border: 1px solid #ccc"
-              >
-                <p class="text-2xl font-bold">최종결과 : 합격</p>
-              </div>
+            <!-- 최종합격 -->
+            <div
+              class="w-[30%] flex justify-center items-center m-1.5 rounded-md float-right"
+              style="border: 1px solid #ccc; padding: 4px"
+            >
+              <p class="text-2xl font-bold">최종결과 : {{ finalResult }}</p>
             </div>
+            <h3 class="text-md mb-2 font-medium">검사 기준 항목</h3>
             <!-- 범위검사(insp_type: "R") -->
+            <h4 class="mb-1.5 text-md">범위 검사</h4>
+
             <DataTable
               :value="inspDataRan"
               dataKey="insp_item_id"
@@ -787,7 +954,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                 :pt="{ columnHeaderContent: 'justify-center' }"
                 style="width: 100px"
               >
-                <template #body>
+                <template #body="slotProps">
                   <div class="flex justify-center">
                     <Button
                       icon="pi pi-file"
@@ -795,6 +962,8 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                       severity="secondary"
                       class="p-button-sm hover:bg-gray-400"
                       style="width: 20px; height: 15px; text-align: center; color: #999"
+                      :disabled="!slotProps.data.insp_method || slotProps.data.insp_method === '-'"
+                      @click="openMethodModal(slotProps.data)"
                     ></Button>
                   </div>
                 </template>
@@ -805,7 +974,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                 :pt="{ columnHeaderContent: 'justify-center' }"
                 style="width: 100px"
               >
-                <template #body>
+                <template #body="slotProps">
                   <div class="flex justify-center">
                     <Button
                       icon="pi pi-paperclip"
@@ -813,7 +982,8 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                       severity="secondary"
                       class="p-button-sm"
                       style="width: 20px; height: 15px; text-align: center; color: #999"
-                    ></Button>
+                      :disabled="!slotProps.data.file_name"
+                    />
                   </div>
                 </template>
               </Column>
@@ -823,12 +993,12 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                 :pt="{ columnHeaderContent: 'justify-center' }"
                 style="width: 450px"
               >
-                <template #body>
+                <template #body="slotProps">
                   <div class="flex gap-2 w-full items-center">
                     <!-- v-moel="min_range" -->
                     <input
                       type="text"
-                      :value="slotProps.data.min_range"
+                      v-model="slotProps.data.min_range"
                       :class="inputDisabled"
                       class="text-right w-[100px]"
                       disabled
@@ -839,7 +1009,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                     <!-- v-model="max_range" -->
                     <input
                       type="text"
-                      :value="slotProps.data.max_range"
+                      v-model="slotProps.data.max_range"
                       :class="inputDisabled"
                       class="text-right"
                       disabled
@@ -861,8 +1031,14 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                 :pt="{ columnHeaderContent: 'justify-center' }"
                 style="width: 250px"
               >
-                <template #body>
-                  <input type="text" :class="inputStyleSM" placeholder="측정값 입력하세요." />
+                <template #body="slotProps">
+                  <input
+                    type="text"
+                    :class="inputStyleSM"
+                    placeholder="측정값 입력하세요."
+                    v-model.number="slotProps.data.insp_result_value"
+                    @input="judgeRange(slotProps.data)"
+                  />
                 </template>
               </Column>
               <Column
@@ -870,9 +1046,26 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                 header="판정"
                 :pt="{ columnHeaderContent: 'justify-center' }"
                 class="text-center"
-                style="width: 120px"
-              />
+                style="width: 120px; text-align: center"
+              >
+                <template #body="slotProps">
+                  {{
+                    slotProps.data.r_value === 'P'
+                      ? '적합'
+                      : slotProps.data.r_value === 'F'
+                        ? '부적합'
+                        : ''
+                  }}
+                </template>
+              </Column>
             </DataTable>
+            <!-- 검사방법 모달 -->
+            <InspMethodModal
+              :visible="isMethodModalOpen"
+              :method="selectedMethod"
+              @close="closeMethodModal"
+            />
+
             <!-- 관능검사(insp_type: "S") -->
             <h4 class="mb-1.5 text-md">관능 검사</h4>
             <DataTable
@@ -907,7 +1100,11 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                 header="합격기준점수 범위"
                 :pt="{ columnHeaderContent: 'justify-center' }"
                 style="width: 300px"
-              />
+              >
+                <template #body="slotProps">
+                  {{ specLabel(slotProps.data.pass_score_spec) }}
+                </template>
+              </Column>
               <Column
                 field="insp_result_value"
                 header="현재점수"
@@ -920,7 +1117,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                 :pt="{ columnHeaderContent: 'justify-center' }"
                 style="width: 120px"
               >
-                <template #body>
+                <template #body="slotProps">
                   <div class="flex justify-center">
                     <Button
                       icon="pi pi-file"
@@ -928,6 +1125,8 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                       severity="secondary"
                       class="p-button-sm hover:bg-gray-400"
                       style="width: 20px; height: 15px; text-align: center; color: #999"
+                      :disabled="!slotProps.data.score_desc || !slotProps.data.score_desc.length"
+                      @click="openScoreDescModal(slotProps.data)"
                     ></Button>
                   </div>
                 </template>
@@ -936,8 +1135,18 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                 field="r_value"
                 header="판정"
                 :pt="{ columnHeaderContent: 'justify-center' }"
-                style="width: 120px"
-              />
+                style="width: 120px; text-align: center"
+              >
+                <template #body="slotProps">
+                  {{
+                    slotProps.data.r_value === 'P'
+                      ? '적합'
+                      : slotProps.data.r_value === 'F'
+                        ? '부적합'
+                        : ''
+                  }}
+                </template>
+              </Column>
               <!-- 확장버전(sens_questions 부분이 들어감) -->
               <template #expansion="slotProps">
                 <div class="p-4">
@@ -946,88 +1155,45 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                       field="order"
                       header="번호"
                       :pt="{ columnHeaderContent: 'justify-center' }"
-                      style="width: 120px"
+                      style="width: 120px; text-align: center"
                     />
                     <Column
                       field="question_name"
                       header="질문"
                       :pt="{ columnHeaderContent: 'justify-center' }"
                     />
+                    <!-- max_score 값만큼 for문(5/10) -->
                     <Column
-                      field="s1"
-                      header="1"
-                      :pt="{ columnHeaderContent: 'justify-center' }"
-                      style="width: 60px"
                       v-for="n in slotProps.data.max_score"
                       :key="n"
                       :field="`s${n}`"
                       :header="String(n)"
+                      :pt="{ columnHeaderContent: 'justify-center' }"
+                      style="width: 60px"
                     >
-                      <template #body>
+                      <template #body="detailSlot">
                         <div class="flex justify-center">
                           <input
                             type="radio"
-                            name="senScore"
                             class="checkboxStyle"
                             :name="`${slotProps.data.insp_item_id}-${detailSlot.data.id}`"
                             :value="n"
                             v-model.number="detailSlot.data.score"
+                            @change="judgeSensory(slotProps.data)"
                           />
                         </div>
                       </template>
                     </Column>
-                    <!-- <Column
-                      field="s2"
-                      header="2"
-                      :pt="{ columnHeaderContent: 'justify-center' }"
-                      style="width: 60px"
-                    >
-                      <template #body>
-                        <div class="flex justify-center">
-                          <input type="radio" name="senScore" class="checkboxStyle" />
-                        </div>
-                      </template>
-                    </Column>
-                    <Column
-                      field="s3"
-                      header="3"
-                      :pt="{ columnHeaderContent: 'justify-center' }"
-                      style="width: 60px"
-                    >
-                      <template #body>
-                        <div class="flex justify-center">
-                          <input type="radio" name="senScore" class="checkboxStyle" />
-                        </div>
-                      </template>
-                    </Column>
-                    <Column
-                      field="s4"
-                      header="4"
-                      :pt="{ columnHeaderContent: 'justify-center' }"
-                      style="width: 60px"
-                    >
-                      <template #body>
-                        <div class="flex justify-center">
-                          <input type="radio" name="senScore" class="checkboxStyle" />
-                        </div>
-                      </template>
-                    </Column>
-                    <Column
-                      field="s5"
-                      header="5"
-                      :pt="{ columnHeaderContent: 'justify-center' }"
-                      style="width: 60px"
-                    >
-                      <template #body>
-                        <div class="flex justify-center">
-                          <input type="radio" name="senScore" class="checkboxStyle" />
-                        </div>
-                      </template>
-                    </Column> -->
                   </DataTable>
                 </div>
               </template>
             </DataTable>
+            <!-- 채점기준 모달 -->
+            <InspRubricModal
+              :visible="isScoreDescModalOpen"
+              :items="selectedScoreDesc"
+              @close="closeScoreDescModal"
+            />
           </div>
         </div>
       </template>

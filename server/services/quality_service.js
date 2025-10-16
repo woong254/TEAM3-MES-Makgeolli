@@ -391,6 +391,66 @@ const getMatInspWithQcMasternNG = async (param) => {
   return { ok: true, ng, qc };
 };
 
+// 2-3. 자재입고검사 등록
+const registerMatInsp = async () => {
+  let conn = null;
+  try {
+    conn = await mariadb.getConnection();
+    await conn.beginTransaction();
+
+    // 쿼리 문자열 변수가 "정상"인지 먼저 확인
+    console.log(
+      "[DEBUG] makeMatInspId defined?",
+      typeof makeMatInspId,
+      "length:",
+      makeMatInspId?.length
+    );
+
+    const rows = await conn.query(makeMatInspId); // ← 변수 그대로
+    console.log("[DEBUG] ID rows:", rows); // ← 여기서 rows 출력 확인
+
+    // await conn.query("insertMatInsp", [
+    //   getMatInspId,
+    //   insp_name,
+    //   insp_date,
+    //   insp_qty,
+    //   pass_qty,
+    //   fail_qty,
+    //   remark,
+    //   t_result,
+    //   emp_id,
+    //   iis_id,
+    // ]);
+    // await conn.query("insertMatInspResult", [
+    //   insp_result_value,
+    //   r_value,
+    //   insp_item_id,
+    //   insp_id,
+    // ]);
+    // // insp_result_id, fail_id는 자동증가니깐 넣을 필요가 없지...?
+    // await conn.query("insertMatInspNg", [qty, def_item_id, insp_id]);
+
+    await conn.commit();
+
+    let result = null;
+    result = {
+      isSuccessed: true,
+    };
+    return result;
+  } catch (err) {
+    console.log(err);
+    await conn.rollback();
+    result = {
+      isSuccessed: false,
+    };
+    return result;
+  } finally {
+    if (conn) {
+      conn.release();
+    }
+  }
+};
+
 module.exports = {
   findInspTarget,
   findInspTargetSearch,
@@ -402,4 +462,5 @@ module.exports = {
   searchInspMaster,
   findMatInspTarget,
   getMatInspWithQcMasternNG,
+  registerMatInsp,
 };

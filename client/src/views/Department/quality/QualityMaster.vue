@@ -44,10 +44,10 @@ const inspTarget = ref<InspRow[]>([]) //검사대상
 const minValue = ref('') // 범위 최소값
 const maxValue = ref('') // 범위 최대값
 const passScore = ref('') // 관능 합격 점수(평균)
-const minSpec = ref('R1') // 이상/초과
-const maxSpec = ref('R3') // 이하/미만
+const minSpec = ref('r1') // 이상/초과
+const maxSpec = ref('r3') // 이하/미만
 const unit = ref('')
-const passSpec = ref('R1')
+const passSpec = ref('r1')
 const inspMode = ref('range') // 검사유형(범위/관능) 초기값 range
 const scoreMax = ref(5) // 관능검사 점수 초기값
 const questions = ref<Question[]>([{ id: 1, text: '' }]) // 관능 질문 목록 (처음 1줄)
@@ -198,15 +198,15 @@ const resetIspForm = () => {
   // 범위형
   minValue.value = ''
   maxValue.value = ''
-  minSpec.value = 'R1'
-  maxSpec.value = 'R3'
+  minSpec.value = 'r1'
+  maxSpec.value = 'r3'
   unit.value = ''
 
   // 관능형
   inspMode.value = 'range' // 검사유형 초기값
   scoreMax.value = 5
   passScore.value = ''
-  passSpec.value = 'R1'
+  passSpec.value = 'r1'
   questions.value = [{ id: 1, text: '' }]
 
   // 선택된 테이블 행
@@ -232,9 +232,9 @@ function buildInspPayload() {
 
   // 범위형 세팅
   let min_range: number | null = null
-  let min_range_spec: 'R1' | 'R2' | null = null
+  let min_range_spec: 'r1' | 'r2' | null = null
   let max_range: number | null = null
-  let max_range_spec: 'R3' | 'R4' | null = null
+  let max_range_spec: 'r3' | 'r4' | null = null
   let t_unit: string | null = null
 
   // ★ 추가: 선언 먼저!
@@ -243,21 +243,21 @@ function buildInspPayload() {
   if (insp_type === 'R') {
     min_range = toDecimalOrNull(minValue.value)
     max_range = toDecimalOrNull(maxValue.value)
-    min_range_spec = minSpec.value as 'R1' | 'R2'
-    max_range_spec = maxSpec.value as 'R3' | 'R4'
+    min_range_spec = minSpec.value as 'r1' | 'r2'
+    max_range_spec = maxSpec.value as 'r3' | 'r4'
     t_unit = unit.value || null
   }
 
   // 관능형 세팅
   let max_score: number | null = null
   let pass_score: number | null = null
-  let pass_score_spec: 'R1' | 'R2' | null = null
+  let pass_score_spec: 'r1' | 'r2' | null = null
   let questionsPayload: string[] = []
 
   if (insp_type === 'S') {
     max_score = Number(scoreMax.value) // 5 or 10
     pass_score = toDecimalOrNull(passScore.value)
-    pass_score_spec = passSpec.value as 'R1' | 'R2'
+    pass_score_spec = passSpec.value as 'r1' | 'r2'
     questionsPayload = questions.value.map((q) => (q.text || '').trim()).filter((t) => t.length > 0)
     // ★ 점수-설명 JSON 만들기 (입력값 있는 것만)
     const scales = scoreSet.value
@@ -367,25 +367,25 @@ async function loadInspDetail(id: string) {
   if (master.insp_type === 'R') {
     inspMode.value = 'range'
     minValue.value = master.min_range != null ? String(master.min_range) : ''
-    minSpec.value = master.min_range_spec || 'R1'
+    minSpec.value = master.min_range_spec || 'r1'
     maxValue.value = master.max_range != null ? String(master.max_range) : ''
-    maxSpec.value = master.max_range_spec || 'R3'
+    maxSpec.value = master.max_range_spec || 'r3'
     unit.value = master.unit || ''
     // 관능 필드 초기화
     scoreMax.value = 5
     passScore.value = ''
-    passSpec.value = 'R1'
+    passSpec.value = 'r1'
     questions.value = [{ id: 1, text: '' }]
   } else {
     inspMode.value = 'sensory'
     scoreMax.value = Number(master.max_score ?? 5)
     passScore.value = master.pass_score != null ? String(master.pass_score) : ''
-    passSpec.value = master.pass_score_spec || 'R1'
+    passSpec.value = master.pass_score_spec || 'r1'
     // 범위 필드 초기화
     minValue.value = ''
-    minSpec.value = 'R1'
+    minSpec.value = 'r1'
     maxValue.value = ''
-    maxSpec.value = 'R3'
+    maxSpec.value = 'r3'
     unit.value = ''
     // ✅ 질문 세팅
     questions.value =
@@ -876,8 +876,8 @@ const fileStyle =
                   />
                   <div class="relative z-20 bg-transparent w-1/2">
                     <select :class="selectStyle" v-model="minSpec">
-                      <option value="R1" selected>이상</option>
-                      <option value="R2">초과</option>
+                      <option value="r1" selected>이상</option>
+                      <option value="r2">초과</option>
                     </select>
                     <span
                       class="absolute z-30 text-gray-500 -translate-y-1/2 pointer-events-none right-4 top-1/2 dark:text-gray-400"
@@ -915,8 +915,8 @@ const fileStyle =
                   />
                   <div class="relative z-20 bg-transparent w-1/2">
                     <select :class="selectStyle" v-model="maxSpec">
-                      <option value="R3" selected>이하</option>
-                      <option value="R4">미만</option>
+                      <option value="r3" selected>이하</option>
+                      <option value="r4">미만</option>
                     </select>
                     <span
                       class="absolute z-30 text-gray-500 -translate-y-1/2 pointer-events-none right-4 top-1/2 dark:text-gray-400"
@@ -999,8 +999,8 @@ const fileStyle =
                   />
                   <div class="relative z-20 bg-transparent w-1/2">
                     <select :class="selectStyle" v-model="passSpec">
-                      <option value="R1">이상</option>
-                      <option value="R2">초과</option>
+                      <option value="r1">이상</option>
+                      <option value="r2">초과</option>
                     </select>
                     <span
                       class="absolute z-30 text-gray-500 -translate-y-1/2 pointer-events-none right-4 top-1/2 dark:text-gray-400"
