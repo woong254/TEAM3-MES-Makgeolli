@@ -370,6 +370,9 @@ const baseInputClass = "dark:bg-dark-900 h-8 w-full rounded-lg border border-gra
                   size="small"
                   :rows="10"
                 >
+                <template #empty>
+                  <div class="text-center">제품을 추가해주세요</div>
+                </template>
                   <Column selectionMode="multiple" headerStyle="width: 1%" />
                   <Column 
                     field="prod_code" 

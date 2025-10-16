@@ -6,17 +6,10 @@ const bcncMaster = require("./sqls/bcncMaster.js");
 const prodMaster = require("./sqls/prodMaster.js");
 const epis = require("./sqls/epis.js");
 const edcts = require("./sqls/edcts.js");
-const sales = {
-  ...orderform,
-  ...orderdetail,
-  ...bcncMaster,
-  ...prodMaster,
-  ...epis,
-  ...edcts,
-};
 
 // 생산
 const prodOrd = require("./sqls/prodOrd.js");
+const prodOrdManage = require('./sqls/prodOrdManage.js');
 
 // 자재
 const materials = require("./sqls/materials.js");
@@ -35,10 +28,16 @@ module.exports = {
   // ...reference,
 
   // 영업
-  ...sales,
+  ...orderform,
+  ...orderdetail,
+  ...bcncMaster,
+  ...prodMaster,
+  ...epis,
+  ...edcts,
 
   // 생산
-  ...prodOrd, // 생산지시
+  ...prodOrd,
+  ...prodOrdManage,
 
   // 자재
   ...materials,

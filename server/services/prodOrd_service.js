@@ -1,5 +1,10 @@
 // 생산 지시 서비스
 const mariadb = require('../database/mapper.js');
+const { selectMakeAll, 
+        selectEquipAll, 
+        selectWorkerAll 
+} = require('../database/sqls/prodOrdManage');
+
 
 // 생산 지시 목록
 const findByEmpId = async(empId) => {
@@ -47,7 +52,27 @@ const addMakeForm = async (header, details) => {
   }
 };
 
+// 지시 목록, 작업자 조회
+const findAllMakeList = async () => {
+  const [makeRows, empRows] = await Promise.all([
+    mariadb.query('selectMakeAll').catch(err => console.error(err)),
+    mariadb.query('selectEmpAll').catch(err => console.error(err)),
+  ]);
+  return { makeRows, empRows };
+}
+
+// 설비 선택
+const chooseAboutEquip = async (procName) => {
+  const equipRows = await mariadb
+    .query('selectEquipAll', procName)
+    .catch(err => console.error(err));
+  return equipRows;
+};
+
+
 module.exports = {
   findByEmpId,
   addMakeForm,
+  findAllMakeList,
+  chooseAboutEquip,
 }
