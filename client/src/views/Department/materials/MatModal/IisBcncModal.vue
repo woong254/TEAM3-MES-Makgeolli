@@ -140,6 +140,9 @@ const selectBcnc = () => {
           :rows="8"
         >
           <DataCol selectionMode="single" headerStyle="width: 37px" bodyStyle="width: 37px" />
+          <template #empty>
+            <div class="text-center">오늘 입고될 자재가 없습니다.</div>
+          </template>
           <DataCol
             field="bcnc_code"
             header="매입처코드"

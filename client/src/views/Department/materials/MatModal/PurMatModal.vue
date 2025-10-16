@@ -4,7 +4,6 @@ import DataTable from 'primevue/datatable'
 import DataCol from 'primevue/column'
 import { ref, watch, computed } from 'vue'
 import axios from 'axios'
-import userDateUtils from '@/utils/useDates.js'
 
 /** 부모에서 v-model 로 열고닫기만 제어 */
 const props = defineProps({
@@ -23,25 +22,13 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
 const baseInputClass =
   'dark:bg-dark-900 h-8 w-full rounded-lg border border-gray-300 bg-transparent pl-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
 
-/** 날짜 포맷 통일 */
-const formatPurData = (data) => {
-  if (!Array.isArray(data)) return []
-  return data.map((item) => ({
-    ...item,
-    pur_date: item.pur_date ? userDateUtils.dateFormat(item.pur_date, 'yyyy-MM-dd') : item.pur_date,
-    receipt_date: item.receipt_date
-      ? userDateUtils.dateFormat(item.receipt_date, 'yyyy-MM-dd')
-      : item.receipt_date,
-  }))
-}
-
 const displayed = computed(() => modalPur.value)
 
 /** 전체 목록 조회 */
 const getPurList = async () => {
   try {
-    const { data } = await axios.get('/api/purList')
-    modalPur.value = formatPurData(data)
+    const { data } = await axios.get('/api/iis/matList')
+    modalPur.value = data
   } catch (error) {
     console.error('Error fetching data:', error)
   }
@@ -52,13 +39,13 @@ const searchPur = async () => {
   const q = (searchName.value || '').trim()
   try {
     if (q) {
-      const { data } = await axios.get('/api/purTarget', { params: { pur_name: q } })
+      const { data } = await axios.get('api/iis/matSearch', { params: { mat_name: q } })
       if (!data || data.length === 0) {
         alert('조회 결과가 없습니다.')
         await getPurList()
         return
       }
-      modalPur.value = formatPurData(data)
+      modalPur.value = data
     } else {
       await getPurList()
     }
@@ -82,7 +69,7 @@ watch(
   <Modal
     v-if="props.modelValue"
     @close="close"
-    title="발주서 조회"
+    title="발주자재 조회"
     title-align="left"
     header-align="right"
     width="1200px"
@@ -94,7 +81,7 @@ watch(
     <template #modal-body>
       <div class="modal-container flex gap-2 mb-2">
         <div class="w-1/3">
-          <label :class="labelStyle">발주서명</label>
+          <label :class="labelStyle">자재명</label>
           <input
             type="text"
             v-model="searchName"
@@ -106,14 +93,10 @@ watch(
       </div>
 
       <div class="modal-container flex gap-2 mb-2">
-        <DataTable
-          :value="displayed"
-          show-gridlines
-          dataKey="pur_code"
-          style="width: 1200px"
-          paginator
-          :rows="8"
-        >
+        <DataTable :value="displayed" show-gridlines style="width: 1200px" paginator :rows="8">
+          <template #empty>
+            <div class="text-center">오늘 입고될 자재가 없습니다.</div>
+          </template>
           <DataCol
             field="pur_code"
             header="발주코드"
@@ -125,28 +108,38 @@ watch(
             :pt="{ columnHeaderContent: 'justify-center' }"
           />
           <DataCol
+            field="bcnc_code"
+            header="매입처코드"
+            :pt="{ columnHeaderContent: 'justify-center' }"
+          />
+          <DataCol
             field="bcnc_name"
             header="매입처명"
             :pt="{ columnHeaderContent: 'justify-center' }"
           />
           <DataCol
-            field="pur_date"
-            header="발주일자"
-            style="text-align: center"
+            field="mat_code"
+            header="자재코드"
             :pt="{ columnHeaderContent: 'justify-center' }"
           />
           <DataCol
-            field="receipt_date"
-            header="입고요청일자"
-            style="text-align: center"
+            field="mat_name"
+            header="자재명"
+            :pt="{ columnHeaderContent: 'justify-center' }"
+          />
+          <DataCol field="mat_spec" header="규격" :pt="{ columnHeaderContent: 'justify-center' }" />
+          <DataCol field="mat_unit" header="단위" :pt="{ columnHeaderContent: 'justify-center' }" />
+          <DataCol
+            field="unreceipt_qty"
+            header="미입고량"
+            style="text-align: right"
             :pt="{ columnHeaderContent: 'justify-center' }"
           />
           <DataCol
-            field="emp_name"
-            header="담당자"
+            field="receipt_status"
+            header="입고상태"
             :pt="{ columnHeaderContent: 'justify-center' }"
           />
-          <DataCol field="remark" header="비고" :pt="{ columnHeaderContent: 'justify-center' }" />
         </DataTable>
       </div>
     </template>

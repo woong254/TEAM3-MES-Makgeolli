@@ -208,9 +208,9 @@ const deleteIisList = async (ids = []) => {
   return { ok: deleted > 0, deleted };
 };
 
-const purIisList = async (receipt_date) => {
+const purIisList = async () => {
   try {
-    const r = await mariadb.query("selectIisMatList", [receipt_date]);
+    const r = await mariadb.query("selectIisMatList");
     return r || [];
   } catch (err) {
     console.error(err);
@@ -218,13 +218,10 @@ const purIisList = async (receipt_date) => {
   }
 };
 
-const findPurIisList = async (receipt_date, mat_name = "") => {
+const findPurIisList = async (mat_name = "") => {
   try {
     const like = `%${mat_name}%`;
-    const rows = await mariadb.query("selectIisMatTarget", [
-      receipt_date,
-      like,
-    ]);
+    const rows = await mariadb.query("selectIisMatTarget", like);
     return rows || [];
   } catch (err) {
     console.error("[findPurIisList] ERROR:", err?.code, err?.message);
@@ -269,15 +266,6 @@ const findIisMatList = async (matData) => {
     params.push(`%${mat_name}%`);
   }
   sql += ` GROUP BY  pm.mat_code, m.mat_name, m.safe_stock, m.mat_spec, m.mat_unit ORDER BY pm.mat_code`;
-
-  console.log(
-    "[SERVICE:findIisMatList] bcnc_code=",
-    bcnc_code,
-    "mat_name=",
-    mat_name
-  ); // ★ 추가
-  console.log("[SERVICE SQL] ", sql); // ★ 추가
-  console.log("[SERVICE PARAMS] ", params); // ★ 추가
 
   try {
     const list = await mariadb.query(sql, params);
