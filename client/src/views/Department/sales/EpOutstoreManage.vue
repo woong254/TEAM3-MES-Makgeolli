@@ -42,7 +42,7 @@ interface OrderItem {
   prod_unit: string
   ord_qty: number // 주문수량
   due_date: string
-  ep_lot: string
+  ep_lot: string // 제품에 대해 선택된 LOT 번호를 콤마(,)로 합쳐서 문자열로 저장하는 용도 / 예: "LOT001,LOT002,LOT003"
   // epep_dt: string
   ep_qty: number // 재품재고수량
   cur_os_qty: number // 현출고수량
@@ -263,7 +263,8 @@ const EpLotClosemodal = () => {
 
 // 선택 제품 정의
 interface EpLot {
-  lot_no: string
+  ep_lot: string
+  lot_no: string // 실제 개별 LOT 고유번호
   lot_cur_os_qty: number
   ep_qty: number
 }
@@ -511,7 +512,7 @@ const rowUnselectHook = () => {
                   headerStyle="width: 1%"
                   field="ofd_no"
                   frozen
-                  :selectionDisabled="(rowData) => rowData.comncode_dtnm === '출고완료'"
+                  :selectionDisabled="(rowData: OrderItem) => rowData.comncode_dtnm === '출고완료'"
                 ></Column>
                 <Column
                   field="due_date"
@@ -612,26 +613,6 @@ const rowUnselectHook = () => {
                   @close="EpLotClosemodal"
                   :usedLots="modalUsedLots"
                 />
-
-                <!-- <Column
-                  field="ep_lot"
-                  header="제품LOT번호"
-                  :pt="{ columnHeaderContent: 'justify-center' }"
-                  style="min-width: 100px"
-                ></Column>
-                <Column
-                  field="epep_dt"
-                  header="유통기한"
-                  :pt="{ columnHeaderContent: 'justify-center' }"
-                  style="min-width: 100px; text-align: center"
-                ></Column> -->
-                <!-- <Column
-                  field="ep_qty"
-                  header="제품재고수량"
-                  :pt="{ columnHeaderContent: 'justify-center' }"
-                  style="min-width: 100px; text-align: right"
-                ></Column> -->
-
                 <Column
                   field="comncode_dtnm"
                   header="출고상태"

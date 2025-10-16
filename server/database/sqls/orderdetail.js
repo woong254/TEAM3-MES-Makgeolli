@@ -21,7 +21,7 @@ SELECT od.no,
        od.prod_code,
        p.prod_name,
        p.prod_spec,
-       p.prod_unit,
+       cd_pu.comncode_dtnm AS prod_unit,
        od.op_qty,
        od.remark
 FROM   orderdetail od
@@ -29,6 +29,8 @@ FROM   orderdetail od
        ON   od.ord_id = o.ord_id
        JOIN prod_master p
        ON   od.prod_code = p.prod_code
+       JOIN comncode_dt cd_pu
+       ON   p.prod_unit = cd_pu.comncode_detailid
 WHERE  1=1`;
 
 const insertOrd = `CALL add_form(?,?,?,?,?,?,?,?)`;
@@ -41,7 +43,7 @@ SELECT od.ord_id,
        od.prod_code,
        p.prod_name,
        p.prod_spec,
-       p.prod_unit,
+	cd_pu.comncode_dtnm AS prod_unit,
        od.op_qty,
        od.remark
 FROM   orderdetail od
@@ -49,6 +51,8 @@ FROM   orderdetail od
        ON   od.ord_id = o.ord_id
        JOIN prod_master p
        ON   od.prod_code = p.prod_code
+       JOIN	comncode_dt cd_pu
+       ON	p.prod_unit = cd_pu.comncode_detailid
 WHERE  od.ord_id = ?`;
 
 const selectProdUnit = `

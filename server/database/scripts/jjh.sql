@@ -673,3 +673,36 @@ WHERE 	od.ofd_no = ?
 AND 	od.op_qty = ( SELECT SUM(ec.ord_epos_qty) 
 					FROM edcts ec 
 					WHERE ec.ofd_no = od.ofd_no );
+                    
+-- selectOrderDetailProducts
+SELECT od.no,
+       od.prod_code,
+       p.prod_name,
+       p.prod_spec,
+       cd_pu.comncode_dtnm AS prod_unit,
+       od.op_qty,
+       od.remark
+FROM   orderdetail od
+       JOIN orderform o
+       ON   od.ord_id = o.ord_id
+       JOIN prod_master p
+       ON   od.prod_code = p.prod_code
+       JOIN	comncode_dt cd_pu
+       ON	p.prod_unit = cd_pu.comncode_detailid;
+       
+-- selectOrderProducts
+SELECT od.ord_id,
+       od.no,
+       od.prod_code,
+       p.prod_name,
+       p.prod_spec,
+	   cd_pu.comncode_dtnm AS prod_unit,
+       od.op_qty,
+       od.remark
+FROM   orderdetail od
+       JOIN orderform o
+       ON   od.ord_id = o.ord_id
+       JOIN prod_master p
+       ON   od.prod_code = p.prod_code
+       JOIN	comncode_dt cd_pu
+       ON	p.prod_unit = cd_pu.comncode_detailid;
