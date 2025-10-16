@@ -1,59 +1,68 @@
-// 품질기준관리
-
-// 모달 : 검사대상(자재,제품) 조회
+// 1. 품질기준관리
+// 1-1. 모달 : 검사대상(자재,제품) 조회
 const selectInspTargetList = `
-SELECT
-	  p.prod_code AS t_id
-	  ,p.prod_name AS t_name
-    ,p.prod_type AS t_type
-    ,c.comncode_dtnm AS t_type_name
-	  ,p.prod_spec AS t_spec
-    ,p.prod_unit AS t_unit
-    ,'제품' AS t_category
+SELECT 
+  p.prod_code AS t_id
+	,p.prod_name AS t_name
+  ,p.prod_type AS t_type
+  ,c.comncode_dtnm AS t_type_name
+	,p.prod_spec AS t_spec
+  ,p.prod_unit AS t_unit
+  ,cb.comncode_dtnm AS t_unit_name
+  ,'제품' AS t_category
 FROM prod_master p
 JOIN comncode_dt c 
   ON p.prod_type = c.comncode_detailid
  AND c.comncode_id = '0A'
-UNION ALL
-SELECT 
-	  m.mat_code AS t_id
-	  ,m.mat_name AS t_name
-    ,m.mat_item_code AS t_type
-    ,c.comncode_dtnm AS t_type_name
-    ,m.mat_spec AS t_spec
-    ,m.mat_unit AS t_unit
-    ,'자재' AS t_category
+LEFT JOIN comncode_dt cb
+  ON p.prod_unit = cb.comncode_detailid
+ AND cb.comncode_id = '0B'
+ UNION ALL
+ SELECT 
+  m.mat_code AS t_id
+	,m.mat_name  AS t_name
+  ,m.mat_item_code AS t_type
+  ,c.comncode_dtnm AS t_type_name
+	,m.mat_spec AS t_spec
+  ,m.mat_unit AS t_unit
+  ,m.mat_unit AS t_unit_name
+  ,'자재' AS t_category
 FROM mat_master m
-JOIN comncode_dt c
+JOIN comncode_dt c 
   ON m.mat_item_code = c.comncode_detailid
  AND c.comncode_id = '0A'
  `;
 
-// 모달 : 검사대상(검색)
+// 1-2. 모달 : 검사대상(검색)
 const searchInspTarget = `
 SELECT
-	p.prod_code AS t_id
-	,p.prod_name AS t_name
-    ,p.prod_type AS t_type
-    ,c.comncode_dtnm AS t_type_name
-	,p.prod_spec AS t_spec
-    ,p.prod_unit AS t_unit
-    ,'제품' AS t_category
+  p.prod_code AS t_id
+  ,p.prod_name AS t_name
+  ,p.prod_type AS t_type
+  ,c.comncode_dtnm AS t_type_name
+  ,p.prod_spec AS t_spec
+  ,p.prod_unit AS t_unit
+  ,cb.comncode_dtnm AS t_unit_name
+  ,'제품' AS t_category
 FROM prod_master p
 JOIN comncode_dt c 
   ON p.prod_type = c.comncode_detailid
  AND c.comncode_id = '0A'
+LEFT JOIN comncode_dt cb 
+  ON p.prod_unit = cb.comncode_detailid
+ AND cb.comncode_id = '0B'
 WHERE p.prod_name LIKE ? 
 AND   (? = '' OR p.prod_type = ?)
 UNION ALL
 SELECT 
-	m.mat_code AS t_id
-	,m.mat_name AS t_name
-    ,m.mat_item_code AS t_type
-    ,c.comncode_dtnm AS t_type_name
-    ,m.mat_spec AS t_spec
-    ,m.mat_unit AS t_unit
-    ,'자재' AS t_category
+  m.mat_code AS t_id
+  ,m.mat_name AS t_name
+  ,m.mat_item_code AS t_type
+  ,c.comncode_dtnm AS t_type_name
+  ,m.mat_spec AS t_spec
+  ,m.mat_unit AS t_unit
+  ,m.mat_unit AS t_unit_name
+  ,'자재' AS t_category
 FROM mat_master m
 JOIN comncode_dt c
   ON m.mat_item_code = c.comncode_detailid
@@ -62,7 +71,7 @@ JOIN comncode_dt c
  AND   (? = '' OR m.mat_item_code = ?)
  `;
 
-// 품질기준관리 등록
+// 1-3. 품질기준관리 등록
 const insertTmpQuestion = `
 INSERT INTO tmp_sen_questions (session_id, ques_name)
 VALUES (?, ?)
@@ -81,7 +90,7 @@ const cleanupTmpTargets = `
 DELETE FROM tmp_targets WHERE session_id = ?
 `;
 
-// 품질기준관리 조회(목록)
+// 1-4. 품질기준관리 조회(목록)
 const selectInspMaster = `
 SELECT qcm.insp_item_id
       ,qcm.insp_item_name
@@ -100,17 +109,17 @@ LEFT JOIN mat_master AS m
 ORDER BY qcm.insp_item_id;
 `;
 
-// 품질기준관리 수정
+// 1-5. 품질기준관리 수정
 const InspMasterUpdate = `
 CALL insp_master_update(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `;
 
-// 품질기준관리 삭제
+// 1-6. 품질기준관리 삭제
 const InspMasterDel = `
 CALL insp_master_delete(?)
 `;
 
-// 품질기준관리 검색
+// 1-7. 품질기준관리 검색
 const searchInspMaster = `
 -- 검색 파라미터: ?, ?, ?, ?
 -- 1) 검사항목명 like
@@ -139,7 +148,7 @@ WHERE (? = '' OR qcm.insp_item_name LIKE CONCAT('%', ?, '%'))
 ORDER BY qcm.write_date DESC
 `;
 
-// 품질기준관리 상세 조회
+// 1-8. 품질기준관리 상세 조회
 const selectInspMasterDetail = `
 SELECT
   qcm.insp_item_id,
@@ -162,7 +171,7 @@ LEFT JOIN qc_master_ran AS ran
        ON ran.insp_item_id = qcm.insp_item_id
 WHERE qcm.insp_item_id = ?
 `;
-// 상세(타겟 목록)
+// 1-9. 상세(타겟 목록)
 const selectInspTargetsByItem = `
 SELECT
   qmt.insp_target_id,
@@ -193,7 +202,8 @@ WHERE qs.insp_item_id = ?
 ORDER BY qs.ques_order, qs.ques_id
 `;
 
-// 자재입고검사 가입고(검사대기) 조회 (모달)
+// 2. 자재입고검사
+// 2-1. 모달 : 자재입고검사 가입고(검사대기) 조회
 const matInspTargetSelect = `
 SELECT
   i.iis_id,               -- 가입고번호
@@ -220,7 +230,7 @@ LEFT JOIN mat_master mat
 WHERE i.insp_status = '검사대기'
 `;
 
-// 자재입고검사 조회시 -> 불량 조회
+// 2-2. 자재입고검사 조회시 -> 불량 조회
 const selectNGMaster = `
 SELECT dmt.def_item_id
        ,dm.def_item_name
@@ -230,7 +240,7 @@ FROM def_master_target dmt
 WHERE dmt.mat_code = ?
 `;
 
-// 자재입고검사 조회시 -> 등록(사용Y)된 품질기준관리 데이터 조회
+// 2-3. 자재입고검사 조회시 -> 등록(사용Y)된 품질기준관리 데이터 조회
 const selectMatInspQcMaster = `
 SELECT 
     qt.insp_item_id
@@ -279,6 +289,62 @@ WHERE qt.mat_code = ?
 ORDER BY qt.insp_item_id
 `;
 
+// 2-4. 자재입고검사 등록
+// 2-4-1. mat_insp ID (IQC-20251016-001)
+const makeMatInspId = `
+SELECT CONCAT(
+		 'IQC-',
+		 DATE_FORMAT(NOW(), '%Y%m%d'),
+		 '-',
+		 LPAD(IFNULL(MAX(CAST(RIGHT(insp_id,3) AS UNSIGNED)),0) + 1, 3, '0')
+	   )
+  FROM mat_insp
+ WHERE SUBSTR(insp_id, 5, 8) = DATE_FORMAT(NOW(), '%Y%m%d')
+ FOR UPDATE
+`;
+// 2-4-2. mat_insp INSERT
+const insertMatInsp = `
+INSERT INTO mat_insp
+	(insp_id
+  ,insp_name
+  ,insp_date
+  ,insp_qty
+  ,pass_qty
+  ,fail_qty
+  ,remark
+  ,t_result
+  ,emp_id
+  ,iis_id)
+VALUES
+	(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+`;
+
+// 2-4-3. mat_insp_result INSERT
+const insertMatInspResult = `
+INSERT INTO mat_insp_result
+	(insp_result_value
+  ,r_value
+  ,insp_item_id
+  ,insp_id)
+VALUES
+	(?, ?, ?, ?)
+`;
+
+// 2-4-4. mat_insp_ng INSERT
+const insertMatInspNg = `
+INSERT INTO mat_insp_ng
+	(qty
+  ,def_item_id
+  ,insp_id)
+VALUES
+	(?, ?, ?);
+`;
+
+// 자재입고검사 수정
+// 자재입고검사 삭제
+// 자재입고검사 조회
+// 자재입고검사 검색
+
 module.exports = {
   selectInspTargetList,
   searchInspTarget,
@@ -297,4 +363,8 @@ module.exports = {
   matInspTargetSelect,
   selectMatInspQcMaster,
   selectNGMaster,
+  makeMatInspId,
+  insertMatInsp,
+  insertMatInspResult,
+  insertMatInspNg,
 };
