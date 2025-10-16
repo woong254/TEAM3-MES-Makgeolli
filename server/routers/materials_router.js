@@ -16,19 +16,18 @@ router.get("/purTarget", async (req, res) => {
     .catch((err) => console.error(err));
   res.send(purList);
 });
+
 router.get("/iis/matList", async (req, res) => {
-  let receipt_date = req.query.receipt_date;
   let iis_list = await materialsService
-    .purIisList(receipt_date)
+    .purIisList()
     .catch((err) => console.error(err));
   res.send(iis_list);
 });
 
 router.get("/iis/matSearch", async (req, res) => {
-  let receipt_date = req.query.receipt_date;
   let mat_name = req.query.mat_name;
   let iis_list = await materialsService
-    .findPurIisList(receipt_date, mat_name)
+    .findPurIisList(mat_name)
     .catch((err) => console.error(err));
   res.send(iis_list);
 });
@@ -184,7 +183,6 @@ router.get("/iisBcncList", async (req, res) => {
 });
 
 router.get("/iisMatMasterList", async (req, res) => {
-  console.log("[ROUTE:/iisMatMasterList] query =", req.query); // ★ 추가
   const matInfo = await materialsService
     .findIisMatList(req.query)
     .catch((err) => console.error(err));
