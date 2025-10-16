@@ -1,281 +1,99 @@
 <script setup lang="ts">
-/* ========================
- * Imports
- * ======================== */
-import { ref, shallowRef, computed, onBeforeMount } from 'vue'
+import { ref } from 'vue'
 import axios from 'axios'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import ComponentCard from '@/components/common/ComponentCardButton.vue'
-import DataTable from 'primevue/datatable'
-import DataCol from 'primevue/column'
 import flatPickr from 'vue-flatpickr-component'
 import 'flatpickr/dist/flatpickr.css'
-import equipSelectModal from './equipSelectModal.vue'
 
-/* ========================
- * Types
- * ======================== */
-
-/* ========================
- * UI Const
- * ======================== */
-const currentPageTitle = ref('설비 기준정보 관리')
+const currentPageTitle = ref('비가동 등록')
 const inputStyle =
   'dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-950 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
-const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400'
-const flatpickrConfig = { dateFormat: 'Y-m-d', altInput: true, altFormat: 'Y-m-d', wrap: true }
-const fileStyle =
-  'focus:border-ring-brand-300 h-11 w-full overflow-hidden rounded-lg border border-gray-300 bg-transparent text-sm text-gray-500 shadow-theme-xs transition-colors file:mr-5 file:border-collapse file:cursor-pointer file:rounded-l-lg file:border-0 file:border-r file:border-solid file:border-gray-200 file:bg-gray-50 file:py-3 file:pl-3.5 file:pr-3 file:text-sm file:text-gray-700 placeholder:text-gray-400 hover:file:bg-gray-100 focus:outline-hidden focus:file:ring-brand-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400 dark:text-white/90 dark:file:border-gray-800 dark:file:bg-white/[0.03] dark:file:text-gray-400 dark:placeholder:text-gray-400'
 
-/* ========================
- * Utils (mappers & inits)
- * ======================== */
-const toCamel = (r: any): EquipItem => ({
-  equipCode: r.equipCode ?? r.equip_code ?? '',
-  equipName: r.equipName ?? r.equip_name ?? '',
-  equipType: r.equipType ?? r.equip_type ?? '',
-  manager: r.manager ?? null,
-  equipStatus: r.equipStatus ?? r.equip_status ?? null,
-  inspCycle: r.inspCycle ?? r.insp_cycle ?? null,
-  installDate: r.installDate ?? r.install_date ?? null,
-  modelName: r.modelName ?? r.model_name ?? null,
-  equipImage: r.equipImage ?? r.equip_image ?? null,
-  mfgDt: r.mfgDt ?? r.mfg_dt ?? null,
-  maker: r.maker ?? null,
-})
-const toSnake = (p: CreateEquipPayload) => ({
-  equip_code: p.equipCode?.trim(),
-  equip_name: p.equipName?.trim(),
-  equip_type: p.equipType?.trim(),
-  manager: p.manager ?? null,
-  equip_status: p.equipStatus ?? null,
-  insp_cycle: p.inspCycle ?? null,
-  install_date: p.installDate || null,
-  model_name: p.modelName || null,
-  equip_image: p.equipImage || null,
-  mfg_dt: p.mfgDt || null,
-  maker: p.maker || null,
-})
-const initForm = (): CreateEquipPayload => ({
+// 날짜+시간 픽커 설정
+const dtConfig = {
+  enableTime: true,
+  time_24hr: true,
+  dateFormat: 'Y-m-d H:i',
+  altInput: true,
+  altFormat: 'Y-m-d H:i',
+}
+
+type DowntimeStartPayload = {
+  equip_code: string
+  equip_name: string | null
+  downtime_type: string
+  description: string | null
+  progress_status: '진행중'
+  downtime_start?: string
+}
+
+const form = ref({
   equipCode: '',
   equipName: '',
-  equipType: '',
-  manager: '',
-  equipStatus: '',
-  inspCycle: 0,
-  installDate: '',
-  modelName: '',
-  equipImage: '',
-  mfgDt: '',
-  maker: '',
+  downtimeType: '비계획정지',
+  description: '',
+  startAt: '', // 선택 시 전송, 미입력 시 서버 NOW
+  endAt: '', // 등록 화면에서는 표시만(전송 X)
 })
-const initSearch = () => ({ equipCode: '', equipName: '', equipType: '', equipStatus: '' })
 
-/* ========================
- * State
- * ======================== */
-const searchForm = ref(initSearch())
-const equipList = shallowRef<EquipItem[]>([])
-const selectedRow = ref<EquipItem | null>(null)
-const createForm = ref<CreateEquipPayload>(initForm())
-const count = computed(() => equipList.value.length)
+const starting = ref(false)
+const currentCode = ref<string | null>(null)
+const isRunning = () => !!currentCode.value
 
-/* (optional) 담당자 모달 & 이미지 프리뷰 */
-const isModalOpen = ref(false)
-const openModal = () => (isModalOpen.value = true)
-const closeModal = () => (isModalOpen.value = false)
-const fileInputEl = ref<HTMLInputElement | null>(null)
-const eqpImageName = ref('선택된 파일 없음')
-const eqpImagePreview = ref('')
-const onFileChange = (e: Event) => {
-  const f = (e.target as HTMLInputElement).files?.[0]
-  if (!f) {
-    eqpImageName.value = '선택된 파일 없음'
-    eqpImagePreview.value = ''
+function resetForm() {
+  form.value = {
+    equipCode: '',
+    equipName: '',
+    downtimeType: '비계획정지',
+    description: '',
+    startAt: '',
+    endAt: '',
+  }
+  currentCode.value = null
+}
+
+async function startDowntime() {
+  if (!form.value.equipCode.trim()) {
+    alert('설비코드를 입력하세요.')
     return
   }
-  eqpImageName.value = f.name
-  if (f.type?.startsWith('image/')) {
-    const r = new FileReader()
-    r.onload = () => (eqpImagePreview.value = (r.result as string) || '')
-    r.readAsDataURL(f)
-  } else {
-    eqpImagePreview.value = ''
-  }
-}
-const clearImage = () => {
-  if (fileInputEl.value) fileInputEl.value.value = ''
-  eqpImageName.value = '선택된 파일 없음'
-  eqpImagePreview.value = ''
-}
+  if (starting.value || isRunning()) return
 
-/* ========================
- * API
- * ======================== */
-//다건 조회
-const getEquipList = async () => {
   try {
-    const { data } = await axios.get('/api/equipment', { params: searchForm.value })
-    equipList.value = (Array.isArray(data) ? data : []).map(toCamel)
-  } catch (e) {
-    console.error(e)
-    equipList.value = []
-  }
-}
+    starting.value = true
 
-//수정/등록 함수
-const saveEquip = async () => {
-  // 필수값
-  if (
-    !createForm.value.equipCode?.trim() ||
-    !createForm.value.equipName?.trim() ||
-    !createForm.value.equipType?.trim()
-  ) {
-    alert('설비코드/설비명/설비유형은 필수입니다.')
-    return
-  }
-  try {
-    if (selectedRow.value) {
-      const code = selectedRow.value.equipCode || createForm.value.equipCode
-      await axios.put(`/api/equipment/${encodeURIComponent(code)}`, toSnake(createForm.value))
-      alert('수정 완료!')
-    } else {
-      await axios.post('/api/equipment', toSnake(createForm.value))
-      alert('등록 완료!')
+    const body: DowntimeStartPayload = {
+      equip_code: form.value.equipCode.trim(),
+      equip_name: form.value.equipName.trim() || null,
+      downtime_type: form.value.downtimeType || '비계획정지',
+      description: form.value.description.trim() || null,
+      progress_status: '진행중',
     }
-    await getEquipList()
-  } catch (e) {
+    if (form.value.startAt.trim()) body.downtime_start = form.value.startAt.trim()
+
+    const { data } = await axios.post('/api/downtime', body)
+    currentCode.value = data?.downtime_code || null
+    alert('비가동이 시작되었습니다.')
+  } catch (e: any) {
     console.error(e)
-    alert('저장 실패')
+    alert(e?.response?.data?.message || '비가동 시작 중 오류가 발생했습니다.')
+  } finally {
+    starting.value = false
   }
 }
-// (추가) 상세 단건 조회
-const getEquipDetail = async (code: string): Promise<EquipItem | null> => {
-  try {
-    const { data } = await axios.get(`/api/equipment/${encodeURIComponent(code)}`)
-    return toCamel(data)
-  } catch (e) {
-    console.error('상세 조회 실패:', e)
-    return null
-  }
-}
-// 삭제 함수
-const deleteOne = async () => {
-  if (!selectedRow.value) return
-  const code = selectedRow.value.equipCode
-  const ok = confirm(`[${code}] 설비를 삭제할까요?`)
-  if (!ok) return
-
-  try {
-    await axios.delete(`/api/equipment/${encodeURIComponent(code)}`)
-    alert('삭제 완료')
-    selectedRow.value = null // 선택 해제
-    resetCreateForm() // 오른쪽 폼 초기화(있으면)
-    await getEquipList() // 목록 새로고침
-  } catch (err: any) {
-    console.error(err?.response ?? err)
-    // FK 제약 등으로 삭제 실패할 수 있음
-    alert(err?.response?.data?.message ?? '삭제 실패')
-  }
-}
-
-/* ========================
- * Handlers
- * ======================== */
-const resetSearchForm = () => Object.assign(searchForm.value, initSearch())
-const resetCreateForm = () => {
-  selectedRow.value = null
-  createForm.value = initForm()
-}
-
-const fillFormFromRow = (row: EquipItem) => {
-  createForm.value = { ...row, inspCycle: row.inspCycle ?? 0 }
-}
-// (수정) 클릭/선택 시 상세 먼저 가져와서 폼 채우기
-const onRowClick = async (e: { data: EquipItem }) => {
-  selectedRow.value = e.data
-  const detail = await getEquipDetail(e.data.equipCode)
-  fillFormFromRow(detail ?? e.data)
-}
-const onSelectionChange = async (e: { value: EquipItem | null }) => {
-  if (!e.value) return
-  selectedRow.value = e.value
-  const detail = await getEquipDetail(e.value.equipCode)
-  fillFormFromRow(detail ?? e.value)
-}
-
-/* ========================
- * Lifecycle
- * ======================== */
-onBeforeMount(getEquipList)
 </script>
 
 <template>
   <AdminLayout>
     <PageBreadcrumb :pageTitle="currentPageTitle" />
 
-    <!-- 조회 -->
-    <ComponentCard title="조회" className="shadow-sm">
-      <template #header-right>
-        <div class="flex justify-end gap-2">
-          <button @click="resetSearchForm" class="btn-common btn-color">초기화</button>
-          <button @click="getEquipList" class="btn-common btn-white">조회</button>
-        </div>
-      </template>
-
-      <template #body-content>
-        <div class="flex gap-4">
-          <div class="w-1/4">
-            <label :class="labelStyle">설비코드</label>
-            <input v-model="searchForm.equipCode" type="text" :class="inputStyle" />
-          </div>
-          <div class="w-1/4">
-            <label :class="labelStyle">설비명</label>
-            <input v-model="searchForm.equipName" type="text" :class="inputStyle" />
-          </div>
-          <div class="w-1/4">
-            <label :class="labelStyle">설비유형</label>
-            <input v-model="searchForm.equipType" type="text" :class="inputStyle" />
-          </div>
-          <div class="flex items-center gap-6">
-            <div :class="labelStyle">설비상태</div>
-            <label class="flex items-center gap-2">
-              <input
-                v-model="searchForm.equipStatus"
-                type="radio"
-                name="equip-using"
-                value="가동중"
-              />
-              가동중
-            </label>
-            <label class="flex items-center gap-2">
-              <input
-                v-model="searchForm.equipStatus"
-                type="radio"
-                name="equip-using"
-                value="비가동"
-              />
-              비가동
-            </label>
-          </div>
-        </div>
-      </template>
-    </ComponentCard>
-
-    <div class="flex gap-2 mt-2 w-full" style="height: 550px">
-      <!-- 등록/수정 -->
-      <ComponentCard title="등록/수정">
-        <template #header-right>
-          <div class="flex justify-end gap-2">
-            <button @click="saveEquip" class="btn-common btn-color">저장</button>
-            <button @click="resetCreateForm" class="btn-common btn-white">신규</button>
-          </div>
-        </template>
-
+    <div class="flex gap-2 mt-2 w-full">
+      <ComponentCard title="비가동 등록">
         <template #body-content>
-          <form @submit.prevent="saveEquip">
-            <table class="w-full table-fixed border-collapse border border-gray-300">
+          <form @submit.prevent="startDowntime">
+            <table class="w-full table-fixed border-collapse border border-gray-200">
               <colgroup>
                 <col style="width: 120px" />
                 <col />
@@ -283,126 +101,127 @@ onBeforeMount(getEquipList)
                 <col />
               </colgroup>
               <tbody>
+                <!-- 설비코드 / 설비명 -->
                 <tr>
-                  <th class="border border-gray-300 bg-gray-50 text-sm text-left p-2">설비코드</th>
-                  <td class="border border-gray-300 p-2">
+                  <th class="border border-gray-200 bg-gray-50 text-sm text-center p-2">
+                    설비코드
+                  </th>
+                  <td class="border border-gray-200 p-2">
                     <input
-                      v-model="createForm.equipCode"
-                      :disabled="!!selectedRow"
+                      v-model="form.equipCode"
+                      :disabled="isRunning() || starting"
                       type="text"
                       :class="inputStyle"
+                      placeholder="EQ-001"
                     />
                   </td>
-                  <th class="border border-gray-300 bg-gray-50 text-sm text-left p-2">설비명</th>
-                  <td class="border border-gray-300 p-2">
-                    <input v-model="createForm.equipName" type="text" :class="inputStyle" />
+                  <th class="border border-gray-200 bg-gray-50 text-sm text-center p-2">설비명</th>
+                  <td class="border border-gray-200 p-2">
+                    <input
+                      v-model="form.equipName"
+                      :disabled="isRunning() || starting"
+                      type="text"
+                      :class="inputStyle"
+                      placeholder="프레스 1호기"
+                    />
                   </td>
                 </tr>
 
+                <!-- 비가동유형 / 담당자(선택 입력란 자리만 유지) -->
                 <tr>
-                  <th class="border border-gray-300 bg-gray-50 text-sm text-left p-2">
-                    비가동코드
-                  </th>
-                  <td class="border border-gray-300 p-2">
-                    <input v-model="createForm.equipType" type="text" :class="inputStyle" />
-                  </td>
-                  <th class="border border-gray-300 bg-gray-50 text-sm text-left p-2">
+                  <th class="border border-gray-200 bg-gray-50 text-sm text-center p-2">
                     비가동유형
                   </th>
-                  <td class="border border-gray-300 p-2">
-                    <div class="relative">
-                      <input
-                        v-model="createForm.manager"
-                        type="text"
-                        :class="inputStyle + ' pr-10'"
-                      />
-                      <button
-                        type="button"
-                        class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500"
-                        @click="openModal"
-                        title="담당자 찾기"
-                      >
-                        🔍
-                      </button>
-                    </div>
+                  <td class="border border-gray-200 p-2">
+                    <select
+                      v-model="form.downtimeType"
+                      :class="inputStyle"
+                      :disabled="isRunning() || starting"
+                    >
+                      <option value="비계획정지">비계획정지</option>
+                      <option value="계획정지">계획정지</option>
+                      <option value="점검/수리">점검/수리</option>
+                    </select>
                   </td>
-                </tr>
-
-                <tr>
-                  <th class="border border-gray-300 bg-gray-50 text-sm text-left p-2">비고</th>
-                  <td class="border border-gray-300 p-2">
-                    <input v-model="createForm.maker" type="text" :class="inputStyle" />
-                  </td>
-                  <th class="border border-gray-300 bg-gray-50 text-sm text-left p-2">
-                    비가동시작일시
-                  </th>
-                  <td class="border border-gray-300 p-2">
-                    <flat-pickr
-                      v-model="createForm.installDate"
-                      :disabled="!!selectedRow"
-                      :config="flatpickrConfig"
-                      class="dark:bg-dark-900 h-11 w-full rounded-lg border px-4 py-2.5"
-                    />
-                  </td>
-                </tr>
-
-                <tr>
-                  <th class="border border-gray-300 bg-gray-50 text-sm text-left p-2">
-                    비가동종료일시
-                  </th>
-                  <td class="border border-gray-300 p-2">
-                    <input v-model="createForm.modelName" type="text" :class="inputStyle" />
-                  </td>
-                  <th class="border border-gray-300 bg-gray-50 text-sm text-left p-2">
-                    설비이미지
-                  </th>
-                  <td class="border border-gray-300 p-2">
-                    <!-- <input
-                      v-model="createForm.equipImage"
+                  <th class="border border-gray-200 bg-gray-50 text-sm text-center p-2">담당자</th>
+                  <td class="border border-gray-200 p-2">
+                    <input
                       type="text"
                       :class="inputStyle"
-                      placeholder="https://..."
-                    /> -->
-                    <input type="file" :class="fileStyle" id="inspFile" />
+                      placeholder="선택/입력"
+                      :disabled="isRunning() || starting"
+                    />
                   </td>
                 </tr>
 
+                <!-- 비고 -->
                 <tr>
-                  <th class="border border-gray-300 bg-gray-50 text-sm text-left p-2">제조일자</th>
-                  <td class="border border-gray-300 p-2">
-                    <flat-pickr
-                      v-model="createForm.mfgDt"
-                      :disabled="!!selectedRow"
-                      :config="flatpickrConfig"
-                      class="dark:bg-dark-900 h-11 w-full rounded-lg border px-4 py-2.5"
-                    />
-                  </td>
-                  <th class="border border-gray-300 bg-gray-50 text-sm text-left p-2">
-                    점검주기(일)
-                  </th>
-                  <td class="border border-gray-300 p-2">
-                    <input
-                      v-model.number="createForm.inspCycle"
-                      type="number"
+                  <th class="border border-gray-200 bg-gray-50 text-sm text-center p-2">비고</th>
+                  <td colspan="3" class="border border-gray-200 p-2">
+                    <textarea
+                      v-model="form.description"
                       :class="inputStyle"
-                      placeholder="예: 30"
+                      rows="4"
+                      placeholder="비고를 입력하세요"
+                      class="w-full resize-none rounded-lg border p-2"
+                      style="height: 120px"
+                      :disabled="isRunning()"
                     />
                   </td>
                 </tr>
 
+                <!-- 시작/종료 일시 -->
                 <tr>
-                  <th class="border border-gray-300 bg-gray-50 text-sm text-left p-2">설비상태</th>
-                  <td class="border border-gray-300 p-2" colspan="3">
-                    <select v-model="createForm.equipStatus" :class="inputStyle">
-                      <option value="j2" readonly>비가동</option>
-                    </select>
+                  <th class="border border-gray-200 bg-gray-50 text-sm text-center p-2">
+                    비가동 시작일시
+                  </th>
+                  <td class="border border-gray-200 p-2">
+                    <flat-pickr
+                      v-model="form.startAt"
+                      :config="dtConfig"
+                      :class="inputStyle"
+                      :disabled="isRunning() || starting"
+                      placeholder="미입력 시 현재시간으로 저장"
+                    />
+                  </td>
+
+                  <th class="border border-gray-200 bg-gray-50 text-sm text-center p-2">
+                    비가동 종료일시
+                  </th>
+                  <td class="border border-gray-200 p-2">
+                    <flat-pickr
+                      v-model="form.endAt"
+                      :config="dtConfig"
+                      :class="inputStyle"
+                      :disabled="true"
+                      placeholder="종료 화면에서 설정"
+                    />
                   </td>
                 </tr>
               </tbody>
             </table>
           </form>
 
-          <equipSelectModal :visible="isModalOpen" @close="closeModal" />
+          <!-- 버튼 -->
+          <div class="mt-6 flex items-center justify-center gap-2">
+            <button
+              @click="startDowntime"
+              class="btn-common btn-color disabled:opacity-50"
+              :disabled="starting || !form.equipCode || isRunning()"
+              title="설비코드 입력 후 시작"
+            >
+              {{ starting ? '시작 중...' : isRunning() ? '진행중' : '비가동 시작' }}
+            </button>
+
+            <button
+              @click="resetForm"
+              class="btn-common btn-white"
+              :disabled="starting || isRunning()"
+              title="진행중에는 초기화 불가"
+            >
+              신규
+            </button>
+          </div>
         </template>
       </ComponentCard>
     </div>
