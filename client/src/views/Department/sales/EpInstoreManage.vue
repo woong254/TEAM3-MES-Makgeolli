@@ -159,7 +159,7 @@ const submitEpIs = async () => {
     alert('서버 요청 중 오류가 발생했습니다.')
   }
 }
-
+// 전체선택 기본값 false
 const selectAll = ref(false)
 // comncode_dtnm가 없는 행 선택
 const isSelectableRow = (row: OrderItem) => !row.comncode_dtnm || row.comncode_dtnm.trim() === ''

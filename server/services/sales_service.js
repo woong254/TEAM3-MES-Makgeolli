@@ -362,14 +362,6 @@ const getEpOsManage = async (data) => {
       sql += ` AND o.due_date <= ?`;
       params.push(due_end_date);
     }
-    if (ep_start_date) {
-      sql += ` AND e.epep_dt >= ?`;
-      params.push(ep_start_date);
-    }
-    if (ep_end_date) {
-      sql += ` AND e.epep_dt <= ?`;
-      params.push(ep_end_date);
-    }
     // 상태 조건 입고완료, 출고완료, 출고진행중
     const stateConditions = [];
     if (Is) stateConditions.push("cd.comncode_dtnm = ?");
@@ -382,29 +374,24 @@ const getEpOsManage = async (data) => {
       if (Os) params.push(Os);
       if (OsIP) params.push(OsIP);
     }
-    sql += `GROUP BY 
+    sql += `
+    GROUP BY 
     od.ofd_no,
     o.ord_name,
     bm.bcnc_name,
     od.prod_code,
     pm.prod_name,
     pm.prod_spec,
-    pm.prod_unit,
+    cd_pu.comncode_dtnm,
     od.op_qty,
     o.due_date,
-    e.ep_lot,
-    e.epep_dt,
-    e.ep_qty,
     cd.comncode_dtnm
-ORDER BY 
-    o.due_date, 
-    e.epep_dt;`;
+    ORDER BY o.due_date`;
 
     const result = await mariadb.query(sql, params);
     const formatted = result.map((row) => ({
       ...row,
       due_date: formatDate(new Date(row.due_date)),
-      epep_dt: formatDate(new Date(row.epep_dt)),
     }));
     return formatted;
   } catch (err) {
@@ -420,35 +407,43 @@ const insertEpOs = async (orderForm) => {
 
     // 출고할때 완제품출고관리 테이블에 등록
     for (const item of orderForm) {
-      await conn.query(insertEpOsManage, [
-        item.ofd_no,
-        item.ep_lot,
-        item.ord_epos_qty,
-        item.remark,
-      ]);
-      console.log("item:", item);
+      for (const lot of item.lot_details) {
+        await conn.query(insertEpOsManage, [
+          item.ofd_no,
+          lot.ep_lot, // 여기서 LOT 배열의 ep_lot 사용
+          lot.lot_cur_os_qty, // 필요한 경우 LOT별 수량 조정 가능
+          item.remark,
+        ]);
 
-      // 출고할때 주문수량 - 주문제품출고수량 0 이면 주문서 상세에 있는 주문서상세상태를 변경
+        // 재고 테이블 업데이트
+        await conn.query(
+          `UPDATE epis SET ep_qty = ep_qty - ?, epos_qty = epos_qty + ? WHERE prod_code = ? AND ep_lot = ?`,
+          [lot.lot_cur_os_qty, lot.lot_cur_os_qty, item.prod_code, lot.ep_lot]
+        );
+
+        // 출고완료 상태 처리
+        await conn.query(
+          `UPDATE epis SET eps = 'm1' WHERE ep_lot = ? AND ep_qty = 0;`,
+          [lot.ep_lot]
+        );
+      }
+
+      // 주문서 상세 상태 처리
       await conn.query(
-        `UPDATE orderdetail od SET od.ofd_st = 'o2' WHERE od.ofd_no = ? AND ( SELECT SUM(od.op_qty - ec.ord_epos_qty) FROM edcts ec WHERE ec.ofd_no = od.ofd_no ) = 0`,
+        `UPDATE orderdetail od 
+        SET 		od.ofd_st = 'o2'
+        WHERE 	od.ofd_no = ? 
+        AND   	od.op_qty = ( SELECT SUM(ec.ord_epos_qty) 
+				                   	FROM edcts ec 
+					                  WHERE ec.ofd_no = od.ofd_no )`,
         [item.ofd_no]
       );
 
-      // 출고할때 루트제품 재고수량, 출고수량 업데이트
+      // 주문서 상태 처리
       await conn.query(
-        `UPDATE epis SET ep_qty = ep_qty - ?, epos_qty = epos_qty + ? WHERE prod_code = ? AND ep_lot = ?`,
-        [item.ord_epos_qty, item.ord_epos_qty, item.prod_code, item.ep_lot]
-      );
-
-      // 루트테이블에 제품 재고가 0이면 출고완료=m1으로 표시
-      await conn.query(
-        `UPDATE 	epis SET 	eps = 'm1' WHERE 	ep_lot = ? AND	 	ep_qty = 0;`,
-        [item.ep_lot]
-      );
-
-      // 출고버튼을 누르면 주문서 상세테이블에 있는 선택한 제품의 상태가 모두 출고완료일경우 주문서 테이블에 있는 선택한 제품의 주문서의 상태도 출고완료로 바뀌게 하기 / o2 출고완료 n2 출고완료
-      await conn.query(
-        `UPDATE	orderform o SET		o.order_status = 'n2' WHERE	o.ord_id = ( SELECT	ord_id FROM	orderdetail WHERE	ofd_no = ?) AND	NOT EXISTS ( 	SELECT	1    FROM	orderdetail od    WHERE	od.ord_id = o.ord_id 	AND		od.ofd_st <> 'o2')`,
+        `UPDATE orderform o SET order_status = 'n2' WHERE ord_id = 
+     (SELECT ord_id FROM orderdetail WHERE ofd_no = ?) AND
+     NOT EXISTS (SELECT 1 FROM orderdetail od WHERE od.ord_id = o.ord_id AND od.ofd_st <> 'o2')`,
         [item.ofd_no]
       );
     }

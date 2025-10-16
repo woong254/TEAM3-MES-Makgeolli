@@ -276,6 +276,7 @@ const menuGroups: MenuGroup[] = [
         subItems: [
           { name: '생산지시관리', path: '/prodOrd', pro: false },
           { name: '공정실적관리', path: '/prodOrdManage', pro: false },
+          { name: '공정제어', path: '/processControl', pro: false },
         ],
       },
       {

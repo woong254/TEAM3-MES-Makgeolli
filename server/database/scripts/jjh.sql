@@ -527,7 +527,7 @@ ORDER BY od.ofd_no, e.epep_dt;
 INSERT INTO edcts(ofd_no, ep_lot, ord_epos_qty, remark)
 VALUES (?,?,?,?);
 
--- 완제품 출고 관리 검색 조회 쿼리문
+-- 완제품 출고 관리 검색 조회 쿼리문 / selectEpOsManage
 SELECT 
     od.ofd_no,
     o.ord_name,
@@ -535,37 +535,25 @@ SELECT
     od.prod_code,
     pm.prod_name,
     pm.prod_spec,
-    cd_pu.comncode_dtnm as prod_unit,
+    cd_pu.comncode_dtnm AS prod_unit,
     od.op_qty AS ord_qty,
-    IFNULL(SUM(ed.ord_epos_qty), 0) AS shipped_qty,                 -- 누적 출고량
-    (od.op_qty - IFNULL(SUM(ed.ord_epos_qty), 0)) AS remain_qty,    -- 미출고량
+    IFNULL(SUM(ed.ord_epos_qty), 0) AS shipped_qty,                 
+    (od.op_qty - IFNULL(SUM(ed.ord_epos_qty), 0)) AS remain_qty,    
     o.due_date,
-    e.ep_lot,
-    e.epep_dt,
-    e.ep_qty,
-    cd.comncode_dtnm
+    cd.comncode_dtnm AS ofd_st
 FROM orderdetail od
-    JOIN orderform o 
-        ON od.ord_id = o.ord_id
-    JOIN bcnc_master bm 
-        ON o.bcnc_code = bm.bcnc_code
-    JOIN prod_master pm 
-        ON od.prod_code = pm.prod_code
-    JOIN comncode_dt cd 
-        ON od.ofd_st = cd.comncode_detailid
-	JOIN comncode_dt cd_pu
-		ON pm.prod_unit = cd_pu.comncode_detailid
-    JOIN (
-        SELECT prod_code, MIN(epep_dt) AS min_epep_dt
-        FROM epis
-        GROUP BY prod_code
-    ) em 
-        ON em.prod_code = od.prod_code
-    JOIN epis e 
-        ON e.prod_code = em.prod_code 
-        AND e.epep_dt = em.min_epep_dt
-    LEFT JOIN edcts ed                   
-        ON od.ofd_no = ed.ofd_no
+JOIN orderform o 
+    ON od.ord_id = o.ord_id
+JOIN bcnc_master bm 
+    ON o.bcnc_code = bm.bcnc_code
+JOIN prod_master pm 
+    ON od.prod_code = pm.prod_code
+JOIN comncode_dt cd 
+    ON od.ofd_st = cd.comncode_detailid
+JOIN comncode_dt cd_pu
+    ON pm.prod_unit = cd_pu.comncode_detailid
+LEFT JOIN edcts ed                   
+    ON od.ofd_no = ed.ofd_no
 GROUP BY 
     od.ofd_no,
     o.ord_name,
@@ -573,16 +561,13 @@ GROUP BY
     od.prod_code,
     pm.prod_name,
     pm.prod_spec,
-    pm.prod_unit,
+    cd_pu.comncode_dtnm,
     od.op_qty,
     o.due_date,
-    e.ep_lot,
-    e.epep_dt,
-    e.ep_qty,
     cd.comncode_dtnm
 ORDER BY 
-    o.due_date, 
-    e.epep_dt;
+    o.due_date;
+
 
 UPDATE epis
 SET ep_qty = ep_qty - ?,
@@ -631,9 +616,9 @@ FROM	orderdetail;
 SELECT	*
 FROM	orderform;
 -- 삭제
-TRUNCATE TABLE epis;
+TRUNCATE TABLE edcts;
 DELETE FROM epis
-WHERE  ep_lot = 'EPRO251109251015002';
+WHERE  ep_lot = 'EPRO251109251016003';
 DELETE FROM edcts
 WHERE  epos_no = 12;
 -- 공정실적관리 조회
@@ -642,15 +627,15 @@ FROM   processform;
 -- 공정실적관리 임시 데이터 추가
 INSERT INTO processform(procs_no, mk_list, equip_code, emp_no, prod_code, inpt_qty, mk_qty, fail_qty, pass_qty, prog,now_procs)
 VALUES
-    (113, 100, 'EQP-MK015','EMP-20250616-0001','PROD-20250101-005',500,500,0,500,'100','포장');
+    (116, 41, 'EQP-MK015','EMP-20250616-0001','PROD-20250101-001',500,500,0,500,'100','포장');
 -- 완제품검사 조회
 SELECT *
 FROM   prod_insp;
 -- 완제품검사 임시 데이터
 INSERT INTO prod_insp (insp_id, insp_name, pass_qty, procs_no, epep_dt, final_result)
 VALUES
-  ('test14', '테스트14', 500, 113, '2025-11-09', 'P');
-
+  ('test18', '테스트18', 500, 116, '2025-11-09', 'P');
+select * from makelist;
 
 
 SELECT 	comncode_dtnm
@@ -681,3 +666,10 @@ SELECT	ep_lot,
 FROM	epis
 WHERE	prod_code = 'PROD-20250101-005';
 
+-- 주문서 상태 처리 
+UPDATE	orderdetail od 
+SET		od.ofd_st = 'o2'
+WHERE 	od.ofd_no = ? 
+AND 	od.op_qty = ( SELECT SUM(ec.ord_epos_qty) 
+					FROM edcts ec 
+					WHERE ec.ofd_no = od.ofd_no );

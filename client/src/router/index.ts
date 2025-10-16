@@ -198,6 +198,14 @@ const router = createRouter({
         title: '공정실적관리',
       },
     },
+    {
+      path: '/processControl',
+      name: '공정제어',
+      component: () => import('../views/Department/production/ProcessControl.vue'),
+      meta: {
+        title: '공정제어',
+      },
+    },
 
     // 자재
     {
