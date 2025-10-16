@@ -188,4 +188,12 @@ router.get("/iisMatMasterList", async (req, res) => {
     .catch((err) => console.error(err));
   res.send(matInfo);
 });
+
+router.post("/iis/register", async (req, res) => {
+  const ids = Array.isArray(req.body?.ids) ? req.body.ids : [];
+  const out = await materialsService
+    .registerIisBatch(ids)
+    .catch(() => ({ ok: false, message: "ERR" }));
+  res.status(out.ok ? 200 : 400).json(out);
+});
 module.exports = router;
