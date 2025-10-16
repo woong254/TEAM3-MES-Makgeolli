@@ -200,7 +200,7 @@ const router = createRouter({
     },
     {
       path: '/processControl',
-      name: '공정제어',
+      name: 'processControl',
       component: () => import('../views/Department/production/ProcessControl.vue'),
       meta: {
         title: '공정제어',
