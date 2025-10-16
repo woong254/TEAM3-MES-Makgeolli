@@ -25,6 +25,7 @@ const isBcncModalOpen = ref(false)
 const isMatModalOpen = ref(false)
 const isPurMatModalOpen = ref(false)
 const selectComplete = ref([])
+const isRegistering = ref(false)
 const selectPending = ref([])
 const isSavingIis = ref(false)
 const activeTab = ref(0)
@@ -214,6 +215,36 @@ const deleteIis = async () => {
   } catch (e) {
     console.error(e)
     alert('삭제 중 오류가 발생했습니다.')
+  }
+}
+
+const registerIis = async () => {
+  if (isRegistering.value) return
+
+  // 검사완료 탭에서 체크된 행들
+  const ids = (selectComplete.value || []).map((r) => r.iis_id)
+  if (!ids.length) return alert('입고등록할 행을 선택하세요.')
+
+  if (!confirm(`${ids.length}건을 입고등록 하시겠습니까?`)) return
+
+  isRegistering.value = true
+  try {
+    // 백엔드 트랜잭션 호출(검사완료 → 입고)
+    const { data } = await axios.post('/api/iis/register', { ids })
+
+    if (data?.ok) {
+      // 성공하면 목록 갱신 + 선택 해제
+      await refreshBoth()
+      selectComplete.value = []
+      alert(`입고등록 완료! (${data.done ?? ids.length}건)`)
+    } else {
+      alert(data?.message || '입고등록 실패')
+    }
+  } catch (e) {
+    console.error(e)
+    alert('입고등록 중 오류가 발생했습니다.')
+  } finally {
+    isRegistering.value = false
   }
 }
 </script>
@@ -428,7 +459,14 @@ const deleteIis = async () => {
         <template #body-content>
           <div class="relative">
             <div class="flex justify-end space-x-2 mb-1 absolute right-0 top-0 z-10">
-              <button v-if="activeTab != 0" type="button" class="btn-color btn-common">등록</button>
+              <button
+                v-if="activeTab != 0"
+                type="button"
+                class="btn-color btn-common"
+                @click="registerIis"
+              >
+                등록
+              </button>
               <button
                 v-if="activeTab != 1"
                 type="button"
