@@ -6,7 +6,8 @@ import { ref, shallowRef, computed, onBeforeMount, onMounted } from 'vue'
 import axios from 'axios'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
-import ComponentCard from '@/components/common/ComponentCardButton.vue'
+import ComponentCard from '@/components/common/ComponentCardOrder.vue'
+import ComponentCardWoong from '@/components/common/ComponentCardButtonWoong.vue'
 import DataTable from 'primevue/datatable'
 import DataCol from 'primevue/column'
 import flatPickr from 'vue-flatpickr-component'
@@ -331,10 +332,10 @@ const createForm = ref<CreateEquipPayload>({
     <!-- 비가동 목록 (탭) -->
     <!-- 비가동 목록 (탭) -->
     <div class="space-y-5 sm:space-y-6 mt-2">
-      <ComponentCard title="">
+      <ComponentCardWoong title="">
         <template #body-content>
           <!-- ✅ 슬롯 flatten 충돌 방지: 한 겹 감싸기 -->
-          <div>
+          <div class="h-78">
             <TabView
               v-model:activeIndex="activeTab"
               @tab-change="onTabChange"
@@ -388,7 +389,7 @@ const createForm = ref<CreateEquipPayload>({
             </TabView>
           </div>
         </template>
-      </ComponentCard>
+      </ComponentCardWoong>
     </div>
   </AdminLayout>
 </template>
