@@ -143,6 +143,9 @@ const selectPur = () => {
           paginator
           :rows="8"
         >
+          <template #empty>
+            <div class="text-center">등록된 발주서가 없습니다.</div>
+          </template>
           <DataCol selectionMode="single" headerStyle="width: 37px" bodyStyle="width: 37px" />
           <DataCol
             field="pur_code"
