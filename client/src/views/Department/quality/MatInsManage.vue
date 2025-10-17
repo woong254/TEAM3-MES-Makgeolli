@@ -174,6 +174,9 @@ const onInspChecked = async (row: matInspTargetDT) => {
   isModalOpen.value = false
   // 3) 불량 + 품질기준 조회를 위한 함수 호출 및 매개변수 전달(9번)
   await findMatInspNgnQcMaster(row.mat_code)
+
+  currentInspId.value = null
+  mode.value = 'create'
 }
 
 // 7. 모달 이벤트(open, close)
@@ -417,97 +420,97 @@ const closeScoreDescModal = () => {
 }
 
 // 14. 등록 및 값 체크(not null 알람창 띄우기)
-const submitRegister = async () => {
-  try {
-    // 1) 알람창
-    // 합격량이 - 값일 때
-    if (matInspPass.value < 0) {
-      alert('합격량은 0보다 작을 수 없습니다.')
-      return
-    }
-    // 검사명 입력하지 않았을 때
-    // if (!inspName.value) {
-    //   alert('검사명을 입력해주세요.')
-    //   return
-    // }
-    // 가입고번호 입력하지 않았을 때
-    if (!matInspTargetData.iis_id) {
-      alert('가입고번호를 선택해주세요.')
-      return
-    }
-    // 검사량을 입력하지 않았을 때
-    if (!matInspQty.value || matInspQty.value <= 0) {
-      alert('검사량을 입력해주세요.')
-      return
-    }
-    // 범위가 있을 경우 -> 측정값 필수
-    // 관능검사가 있을 경우 -> 라디오번호 선택 필수
+// const submitRegister = async () => {
+//   try {
+//     // 1) 알람창
+//     // 합격량이 - 값일 때
+//     if (matInspPass.value < 0) {
+//       alert('합격량은 0보다 작을 수 없습니다.')
+//       return
+//     }
+//     // 검사명 입력하지 않았을 때
+//     // if (!inspName.value) {
+//     //   alert('검사명을 입력해주세요.')
+//     //   return
+//     // }
+//     // 가입고번호 입력하지 않았을 때
+//     if (!matInspTargetData.iis_id) {
+//       alert('가입고번호를 선택해주세요.')
+//       return
+//     }
+//     // 검사량을 입력하지 않았을 때
+//     if (!matInspQty.value || matInspQty.value <= 0) {
+//       alert('검사량을 입력해주세요.')
+//       return
+//     }
+//     // 범위가 있을 경우 -> 측정값 필수
+//     // 관능검사가 있을 경우 -> 라디오번호 선택 필수
 
-    // 2) 최종결과(합격/불합격) 코드화 -> P / F
-    const t_result = finalResult.value === '합격' ? 'P' : 'F'
+//     // 2) 최종결과(합격/불합격) 코드화 -> P / F
+//     const t_result = finalResult.value === '합격' ? 'P' : 'F'
 
-    // 3) 검사 결과 rows(범위형 + 관능형) → mat_insp_result 테이블의 배열로 변환
-    const results: Array<{
-      insp_result_value: number
-      r_value: string
-      insp_item_id: string
-    }> = []
+//     // 3) 검사 결과 rows(범위형 + 관능형) → mat_insp_result 테이블의 배열로 변환
+//     const results: Array<{
+//       insp_result_value: number
+//       r_value: string
+//       insp_item_id: string
+//     }> = []
 
-    // 범위형
-    for (const r of inspDataRan.value) {
-      results.push({
-        insp_result_value: Number(r.insp_result_value ?? 0),
-        r_value: r.r_value || '', // 'P' | 'F' | '' (미입력)
-        insp_item_id: r.insp_item_id,
-      })
-    }
-    // 관능형
-    for (const s of inspDataSen.value) {
-      results.push({
-        insp_result_value: Number(s.insp_result_value ?? 0),
-        r_value: s.r_value || '', // 'P' | 'F' | ''
-        insp_item_id: s.insp_item_id,
-      })
-    }
+//     // 범위형
+//     for (const r of inspDataRan.value) {
+//       results.push({
+//         insp_result_value: Number(r.insp_result_value ?? 0),
+//         r_value: r.r_value || '', // 'P' | 'F' | '' (미입력)
+//         insp_item_id: r.insp_item_id,
+//       })
+//     }
+//     // 관능형
+//     for (const s of inspDataSen.value) {
+//       results.push({
+//         insp_result_value: Number(s.insp_result_value ?? 0),
+//         r_value: s.r_value || '', // 'P' | 'F' | ''
+//         insp_item_id: s.insp_item_id,
+//       })
+//     }
 
-    // 3) 불량 합계(각 불량유형별 수치) → mat_insp_ng 배열로 변환
-    const ngs = Object.entries(ngValues)
-      .filter(([, v]) => Number(v) > 0)
-      .map(([def_item_id, v]) => ({
-        def_item_id,
-        qty: Number(v),
-      }))
+//     // 3) 불량 합계(각 불량유형별 수치) → mat_insp_ng 배열로 변환
+//     const ngs = Object.entries(ngValues)
+//       .filter(([, v]) => Number(v) > 0)
+//       .map(([def_item_id, v]) => ({
+//         def_item_id,
+//         qty: Number(v),
+//       }))
 
-    // 4) 페이로드 구성 (백엔드 registerMatInsp(Info)와 동일 구조)
-    const payload = {
-      insp_name: inspName.value, // 검사명
-      insp_date: matInspTargetDataattedDateTime, // 검사일시
-      insp_qty: Number(matInspQty.value || 0), // 검사량
-      pass_qty: Number(matInspPass.value || 0), // 합격량
-      fail_qty: Number(matInspNG.value || 0), // 불량량
-      remark: remark.value || '', // 비고
-      t_result, // 'P' | 'F'
-      emp_id: inspector.value || 'EMP-20250616-0004', // 로그인 계정으로 대체 가능
-      iis_id: Number(matInspTargetData.iis_id), // 가입고 ID
-      results, // mat_insp_result 테이블 데이터
-      ngs, // mat_insp_ng 테이블 데이터
-    }
+//     // 4) 페이로드 구성 (백엔드 registerMatInsp(Info)와 동일 구조)
+//     const payload = {
+//       insp_name: inspName.value, // 검사명
+//       insp_date: matInspTargetDataattedDateTime, // 검사일시
+//       insp_qty: Number(matInspQty.value || 0), // 검사량
+//       pass_qty: Number(matInspPass.value || 0), // 합격량
+//       fail_qty: Number(matInspNG.value || 0), // 불량량
+//       remark: remark.value || '', // 비고
+//       t_result, // 'P' | 'F'
+//       emp_id: inspector.value || 'EMP-20250616-0004', // 로그인 계정으로 대체 가능
+//       iis_id: Number(matInspTargetData.iis_id), // 가입고 ID
+//       results, // mat_insp_result 테이블 데이터
+//       ngs, // mat_insp_ng 테이블 데이터
+//     }
 
-    console.log('[FE] payload:', payload)
+//     console.log('[FE] payload:', payload)
 
-    // 5) 전송 (프록시가 '^/api' → '/' rewrite라면 프론트는 /api로 호출)
-    const { data } = await axios.post('/api/matInsp', payload)
-    if (data?.ok) {
-      alert(`등록되었습니다.\n검사ID: ${data.insp_id ?? ''}`)
-      // TODO: 필요 시 폼 초기화
-    } else {
-      alert(data?.message || '등록 실패')
-    }
-  } catch (e) {
-    console.error('[FE] 등록 오류:', e)
-    alert('서버 오류가 발생했습니다.')
-  }
-}
+//     // 5) 전송 (프록시가 '^/api' → '/' rewrite라면 프론트는 /api로 호출)
+//     const { data } = await axios.post('/api/matInsp', payload)
+//     if (data?.ok) {
+//       alert(`등록되었습니다.\n검사ID: ${data.insp_id ?? ''}`)
+//       // TODO: 필요 시 폼 초기화
+//     } else {
+//       alert(data?.message || '등록 실패')
+//     }
+//   } catch (e) {
+//     console.error('[FE] 등록 오류:', e)
+//     alert('서버 오류가 발생했습니다.')
+//   }
+// }
 
 // 15. 날짜 선택
 // 일자 시작일 설정 (종료일이 있다면 maxDate 설정)
@@ -538,6 +541,13 @@ const cond = reactive({
   start_date: '', // 'YYYY-MM-DD'
   end_date: '', // 'YYYY-MM-DD'
 })
+// 16-1. 초기화
+const resetSearch = () => {
+  cond.insp_name_word = ''
+  cond.start_date = ''
+  cond.end_date = ''
+  modalRows.value = []
+}
 // 16-2. 모달 상태/데이터
 const isSearchModalOpen = ref(false)
 const modalRows = ref<modalRowDT[]>([])
@@ -564,11 +574,7 @@ const openSearchModal = async () => {
   }
 }
 
-// 16-4. 부모 script setup
-// function onPickedRow(row: modalRowDT) {
-//   // row.iis_id 로 상세조회 → 폼 주입
-//   isSearchModalOpen.value = false
-// }
+// 16-4. 부모 script setup (검색으로 해당값 조회하고 화면단에 상세조회)
 async function onPickedRow(row: modalRowDT) {
   // 1) 모달 닫기
   isSearchModalOpen.value = false
@@ -661,6 +667,210 @@ async function onPickedRow(row: modalRowDT) {
       console.error(e)
       alert('상세 조회 중 오류')
     })
+  currentInspId.value = row.insp_id
+  mode.value = 'edit'
+}
+
+// 수정/삭제 선택
+const mode = ref<'create' | 'edit'>('create')
+const currentInspId = ref<string | null>(null)
+
+// 공통 payload 빌더 (등록/수정에서 재사용)
+const buildPayload = () => {
+  // 최종결과 코드화
+  const t_result = finalResult.value === '합격' ? 'P' : 'F'
+
+  // 결과 rows(범위형 + 관능형) → mat_insp_result
+  const results: Array<{ insp_result_value: number; r_value: string; insp_item_id: string }> = []
+  for (const r of inspDataRan.value) {
+    results.push({
+      insp_result_value: Number(r.insp_result_value ?? 0),
+      r_value: r.r_value || '',
+      insp_item_id: r.insp_item_id,
+    })
+  }
+  for (const s of inspDataSen.value) {
+    results.push({
+      insp_result_value: Number(s.insp_result_value ?? 0),
+      r_value: s.r_value || '',
+      insp_item_id: s.insp_item_id,
+    })
+  }
+
+  // 불량 합계 → mat_insp_ng
+  const ngs = Object.entries(ngValues)
+    .filter(([, v]) => Number(v) > 0)
+    .map(([def_item_id, v]) => ({ def_item_id, qty: Number(v) }))
+
+  return {
+    insp_name: inspName.value,
+    insp_date: matInspTargetDataattedDateTime,
+    insp_qty: Number(matInspQty.value || 0),
+    pass_qty: Number(matInspPass.value || 0),
+    fail_qty: Number(matInspNG.value || 0),
+    remark: remark.value || '',
+    t_result, // 'P' | 'F'
+    emp_id: inspector.value || 'EMP-20250616-0004',
+    iis_id: Number(matInspTargetData.iis_id),
+    results,
+    ngs,
+  }
+}
+
+// 유효성 검사
+// 숫자 입력 여부 체크
+const isFilledNumber = (v: any) =>
+  v !== null && v !== undefined && v !== '' && !Number.isNaN(Number(v))
+// 등록 전 유효성 검사
+const validateBeforeSubmit = (): boolean => {
+  // 0) 기본 수량/타겟
+  if (!inspName.value?.trim()) {
+    alert('검사명을 입력해주세요.')
+    return false
+  }
+  if (!matInspTargetData.iis_id) {
+    alert('가입고번호를 선택해주세요.')
+    return false
+  }
+  if (!matInspQty.value || matInspQty.value <= 0) {
+    alert('검사량을 입력해주세요.')
+    return false
+  }
+  if (matInspQty.value > matInspTargetData.receipt_qty) {
+    alert('검사량은 입고량을 초과할 수 없습니다.')
+    return false
+  }
+  if (matInspPass.value < 0) {
+    alert('합격량은 0보다 작을 수 없습니다.')
+    return false
+  }
+  // 1) 범위검사: 측정값 필수
+  if (inspDataRan.value.length > 0) {
+    const missingRan = inspDataRan.value.filter((r) => !isFilledNumber(r.insp_result_value))
+    if (missingRan.length > 0) {
+      const first = missingRan[0]
+      alert(`범위 검사 '${first.insp_item_name}'에 측정값을 입력해주세요.`)
+      return false
+    }
+  }
+  // 2) 관능검사: 각 질문 라디오 필수
+  if (inspDataSen.value.length > 0) {
+    for (const row of inspDataSen.value) {
+      if (!row.details || row.details.length === 0) continue
+      const notPicked = row.details.find((d) => typeof d.score !== 'number')
+      if (notPicked) {
+        alert(
+          `관능 검사 '${row.insp_item_name}'의 '${notPicked.order}. ${notPicked.question_name}' 점수를 선택해주세요.`,
+        )
+        return false
+      }
+    }
+  }
+
+  return true
+}
+
+// 등록 → 기존 submitRegister 그대로 두되, buildPayload 재사용
+const submitRegister = async () => {
+  try {
+    if (!validateBeforeSubmit()) return //유효성검사
+
+    const payload = buildPayload()
+    const { data } = await axios.post('/api/matInsp', payload)
+    if (data?.ok) {
+      alert(`등록되었습니다.\n검사ID: ${data.insp_id ?? ''}`)
+      // 등록 후 수정모드로 전환하고 싶으면 아래 두 줄 사용:
+      // currentInspId.value = data.insp_id
+      // mode.value = 'edit'
+      // 아니면 폼 초기화:
+      resetForm()
+    } else {
+      alert(data?.message || '등록 실패')
+    }
+  } catch (e) {
+    console.error('[FE] 등록 오류:', e)
+    alert('서버 오류가 발생했습니다.')
+  }
+}
+
+// 수정
+const submitUpdate = async () => {
+  try {
+    if (!currentInspId.value) return alert('수정할 검사ID가 없습니다.')
+    if (matInspPass.value < 0) return alert('합격량은 0보다 작을 수 없습니다.')
+    if (!matInspTargetData.iis_id) return alert('가입고번호를 선택해주세요.')
+    if (!matInspQty.value || matInspQty.value <= 0) return alert('검사량을 입력해주세요.')
+
+    const payload = buildPayload()
+    const { data } = await axios.put(`/api/matInsp/${currentInspId.value}`, payload)
+    if (data?.ok) {
+      alert(`수정되었습니다.\n검사ID: ${currentInspId.value}`)
+    } else {
+      alert(data?.message || '수정 실패')
+    }
+  } catch (e) {
+    console.error('[FE] 수정 오류:', e)
+    alert('서버 오류가 발생했습니다.')
+  }
+}
+
+// 삭제
+const confirmDelete = async () => {
+  try {
+    if (!currentInspId.value) return alert('삭제할 검사ID가 없습니다.')
+    if (!confirm('정말 삭제하시겠습니까?')) return
+    const { data } = await axios.delete(`/api/matInsp/${currentInspId.value}`)
+    if (data?.ok) {
+      alert('삭제되었습니다.')
+      resetForm()
+    } else {
+      alert(data?.message || '삭제 실패')
+    }
+  } catch (e) {
+    console.error('[FE] 삭제 오류:', e)
+    alert('서버 오류가 발생했습니다.')
+  }
+}
+
+// 초기화
+const resetForm = () => {
+  // 상단 기본정보
+  inspName.value = ''
+  inspector.value = '이한솔'
+  remark.value = ''
+
+  // 가입고/타겟
+  Object.assign(matInspTargetData, {
+    iis_id: '',
+    pur_code: '',
+    pur_name: '',
+    pur_date: '',
+    bcnc_name: '',
+    mat_code: '',
+    mat_name: '',
+    mat_spec: '',
+    mat_unit: '',
+    pur_qty: 0,
+    receipt_qty: 0,
+  })
+
+  // 수량
+  matInspQty.value = 0
+  matInspNG.value = 0
+  matInspPass.value = 0
+
+  // 불량 목록/값
+  ng.value = []
+  Object.keys(ngValues).forEach((k) => delete ngValues[k])
+
+  // 검사 테이블
+  inspDataRan.value = []
+  inspDataSen.value = []
+  expandedRows.value = null
+
+  // 모드/ID
+  currentInspId.value = null
+  mode.value = 'create'
 }
 
 // style
@@ -681,7 +891,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
     <ComponentCard title="조회" className="shadow-sm" class="mb-2">
       <template #header-right>
         <div class="flex justify-end">
-          <button class="btn-common btn-white">초기화</button>
+          <button class="btn-common btn-white" @click="resetSearch">초기화</button>
           <button class="btn-common btn-color" @click="openSearchModal">조회</button>
         </div>
       </template>
@@ -765,10 +975,17 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
     <ComponentCard title="등록" className="shadow-sm">
       <template #header-right>
         <div class="flex justify-end">
-          <button class="btn-common btn-white">초기화</button>
+          <button class="btn-common btn-white" @click="resetForm">초기화</button>
           <button class="btn-common btn-color">PDF</button>
-          <button class="btn-common btn-color" @click="submitRegister">등록</button>
-          <button class="btn-common btn-white">삭제</button>
+          <!-- 등록 모드 -->
+          <template v-if="mode === 'create'">
+            <button class="btn-common btn-color" @click="submitRegister">등록</button>
+          </template>
+          <!-- 수정 모드 -->
+          <template v-else>
+            <button class="btn-common btn-color" @click="submitUpdate">수정</button>
+            <button class="btn-common btn-white" @click="confirmDelete">삭제</button>
+          </template>
         </div>
       </template>
       <template #body-content>

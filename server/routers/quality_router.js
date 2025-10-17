@@ -117,16 +117,19 @@ router.get("/matInspDetail/:inspId", async (req, res) => {
 
 // 2-6. 자재입고검사 관리 수정
 router.put("/matInsp/:id", async (req, res) => {
+  const { id } = req.params;
+  const payload = { ...req.body, insp_id: id }; 
   let result = await qualityService
-    .registerMatInsp(req.body)
-    .catch((err) => console.error(err));
+    .updateMatInsp(payload)
+    .catch((err) => ({ ok: false, message: err?.message || "서버 오류" }));
   res.send(result);
 });
 
 // 2-7. 자재입고검사 관리 삭제
 router.delete("/matInsp/:id", async (req, res) => {
+  const { id } = req.params;
   let result = await qualityService
-    .registerMatInsp(req.body)
+    .deleteMatInsp(id)
     .catch((err) => console.error(err));
   res.send(result);
 });
