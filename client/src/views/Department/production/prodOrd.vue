@@ -41,6 +41,40 @@ interface MakeItem {
   pld_no: string        // 계획서
 };
 
+type Row = MakeItem & { desiredRank?: number };
+
+// 우선순위
+const normalizePriorities = ((rows: Row[]) => {
+  // desiredRank가 있으면 그 값, 없으면 기존 make_priority 사용
+  const sorted = [...rows].sort((a, b) => {
+    const ra = a.desiredRank ?? a.make_priority ?? Number.MAX_SAFE_INTEGER;
+    const rb = b.desiredRank ?? b.make_priority ?? Number.MAX_SAFE_INTEGER;
+    if (ra !== rb) return ra - rb;
+    // 타이브레이킹: 기존 make_priority → no(등록순) → prod_code
+    if ((a.make_priority ?? 0) !== (b.make_priority ?? 0)) {
+      return (a.make_priority ?? 0) - (b.make_priority ?? 0);
+    }
+    if (a.no !== b.no) return a.no.localeCompare(b.no);
+    return a.prod_code.localeCompare(b.prod_code);
+  });
+
+  // 1..N 재부여
+  sorted.forEach((r, idx) => {
+    r.make_priority = idx + 1;
+    delete r.desiredRank;
+  });
+
+  return sorted;
+});
+
+const onPriorityInput = ((row: Row, value: number) => {
+  const desired = Math.max(1, Math.floor(Number(value) || 1));
+  row.desiredRank = desired;
+  const next = normalizePriorities(products.value as Row[]);
+  products.value.splice(0, products.value.length, ...next);
+});
+
+
 const selectProducts = ref<MakeItem[]>([]);
 const products = ref<MakeItem[]>([]);
 
@@ -91,9 +125,8 @@ const productModalClose= () => {
 
 // 제품 선택하면 데이터 넘어오는 함수실행
 const ProductSelect = (value: MakeItem[]) => {
-  // console.log('선택된 제품:', value)
   value.forEach((item) => {
-    const newNo = `${new Date().getTime()}_${item.prod_code}`
+    const newNo = `${Date.now()}_${item.prod_code}`;
     products.value.push({
       no: newNo,
       prod_code: item.prod_code,
@@ -101,20 +134,25 @@ const ProductSelect = (value: MakeItem[]) => {
       prod_spec: item.prod_spec,
       prod_unit: item.prod_unit,
       make_qty: item.make_qty || 1,
-      make_priority: item.make_priority,
+      make_priority: item.make_priority ?? (products.value.length + 1),
       remark: item.remark || '',
       pld_no: item.pld_no || ''
-    })
-  })
+    });
+  });
+  // 새로 추가 후 정렬 보정
+  const next = normalizePriorities(products.value as Row[]);
+  products.value.splice(0, products.value.length, ...next);
   productModal.value = false;
-}
+};
 
 // 행삭제 하면 선택한 제품들 삭제
 const deleteSelectedRows = (prod: MakeItem[]) => {
-  console.log('행삭제 선택한 제품들', prod)
-  products.value = products.value.filter((item) => !prod.includes(item))  
-  prod.length = 0
-}
+  products.value = products.value.filter((item) => !prod.includes(item));
+  prod.length = 0;
+  // 삭제 후 정렬 보정
+  const next = normalizePriorities(products.value as Row[]);
+  products.value.splice(0, products.value.length, ...next);
+};
 
 const blankMakeInfo: MakeInfo = {
   make_code: '',
@@ -133,15 +171,15 @@ const resetInfo = () => {
 }
 
 // 저장 전 상세정보 정리
-const detailsInfo = () => 
-  products.value.map((p, idx) => ({
+const detailsInfo = () =>
+  normalizePriorities(products.value as Row[]).map((p, idx) => ({
     no: String(idx + 1),
     prod_code: p.prod_code,
     mk_num: Number(p.make_qty || 1),
-    mk_priority: p.make_priority,
+    mk_priority: p.make_priority, // 이미 1..N
     remark: p.remark || null,
     pld_no: p.pld_no || null
-  }))
+  }));
 
 // 저장 버튼 클릭시 실행 함수
 const isSubmitting = ref(false);
@@ -349,6 +387,7 @@ const baseInputClass = "dark:bg-dark-900 h-8 w-full rounded-lg border border-gra
                 <button type="button" class="btn-color btn-common" @focus="productModalOpen">제품추가</button>
                 <button type="button" class="btn-white btn-common" @click="() => deleteSelectedRows(selectProducts)">제품삭제</button>
                 <ProductSelectmodal
+                  :disabledProdCodes="products.map((p) => p.prod_code)"
                   @selectedProductValue="ProductSelect"
                   :visible="productModal"
                   @close="productModalClose"
@@ -418,22 +457,24 @@ const baseInputClass = "dark:bg-dark-900 h-8 w-full rounded-lg border border-gra
                       />
                     </template>
                   </Column>
-                  <Column 
-                    field="make_priority" 
-                    header="우선순위" 
+                  <Column
+                    field="make_priority"
+                    header="우선순위"
                     :pt="{ columnHeaderContent: 'justify-center' }"
                     style="text-align: right"
                     headerStyle="width: 7%"
                   >
                     <template #body="{ data }">
                       <input
-                        v-model="data.make_priority"
+                        v-model.number="data.make_priority"
                         type="number"
                         :min="1"
                         :class="baseInputClass"
                         :style="{ textAlign: 'right' }"
                         style="height: 2rem"
                         placeholder="우선순위"
+                        @blur="onPriorityInput(data, data.make_priority)"
+                        @keydown.enter.prevent="onPriorityInput(data, data.make_priority)"
                       />
                     </template>
                   </Column>

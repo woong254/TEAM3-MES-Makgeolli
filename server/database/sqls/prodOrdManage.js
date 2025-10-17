@@ -2,9 +2,12 @@
 
 // 작업지시목록
 const selectMakeAll = `
-  SELECT  mkd.mkd_no, -- 생산지시상세번호
+  SELECT  ROW_NUMBER() OVER (
+            ORDER BY mkf.mk_ord_no ASC, mkd.mk_priority ASC, pfd.seq_no ASC
+          ) AS no,
+          mkd.mkd_no, -- 생산지시상세번호
           mkf.mk_ord_no, -- 작업지시코드
-          mkf.writing_date, -- 작업일자
+          DATE_FORMAT(mkf.writing_date, '%Y-%m-%d') AS writing_date, -- 작업일자
           mkf.mk_name, -- 작업지시명
           mkd.prod_code, -- 제품코드
           prod.prod_name, -- 제품명
@@ -14,9 +17,13 @@ const selectMakeAll = `
           pfd.seq_no, -- 공정순서
           pfd.proc_id, -- 공정코드
           pm.proc_name, -- 공정이름
-          (SELECT IFNULL(SUM(inpt_qty),0) FROM processform WHERE mk_list = mkf.mk_ord_no) AS total_inpt_qty, -- 해당 지시건을 기반으로 총 투입량
           mkd.mk_priority, -- 우선순위
-          pm.equip_type -- 설비유형
+          pm.equip_type, -- 설비유형
+          CASE
+            WHEN pf_sum.total_qty IS NULL THEN '생산대기'
+            WHEN pf_sum.total_qty = mkd.mk_num THEN '생산완료'
+            ELSE '생산 중'
+          END AS total_inpt_qty -- 해당 지시건을 기반으로 총 투입량
   FROM makeform mkf
       JOIN makedetail mkd
       ON mkf.mk_ord_no = mkd.mk_ord_no
@@ -30,6 +37,12 @@ const selectMakeAll = `
       ON pfm.flow_id = pfd.flow_id
       JOIN proc_master pm
       ON pfd.proc_id = pm.proc_id
+      -- processform의 inpt_qty의 값을 비교
+      LEFT JOIN (SELECT mk_list, 
+                  SUM(inpt_qty) AS total_qty
+            FROM processform
+            GROUP BY mk_list) pf_sum 
+      ON pf_sum.mk_list = mkf.mk_ord_no
   WHERE mkf.mk_st <> 'p3'
 `;
 
