@@ -4,13 +4,16 @@
 const searchEquipList = `
 SELECT  e.equip_code,
 		    e.equip_name,
-		    e.equip_type,
+        c2.comncode_dtnm as equip_type,
 		    e.manager,
 		    c.comncode_dtnm as equip_status,
 		    e.insp_cycle
 FROM 	equip_master e
 		JOIN comncode_dt c
-    ON e.equip_status = c.comncode_detailid`;
+    ON e.equip_status = c.comncode_detailid
+    LEFT JOIN comncode_dt c2
+    ON e.equip_type = c2.comncode_detailid
+    `;
 
 // ✅ 설비 상태 조회 (드롭다운용) — value: code_id, label: code_name
 const selectEquipType = `
