@@ -706,3 +706,11 @@ FROM   orderdetail od
        ON   od.prod_code = p.prod_code
        JOIN	comncode_dt cd_pu
        ON	p.prod_unit = cd_pu.comncode_detailid;
+       
+-- insertProcessForm / 지시서상세번호, 설비코드, 사원번호, 제품코드, 지시수량, 공정명 / 작업시작시간 : 지금시간, 진행률 : 0,
+INSERT INTO processform(mk_list, equip_code, emp_no, prod_code, inpt_qty, procs_bgntm, prog, procs_st, now_procs)
+				 VALUES(?,?,?,?,?,?,?,Now(),0);
+
+select * from processform;
+desc processform;
+select Now();

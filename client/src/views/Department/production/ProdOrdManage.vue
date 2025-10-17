@@ -19,7 +19,7 @@ import { useRouter } from 'vue-router'
 const router = useRouter()
 
 const goToProcessControl = () => {
-  router.push({ name: 'processControl' }) // 라우트 이름을 사용
+  router.push({ name: 'processControl', query: { proc_code: '1' } }) // 라우트 이름을 사용
 }
 
 // 지시사항 검색 조건

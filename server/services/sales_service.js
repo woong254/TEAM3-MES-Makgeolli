@@ -1,8 +1,8 @@
 // 영업 서비스
-// const mariadb = require("../database/mapper.js");
-import mariadb from "../database/mapper.js";
-// const sqlList = require("../database/sqlList.js");
-import sqlList from "../database/sqlList.js";
+const mariadb = require("../database/mapper.js");
+// import mariadb from "../database/mapper.js";
+const sqlList = require("../database/sqlList.js");
+// import sqlList from "../database/sqlList.js";
 
 const selectOrderDetail = sqlList.selectOrderDetail;
 const selectOrderDetailProducts = sqlList.selectOrderDetailProducts;
@@ -475,7 +475,7 @@ const getEpLot = async (data) => {
   }
 };
 // export
-export {
+module.exports = {
   viewList,
   ordFormInfoView,
   ordDetail,
@@ -490,3 +490,18 @@ export {
   insertEpOs,
   getEpLot,
 };
+// export {
+//   viewList,
+//   ordFormInfoView,
+//   ordDetail,
+//   bcncInfoView,
+//   productsView,
+//   removeOrder,
+//   getOrderProducts,
+//   getProdUnit,
+//   getEpIsManage,
+//   insertEpIs,
+//   getEpOsManage,
+//   insertEpOs,
+//   getEpLot,
+// };
