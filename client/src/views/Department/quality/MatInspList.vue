@@ -12,6 +12,7 @@ import Button from 'primevue/button'
 import flatPickr from 'vue-flatpickr-component'
 import 'flatpickr/dist/flatpickr.css'
 import * as XLSX from 'xlsx'
+import { Korean } from 'flatpickr/dist/l10n/ko.js' // 달력 한글 import
 
 const currentPageTitle = ref('자재입고검사 조회')
 
@@ -21,9 +22,9 @@ const formData = reactive({
 const date = ref(null)
 const flatpickrConfig = {
   dateFormat: 'Y-m-d',
-  altInput: true,
-  altFormat: 'F j, Y',
+  altInput: false,
   wrap: true,
+  locale: Korean,
 }
 
 // table data

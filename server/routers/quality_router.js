@@ -90,8 +90,41 @@ router.get("/matInspQcMasternNG/:matCode", async (req, res) => {
   res.send(result);
 });
 
-// 2-3. 자재입고검사 등록
-router.post("/matInspRegister", async (req, res) => {
+// 2-3. 자재입고검사 관리 등록
+router.post("/matInsp", async (req, res) => {
+  let result = await qualityService
+    .registerMatInsp(req.body)
+    .catch((err) => console.error(err));
+  res.send(result);
+});
+
+// 2-4. 자재입고검사 관리 검색
+router.post("/matInspSearch", async (req, res) => {
+  let result = await qualityService
+    .searchMatInsp(req.body)
+    .catch((err) => console.error(err));
+  res.send(result);
+});
+
+// 2-5. 자재입고검사 관리 상세조회
+router.get("/matInspDetail/:inspId", async (req, res) => {
+  const { inspId } = req.params;
+  let result = await qualityService
+    .matInspDetail(inspId)
+    .catch((err) => ({ ok: false, message: err?.message || "서버 오류" }));
+  res.send(result);
+});
+
+// 2-6. 자재입고검사 관리 수정
+router.put("/matInsp/:id", async (req, res) => {
+  let result = await qualityService
+    .registerMatInsp(req.body)
+    .catch((err) => console.error(err));
+  res.send(result);
+});
+
+// 2-7. 자재입고검사 관리 삭제
+router.delete("/matInsp/:id", async (req, res) => {
   let result = await qualityService
     .registerMatInsp(req.body)
     .catch((err) => console.error(err));
