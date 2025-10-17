@@ -164,19 +164,26 @@ const validateBeforeGoToProcess = () => {
     alert('지시 목록에서 제품(행)을 선택하세요.');
     return false;
   }
+
+  const selectedRow = makeRows.value.find(row => row.mk_ord_no === selectMake.value!.mk_ord_no);
+  if (!selectedRow || !selectedRow.inpt_qty) {
+    alert('선택한 지시의 투입수량을 작성하세요');
+    return false;
+  }
+
   if (!selectEquip.value) {
     alert('설비를 선택하세요.');
     return false;
   }
+
   if (!selectEmp.value) {
     alert('작업자를 선택하세요.');
     return false;
   }
-  if (!selectMake.value.inpt_qty) {
-    alert('선택한 지시의 투입수량을 작성하세요');
-    return false;
-  }
-  
+
+  // 최종 selectMake에도 반영
+  selectMake.value.inpt_qty = selectedRow.inpt_qty;
+
   return true;
 };
 
@@ -421,7 +428,13 @@ const baseInputClass =
                         :max="Number(data.mk_num || 0)"
                         :class="baseInputClass"
                         style="text-align: right; height: 2rem"
-                        @input="data.inpt_qty = Math.min(Number(data.mk_num || 0), Math.max(0, Number(data.inpt_qty || 0)))"
+
+                        @input="
+                          data.inpt_qty = Math.min(Number(data.mk_num || 0), Math.max(0, Number(data.inpt_qty || 0)));
+                          if (selectMake && selectMake.mk_ord_no === data.mk_ord_no) {
+                            selectMake.inpt_qty = data.inpt_qty;
+                          }
+                        "
                         placeholder="투입"
                       />
                     </template>
@@ -482,7 +495,7 @@ const baseInputClass =
                   class="fixed-data dense-table"
                   showGridlines
                   scrollable
-                  scrollHeight="250px"
+                  scrollHeight="180px"
                   editMode="cell"
                   size="small"
                   :value="equipRows"

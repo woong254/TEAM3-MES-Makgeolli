@@ -1,5 +1,6 @@
 // table : equip_master
 
+
 // ✅ 다건조회 (상태 한글명까지)
 const searchEquipList = `
 SELECT
@@ -20,6 +21,26 @@ LEFT JOIN comncode_dt t
  AND t.comncode_detailid = e.equip_type
 WHERE 1=1
 `;
+
+/*
+// 박봉근
+// 설비 조회
+const searchEquipList = `
+  select  e.equip_code, -- 설비코드
+          e.equip_name, -- 설비명
+          et.comncode_dtnm, -- 설비유형
+          em.emp_name, -- 담당자
+          es.comncode_dtnm, -- 설비상태
+          e.insp_cycle
+  from equip_master e JOIN comncode_dt et
+                        ON e.equip_type = et.comncode_detailid
+                      JOIN comncode_dt es
+                        ON e.equip_status = es.comncode_detailid
+                 LEFT JOIN emp_master em
+                        ON e.manager = em.emp_id
+`;
+*/
+
 // -- ✅ 권장 쿼리: 코드와 이름 동시 반환
 // ✅ 설비 상태 조회 (드롭다운용) — value: code_id, label: code_name
 const selectEquipType = `
