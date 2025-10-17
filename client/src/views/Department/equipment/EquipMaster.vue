@@ -22,8 +22,10 @@ interface EquipItem {
   equipCode: string
   equipName: string
   equipType: string
+  equipTypeName?: string // ← 화면표시용
   manager: string | null
   equipStatus: string
+  equipStatusName?: string // ← 화면표시용
   inspCycle: number | null
   installDate: string | null
   modelName: string | null
@@ -56,8 +58,10 @@ const toCamel = (r: any): EquipItem => ({
   equipCode: r.equipCode ?? r.equip_code ?? '',
   equipName: r.equipName ?? r.equip_name ?? '',
   equipType: r.equipType ?? r.equip_type ?? '',
+  equipTypeName: r.equipTypeName ?? r.equip_type_name ?? '',
   manager: r.manager ?? null,
   equipStatus: r.equipStatus ?? r.equip_status ?? '',
+  equipStatusName: r.equipStatusName ?? r.equip_status_name ?? '',
   inspCycle: r.inspCycle ?? r.insp_cycle ?? null,
   installDate: r.installDate ?? r.install_date ?? null,
   modelName: r.modelName ?? r.model_name ?? null,
@@ -175,7 +179,8 @@ const getEquipList = async () => {
 
 // 설비유형 공통코드
 interface ViewType {
-  comncode_dtnm: string
+  code: string // ✅ 코드값
+  name: string // ✅ 화면 표시용 이름
 }
 
 const TypeInfo = ref<ViewType[]>([])
@@ -279,9 +284,10 @@ const onSelectionChange = async (e: { value: EquipItem | null }) => {
 /* ========================
  * Lifecycle
  * ======================== */
-onBeforeMount(getEquipList)
-onMounted(() => {
-  viewType()
+
+onMounted(async () => {
+  await viewType()
+  await getEquipList()
 })
 </script>
 
@@ -312,8 +318,8 @@ onMounted(() => {
             <label :class="labelStyle">설비유형</label>
             <select v-model="searchForm.equipType" :class="inputStyle">
               <option value="">설비유형 선택</option>
-              <option v-for="(item, index) in TypeInfo" :key="index" :value="item.comncode_dtnm">
-                {{ item.comncode_dtnm }}
+              <option v-for="(item, index) in TypeInfo" :key="index" :value="item.code">
+                {{ item.name }}
               </option>
             </select>
           </div>
@@ -360,12 +366,12 @@ onMounted(() => {
             <DataCol selectionMode="single" headerStyle="width: 2.5rem" />
             <DataCol field="equipCode" header="설비코드" />
             <DataCol field="equipName" header="설비명" />
-            <DataCol field="equipType" header="설비유형" sortable />
+            <DataCol field="equipTypeName" header="설비유형" sortable />
             <DataCol field="manager" header="담당자" sortable />
-            <DataCol field="equipStatus" header="설비상태" sortable />
+            <DataCol field="equipStatusName" header="설비상태" sortable />
             <DataCol
               field="inspCycle"
-              header="점검예정일"
+              header="점검주기"
               sortable
               style="width: 110px; text-align: center"
             />
@@ -418,12 +424,8 @@ onMounted(() => {
                     <div class="relative">
                       <select v-model="createForm.equipType" :class="inputStyle">
                         <option value="">설비유형 선택</option>
-                        <option
-                          v-for="(item, index) in TypeInfo"
-                          :key="index"
-                          :value="item.comncode_dtnm"
-                        >
-                          {{ item.comncode_dtnm }}
+                        <option v-for="(item, index) in TypeInfo" :key="index" :value="item.code">
+                          {{ item.name }}
                         </option>
                       </select>
                       <!-- 수정모드일 때 수정 허용하고 싶다면 disabled 제거 -->
