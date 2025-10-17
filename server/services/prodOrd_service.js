@@ -18,10 +18,8 @@ const findByEmpId = async (empId) => {
 const addMakeForm = async (header, details) => {
   let conn = null;
   try {
-    // 1) 커넥션 획득
     conn = await mariadb.getConnection();
 
-    // 2) 파라미터 준비 (JSON 배열 변환 필수!)
     const params = [
       header.mk_name,
       header.mk_bgnde,
@@ -32,13 +30,8 @@ const addMakeForm = async (header, details) => {
       JSON.stringify(details),
     ];
 
-    // 3) 프로시저 호출
     const rows = await conn.query("CALL add_makeForm(?,?,?,?,?,?,?)", params);
 
-    /**
-     * 결과 rows 형태: [ [ { mk_ord_no: ..., mk_list: ... } ], ... ]
-     * 프로시저의 SELECT 결과는 rows[0][0]에 첫 결과가 담긴다
-     */
     const result =
       Array.isArray(rows) && Array.isArray(rows[0]) && rows[0][0]
         ? rows[0][0]
@@ -93,6 +86,41 @@ const insertProcessForm = async (params) => {
     return { isSuccessed: false };
   }
 };
+
+/*
+// 공정실적에서 입력한 값이 공정 제어에 값이 있는지 비교
+const calculateRemainingQty = async (prod_code, target_qty) => {
+  try {
+    const [rows] = await db.query(
+      `SELECT COALESCE(SUM(inpt_qty), 0) AS total_inpt_qty
+       FROM processform
+       WHERE prod_code = ?`,
+      [prod_code]
+    );
+
+    const total_inpt_qty = rows[0].total_inpt_qty;
+
+    // 2️⃣ 남은 생산 가능 수량 계산
+    const remaining_qty = target_qty - total_inpt_qty;
+
+    let message;
+    if (remaining_qty > 0) {
+      message = `이미 ${total_inpt_qty}개가 생산 지시됨. ${remaining_qty}개만 추가 생산 필요.`;
+    } else {
+      message = `이미 ${total_inpt_qty}개가 생산 지시되어 추가 지시 불필요.`;
+    }
+
+    return {
+      success: true,
+      total_inpt_qty,
+      remaining_qty: remaining_qty > 0 ? remaining_qty : 0,
+      message,
+    };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+};
+*/
 
 module.exports = {
   findByEmpId,

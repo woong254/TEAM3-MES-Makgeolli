@@ -56,6 +56,7 @@ const selectEquipAll = `
                       JOIN comncode_dt comn
                         ON em.equip_status = comn.comncode_detailid
   WHERE pm.proc_name = ?
+    AND em.equip_status <> 'j2'
 `;
 
 // 작업자 선택

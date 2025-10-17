@@ -29,52 +29,64 @@ router.post("/prodOrd", async (req, res) => {
 
 
 // 목록 조회
-router.get("/prodOrdManage", async (req, res, next) => {
+router.get("/prodOrdManage", async (req, res) => {
   try {
     const data = await prodOrdService.findAllMakeList();
     res.json(data);
   } catch (e) {
-    next(e);
+    console.error(e);
   }
 });
 
 
-router.get('/prodOrdManage/equipments', async (req, res, next) => {
+router.get('/prodOrdManage/equipments', async (req, res) => {
   try {
     const procName = String(req.query.procName ?? '');
     const data = await prodOrdService.chooseAboutEquip(procName);
     res.json(data);
   } catch (e) {
-    next(e);
+    console.error(e);
   }
 });
 
 
 // 공정제어 작업시작 버튼 누르면 공정실적관리 테이블에 등록
-router.post("/addProcessForm", async (req, res, next) => {
+router.post("/addProcessForm", async (req, res) => {
   try {
     const processform = req.body;
     const data = await prodOrdService.insertProcessForm(processform);
     res.json(data);
   } catch (err) {
-    console.error("addProcessForm 오류:", err);
+    console.error(err);
   }
 });
 
-// 공정실적관리에서 공정제어로 데이터 보내는 쿼리
+// 공정실적관리에서 서버로 보낸 데이터
 router.get('/goToProcess', async (req, res) => {
-  const { makePayload, equipPayload, empPayload } = req.query;
+  try {
+    const { makePayload, equipPayload, empPayload } = req.query;
 
-  const make = makePayload ? JSON.parse(makePayload) : null;
-  const equip = equipPayload ? JSON.parse(equipPayload) : null;
-  const emp = empPayload ? JSON.parse(empPayload) : null;
+    const make = makePayload ? JSON.parse(makePayload) : null;
+    const equip = equipPayload ? JSON.parse(equipPayload) : null;
+    const emp = empPayload ? JSON.parse(empPayload) : null;
 
-  console.log('make', make);
-  console.log('equip', equip);
-  console.log('emp', emp);
+    console.log('make', make);
+    console.log('equip', equip);
+    console.log('emp', emp);
 
-  return res.status(200).json({ ok: true });
+    return res.status(200).json({ ok: true });
+  } catch (err) { 
+    console.error(err);
+  }
 })
 
+/*
+// 
+router.post('/goToProcess/remaining', async (req, res) => {
+  const { prod_code, target_qty } = req.body;
+  const result = await calculateRemainingQty(item_code, target_qty);
+  res.json(result);
+});
+*/
 
 module.exports = router;
