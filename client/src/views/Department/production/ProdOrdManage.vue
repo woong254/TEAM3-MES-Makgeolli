@@ -12,15 +12,6 @@ import axios from 'axios'
 import flatPickr from 'vue-flatpickr-component'
 import 'flatpickr/dist/flatpickr.css'
 import { Korean } from 'flatpickr/dist/l10n/ko.js'
-import ProcessControl from './ProcessControl.vue'
-
-import { useRouter } from 'vue-router'
-
-const router = useRouter()
-
-const goToProcessControl = () => {
-  router.push({ name: 'processControl' }) // 라우트 이름을 사용
-}
 
 // 지시사항 검색 조건
 interface SearchMakeOrder {
@@ -33,6 +24,7 @@ interface SearchMakeOrder {
 // 지시 상품들
 interface MakeOrderDetail {
   no: number // 선택을 위한 임의 번호
+  mkd_no: number
   mk_ord_no: string // 지시코드
   writing_date: string // 지시날짜
   mk_name: string // 지시명
@@ -44,7 +36,8 @@ interface MakeOrderDetail {
   seq_no: number // 우선순위 -> 공정 순서
   proc_id: string // 공정코드
   proc_name: string // 공정명
-  procs_st: string // 실적상태
+  total_inpt_qty: string // 실적상태
+  inpt_qty: number
 }
 
 interface ChooseEquip {
@@ -66,12 +59,12 @@ const searchMakeOrder = ref<SearchMakeOrder>({
   make_order_end_date: '',
 })
 
-// 라디오 버튼으로 선택한 값 저장하는 배열
+// 목록 상태
 const makeRows = ref<MakeOrderDetail[]>([])
 const equipRows = ref<ChooseEquip[]>([])
 const empRows = ref<ChooseEmp[]>([])
 
-// 라디오 버튼
+// 선택 상태
 const selectMake = ref<MakeOrderDetail | null>(null)
 const selectEquip = ref<ChooseEquip | null>(null)
 const selectEmp = ref<ChooseEmp | null>(null)
@@ -94,25 +87,130 @@ const endDateRange = computed(() => ({
   locale: Korean,
 }))
 
-const loadProcDetail = async ({ data }) => {
-  const { proc_id, proc_name } = data
+const state = ref({
+  selected: null as MakeOrderDetail | null,
+});
 
-  const res = await axios.get('/api/prodOrdManage', { params: { procId: proc_id } })
-  equipRows.value = res.data.equipRows
-  empRows.value = res.data.workerRows
+const prevSelectedNo = ref<number | null>(null)
 
-  await axios.post('/api/prodOrdManage/selection', {
-    procName: proc_name,
-  })
-}
+// 선택한 지시건이 가진 공정명
+const selectProcName = (e: { data: MakeOrderDetail }) => {
+  const item = e.data;
 
+  // 이전 선택과 다를 때만 초기화하고 싶다면 조건 추가
+  if (!state.value.selected || state.value.selected.mk_ord_no !== item.mk_ord_no) {
+    resetInputsAndSelections();
+  }
+
+  state.value = { ...state.value, selected: item };
+  selectMake.value = item;
+
+  void onRowSelectEquip(item.proc_name);
+};
+
+const resetInputsAndSelections = () => {
+  // 투입수량 초기화
+  makeRows.value = makeRows.value.map(row => ({
+    ...row,
+  }));
+  // 선택 상태 초기화
+  selectMake.value = null;
+  selectEquip.value = null;
+  equipRows.value = [];
+};
+
+const equipError = ref<string | null>(null);
+
+// 선택한 지시건을 기준으로 사용 가능한 설비 조회
+const onRowSelectEquip = async (procName: string) => {
+  try {
+    isEquipLoading.value = true;
+    equipError.value = null;
+    const res = await axios.get('/api/prodOrdManage/equipments', { params: { procName } });
+    equipRows.value = Array.isArray(res.data) ? res.data : [];
+  } catch (e) {
+    console.error(e);
+    equipRows.value = [];
+    equipError.value = '설비를 불러오지 못했습니다.';
+  } finally {
+    isEquipLoading.value = false;
+  }
+};
+
+// 최초 로드
 onMounted(async () => {
-  const res = await axios.get('/api/prodOrdManage')
-  makeRows.value = res.data.makeRows
-  empRows.value = res.data.empRows
-  console.log('makeRows.value:', makeRows.value)
-  console.log('empRows.value:', empRows.value)
-})
+  const res = await axios.get('/api/prodOrdManage');
+  makeRows.value = res.data.makeRows ?? [];
+  empRows.value  = res.data.empRows  ?? [];
+});
+
+const isEquipLoading = ref(false);
+// 저장
+const isSubmitting = ref(false);
+
+// 유효성 검사
+const validateBeforeGoToProcess = () => {
+  if (!selectMake.value) {
+    alert('지시 목록에서 제품(행)을 선택하세요.');
+    return false;
+  }
+  if (!selectEquip.value) {
+    alert('설비를 선택하세요.');
+    return false;
+  }
+  if (!selectEmp.value) {
+    alert('작업자를 선택하세요.');
+    return false;
+  }
+  if (!selectMake.value.inpt_qty) {
+    alert('선택한 지시의 투입수량을 작성하세요');
+    return false;
+  }
+  
+  return true;
+};
+
+const goToProcess = async () => {
+  if (isSubmitting.value) return;
+  if (!validateBeforeGoToProcess()) return;
+
+  const make = selectMake.value as MakeOrderDetail;
+  const equip = selectEquip.value as ChooseEquip;
+  const emp = selectEmp.value as ChooseEmp;
+
+  const makePayload  = {
+    mkd_no: make.mkd_no,           // 1. 지시서 상세 목록
+    prod_code: make.prod_code,     // 4. 제품코드
+    inpt_qty: make.inpt_qty        // 5. 현투입량
+  }
+
+  const equipPayload  = {
+    equip_code: equip.equip_code, // 2. 설비코드
+  }
+
+  const empPayload  = {
+    emp_id: emp.emp_id,            // 3. 사원번호
+  }
+
+  console.log(makePayload);
+  console.log(equipPayload);
+  console.log(empPayload);
+
+  try {
+    isSubmitting.value = true;
+    const res = await axios.get('/api/goToProcess', { params: {
+      makePayload: JSON.stringify(makePayload),
+      equipPayload: JSON.stringify(equipPayload),
+      empPayload: JSON.stringify(empPayload),
+    }});
+    console.log(res);
+  } catch (err) {
+    console.error(err);
+    alert('등록 실패');
+  } finally {
+    isSubmitting.value = false;
+  }
+};
 
 const currentPageTitle = ref('공정 실적 관리')
 
@@ -220,8 +318,8 @@ const baseInputClass =
           <ComponentCard title="작업지시목록">
             <template #header-right>
               <div class="flex items-center">
-                <button type="button" class="btn-color btn-common" @click="goToProcessControl">
-                  공정 제어
+                <button type="button" class="btn-color btn-common" @click="goToProcess" :disabled="isSubmitting">
+                  {{ isSubmitting ? '이동 중' : '공정 제어' }}
                 </button>
               </div>
             </template>
@@ -238,7 +336,7 @@ const baseInputClass =
                   size="small"
                   :value="makeRows"
                   selectionMode="single"
-                  @row-select="loadProcDetail"
+                  @row-select="selectProcName"
                   v-model:selection="selectMake"
                 >
                   <template #empty>
@@ -275,7 +373,7 @@ const baseInputClass =
                     field="prod_code"
                     header="제품코드"
                     :pt="{ columnHeaderContent: 'justify-center' }"
-                    headerStyle="width: 15%"
+                    headerStyle="width: 10%"
                   />
                   <Column
                     field="prod_name"
@@ -297,29 +395,48 @@ const baseInputClass =
                     :pt="{ columnHeaderContent: 'justify-center' }"
                     headerStyle="width: 5%"
                   />
+                  
                   <Column
-                    field="mk_num"
-                    header="지시수량"
-                    style="text-align: right"
-                    :pt="{ columnHeaderContent: 'justify-center' }"
-                    headerStyle="width: 7%"
+                  field="inpt_qty"
+                  header="투입수량"
+                  :pt="{ columnHeaderContent: 'justify-center' }"
+                  style="text-align: right"
+                  headerStyle="width: 7%"
                   >
                     <template #body="{ data }">
                       <input
-                        v-model="data.remark"
-                        type="text"
+                        v-model.number="data.inpt_qty"
+                        type="number"
+                        :min="0"
+                        :max="Number(data.mk_num || 0)"
                         :class="baseInputClass"
-                        style="height: 2rem"
+                        style="text-align: right; height: 2rem"
+                        @input="data.inpt_qty = Math.min(Number(data.mk_num || 0), Math.max(0, Number(data.inpt_qty || 0)))"
+                        placeholder="투입"
                       />
                     </template>
                   </Column>
+                  <Column
+                    field="remaining_qty"
+                    header="잔여수량"
+                    :pt="{ columnHeaderContent: 'justify-center' }"
+                    style="text-align: right"
+                    headerStyle="width: 5%"
+                  >
+                    <template #body="{ data }">
+                      <div style="text-align: right">
+                        {{ Math.max(0, Number(data.mk_num || 0) - Number(data.inpt_qty || 0)) }}
+                      </div>
+                    </template>
+                  </Column>
+
                   <Column
                     field="seq_no"
                     header="공정순서"
                     style="text-align: right"
                     :pt="{ columnHeaderContent: 'justify-center' }"
                     class="dense-table"
-                    headerStyle="width: 7%"
+                    headerStyle="width: 5%"
                   />
                   <Column
                     field="proc_id"
@@ -334,7 +451,7 @@ const baseInputClass =
                     headerStyle="width: 7%"
                   />
                   <Column
-                    field="procs_st"
+                    field="total_inpt_qty"
                     header="실적상태"
                     :pt="{ columnHeaderContent: 'justify-center' }"
                     headerStyle="width: 7%"
@@ -362,9 +479,16 @@ const baseInputClass =
                   v-model:selection="selectEquip"
                 >
                   <template #empty>
-                    <div class="text-center">지시 목록을 선택해주세요</div>
+                    <div class="text-center">
+                      {{ isEquipLoading ? '설비를 불러오는 중...' : (equipError || '지시 목록을 선택해주세요') }}
+                    </div>
                   </template>
-                  <Column selectionMode="single" :pt="{ columnHeaderContent: 'justify-center' }" />
+                  <Column
+                    selectionMode="single"
+                    headerStyle="width: 5%"
+                    field="no"
+                    :pt="{ columnHeaderContent: 'justify-center' }"
+                  />
                   <Column
                     field="equip_code"
                     header="설비코드"
@@ -403,7 +527,12 @@ const baseInputClass =
                   <template #empty>
                     <div class="text-center">사원이 없습니다</div>
                   </template>
-                  <Column selectionMode="single" :pt="{ columnHeaderContent: 'justify-center' }" />
+                  <Column
+                    selectionMode="single"
+                    headerStyle="width: 5%"
+                    field="no"
+                    :pt="{ columnHeaderContent: 'justify-center' }"
+                  />
 
                   <Column
                     field="emp_id"
