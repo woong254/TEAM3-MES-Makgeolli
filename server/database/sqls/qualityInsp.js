@@ -383,7 +383,7 @@ FROM mat_insp_result r
 JOIN qc_master      qm ON qm.insp_item_id = r.insp_item_id
 LEFT JOIN qc_master_ran qr ON qr.insp_item_id = r.insp_item_id
 WHERE r.insp_id = ?
-ORDER BY r.insp_item_id;
+ORDER BY r.insp_item_id
 `;
 
 // 2-5-3. 불량목록 + 불량기준관리(이름)
@@ -421,4 +421,7 @@ module.exports = {
   selectMatInspQcMaster,
   selectNGMaster,
   matInspSearch,
+  selectMatInspNGsById,
+  selectMatInspResultsById,
+  selectMatInspHeaderById,
 };

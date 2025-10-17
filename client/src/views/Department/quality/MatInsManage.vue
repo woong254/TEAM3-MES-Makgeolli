@@ -569,13 +569,13 @@ const openSearchModal = async () => {
 //   // row.iis_id 로 상세조회 → 폼 주입
 //   isSearchModalOpen.value = false
 // }
-function onPickedRow(row: modalRowDT) {
+async function onPickedRow(row: modalRowDT) {
   // 1) 모달 닫기
   isSearchModalOpen.value = false
 
   // 2) 상세조회 호출
-  axios
-    .get(`/api/matInsp/${row.insp_id}`)
+  await axios
+    .get(`/api/matInspDetail/${row.insp_id}`)
     .then(({ data }) => {
       if (!data?.ok) {
         alert(data?.message || '상세 조회 실패')
