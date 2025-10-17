@@ -1,7 +1,7 @@
-// const mariadb = require("../database/mapper.js");
-// const sqlList = require("../database/sqlList.js");
-import mariadb from "../database/mapper.js";
-import sqlList from "../database/sqlList.js";
+const mariadb = require("../database/mapper.js");
+const sqlList = require("../database/sqlList.js");
+// import mariadb from "../database/mapper.js";
+// import sqlList from "../database/sqlList.js";
 
 const iisModalBcnc = sqlList.iisModalBcnc;
 const iisModalMat = sqlList.iisModalMat;
@@ -370,7 +370,7 @@ const registerIisBatch = async (ids = []) => {
   }
 };
 
-export {
+module.exports = {
   // 목록/검색
   findPurList,
   findPurTarget,
