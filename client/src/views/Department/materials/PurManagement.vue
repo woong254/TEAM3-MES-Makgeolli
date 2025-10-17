@@ -5,12 +5,12 @@ import ComponentCard from '@/components/common/ComponentCardButton.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import flatPickr from 'vue-flatpickr-component'
+import 'flatpickr/dist/flatpickr.css'
 import MatModal from './MatModal/MatModal.vue'
 import PurModal from './MatModal/PurModal.vue'
 import BcncModal from './MatModal/BcncModal.vue'
 import sysdate from 'moment'
 import axios from 'axios'
-import 'flatpickr/dist/flatpickr.css'
 import { Korean } from 'flatpickr/dist/l10n/ko.js'
 import '@/assets/common.css'
 import { ref, onMounted, computed } from 'vue'
@@ -272,7 +272,7 @@ onMounted(async () => {
 <template>
   <AdminLayout>
     <PageBreadcrumb :pageTitle="currentPageTitle" />
-    <div class="space-y-5 sm:space-y-6">
+    <div class="space-y-5 sm:space-y-3">
       <ComponentCard title="발주서">
         <template #header-right>
           <div class="flex justify-end space-x-2 mb-1">
@@ -421,7 +421,7 @@ onMounted(async () => {
         </template>
       </ComponentCard>
 
-      <ComponentCard title="발주자재" style="height: 500px">
+      <ComponentCard title="발주자재" style="height: 530px">
         <template #header-right>
           <div class="flex justify-end space-x-2">
             <button type="button" class="btn-white btn-common" @click="isMatModalOpen = true">
@@ -438,6 +438,7 @@ onMounted(async () => {
             v-model:selection="selectMat"
             showGridlines
             dataKey="mat_code"
+            size="small"
             scrollable
             scrollHeight="350px"
           >

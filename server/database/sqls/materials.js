@@ -1,6 +1,8 @@
-// Table: bcnc_master, mat_master, pur_form, emp_master, pur_mat, lot_mat
+// Table: bcnc_master, mat_master, pur_form, emp_master, pur_mat, lot_mat, iis, mat_receipt, mat_release, lot_seq
 
-// 발주서 조회 (목록) - LEFT JOIN
+/* =========================
+ *  목록/검색 (기존 그대로)
+ * ========================= */
 const selectPurList = `
   SELECT 
     p.pur_code,
@@ -17,7 +19,6 @@ const selectPurList = `
   ORDER BY p.pur_code DESC
 `;
 
-// 발주서명으로 발주서 조회 (목록) - LEFT JOIN
 const selectPurTarget = `
   SELECT 
     p.pur_code,
@@ -35,7 +36,6 @@ const selectPurTarget = `
   ORDER BY p.pur_code DESC
 `;
 
-// ✅ 단건 헤더 조회 (모달 선택 시 메인으로 채우기)
 const selectPurHeaderByCode = `
   SELECT 
     p.pur_code,
@@ -53,7 +53,6 @@ const selectPurHeaderByCode = `
   WHERE p.pur_code = ?
 `;
 
-// ✅ 단건 라인 조회 (해당 발주서의 발주자재 라인)
 const selectPurLinesByCode = `
   SELECT
     pm.mat_code,
@@ -75,12 +74,11 @@ const selectPurLinesByCode = `
   ORDER BY pm.mat_code
 `;
 
-// 발주자재 조회(모달: 자재 선택용 목록)
 const selectPurMatList = `
   SELECT
     m.mat_code,
     m.mat_name,
-    COALESCE(SUM(l.receipt_qty - l.release_qty), 0) AS stock_qty,  -- LOT 합계
+    COALESCE(SUM(l.receipt_qty - l.release_qty), 0) AS stock_qty,
     m.safe_stock,
     m.mat_spec,
     m.mat_unit
@@ -90,12 +88,11 @@ const selectPurMatList = `
   ORDER BY m.mat_code
 `;
 
-// 자재명으로 발주자재 조회
 const selectPurMatTarget = `
   SELECT
     m.mat_code,
     m.mat_name,
-    COALESCE(SUM(l.receipt_qty - l.release_qty), 0) AS stock_qty,  -- LOT 합계
+    COALESCE(SUM(l.receipt_qty - l.release_qty), 0) AS stock_qty,
     m.safe_stock,
     m.mat_spec,
     m.mat_unit
@@ -106,13 +103,13 @@ const selectPurMatTarget = `
   ORDER BY m.mat_code
 `;
 
-// 매입처 조회/검색
 const selectBcncList = `
   SELECT bcnc_code, bcnc_name, bcnc_category
   FROM bcnc_master
   WHERE bcnc_type = '매입처'
   ORDER BY CONVERT(bcnc_code, UNSIGNED INTEGER)
 `;
+
 const searchBcncTarget = `
   SELECT bcnc_code, bcnc_name, bcnc_category
   FROM bcnc_master
@@ -120,7 +117,6 @@ const searchBcncTarget = `
     AND bcnc_name LIKE ?
 `;
 
-// 발주서코드 생성
 const purCode = `
   SELECT CONCAT('PUR-', LPAD(
     IFNULL(MAX(CAST(SUBSTRING(pur_code, 5) AS UNSIGNED)), 0) + 1,
@@ -131,16 +127,15 @@ const purCode = `
   WHERE pur_code LIKE 'PUR-%'
 `;
 
-/* ========== 저장(등록/수정) 관련 ========== */
-
-// 발주서 존재 여부(등록/수정 구분)
+/* =========================
+ *  저장(등록/수정) (기존 그대로)
+ * ========================= */
 const existsPurForm = `
   SELECT COUNT(*) AS cnt
   FROM pur_form
   WHERE pur_code = ?
 `;
 
-// 헤더 UPSERT
 const upsertPurForm = `
 INSERT INTO pur_form
   (pur_code, emp_id, bcnc_code, pur_name, pur_date, receipt_date, pur_status, remark)
@@ -155,14 +150,12 @@ ON DUPLICATE KEY UPDATE
   remark       = VALUES(remark)
 `;
 
-// 발주서의 현재 라인 목록(코드만)
 const selectMatCodesByPurCode = `
 SELECT mat_code
 FROM pur_mat
 WHERE pur_code = ?
 `;
 
-// 라인 UPSERT (필수 4컬럼만)
 const upsertOnePurMat = `
 INSERT INTO pur_mat
   (pur_code, mat_code, pur_qty, remark)
@@ -173,18 +166,19 @@ ON DUPLICATE KEY UPDATE
   remark  = VALUES(remark)
 `;
 
-// 화면에서 지운 라인만 삭제
 const deleteOnePurMat = `
 DELETE FROM pur_mat
 WHERE pur_code = ? AND mat_code = ?
 `;
 
-// 발주서 삭제
 const deletePur = `
 DELETE FROM pur_form
 WHERE pur_code = ?
 `;
 
+/* =========================
+ *  가입고 입력/목록 (기존 그대로)
+ * ========================= */
 const insertIis = `
 INSERT INTO iis (pur_code, bcnc_code, mat_code, prod_date, exp_date, pre_receipt_date, receipt_qty)
 SELECT
@@ -199,25 +193,29 @@ FROM pur_form f JOIN pur_mat m
 ON f.pur_code = m.pur_code
 WHERE f.receipt_date = ?
   AND f.bcnc_code    = ?
-  AND m.mat_code     = ?       
-  AND m.unreceipt_qty >= ?
+  AND m.mat_code     = ?
+  AND (
+        (m.pur_qty - IFNULL(m.receipt_qty,0)) 
+        - (
+            SELECT IFNULL(SUM(i.receipt_qty),0)
+            FROM iis i
+            WHERE i.pur_code = f.pur_code
+              AND i.mat_code = m.mat_code
+              AND i.insp_status IN ('검사대기','검사완료')
+          )
+      ) >= ?
 ORDER BY f.pur_date DESC
 LIMIT 1
 `;
-// 바인딩 순서 (mysql2.execute(insertIis, params)):
-// [
-//   prod_date, exp_date, pre_receipt_date, receipt_qty,
-//   pre_receipt_date, bcnc_code, mat_code, receipt_qty
-// ]
 
 const iisList = `
 SELECT
   i.iis_id,
   i.pur_code,
-  f.pur_name,   
-  b.bcnc_name,         
+  f.pur_name,
+  b.bcnc_name,
   i.mat_code,
-  m.mat_name,         
+  m.mat_name,
   m.mat_spec,
   m.mat_unit,
   i.prod_date,
@@ -237,7 +235,8 @@ const deleteIis = `
 DELETE
 FROM iis
 WHERE insp_status = '검사대기'
-AND iis_id IN(?)`;
+AND iis_id IN(?)
+`;
 
 const selectIisMatList = `
 SELECT
@@ -314,6 +313,68 @@ WHERE pm.receipt_status IN ('입고대기', '부분입고')
   AND pf.receipt_date = CURDATE()
 `;
 
+// 검사완료건 조회 (발주누적용 receipt_qty, LOT/입고용 pass_qty 둘 다 꺼내옴)
+const selectIisForRegister = `
+SELECT
+  i.iis_id,
+  i.pur_code,
+  i.mat_code,
+  i.exp_date,
+  i.prod_date,
+  IFNULL(i.receipt_qty,0) AS receipt_qty,  -- 발주누적(pur_mat.receipt_qty +=)
+  IFNULL(i.pass_qty,0)    AS pass_qty      -- LOT/입고이력(mat_receipt.receipt_qty)
+FROM iis i
+WHERE i.insp_status = '검사완료'
+  AND i.iis_id IN (?)
+ORDER BY i.iis_id
+`;
+
+// 같은 자재/유통기한 LOT 재사용
+const selectLotForReuse = `
+SELECT mat_lot
+FROM lot_mat
+WHERE mat_code = ?
+  AND DATE(exp_date) = DATE(?)
+LIMIT 1
+`;
+
+// 날짜별 시퀀스 +1 (YYYYMMDD 기준) → LAST_INSERT_ID()로 현재값 얻음
+const nextLotSeqByDate = `
+INSERT INTO lot_seq(date_key, seq)
+VALUES (DATE_FORMAT(DATE(?), '%Y%m%d'), 1)
+ON DUPLICATE KEY UPDATE seq = LAST_INSERT_ID(seq + 1)
+`;
+
+// LOT 신규 생성 (이미 있으면 무시)
+const insertLotIgnore = `
+INSERT IGNORE INTO lot_mat
+  (mat_lot, mat_code, exp_date, prod_date, stock_qty, receipt_qty, release_qty)
+VALUES
+  (?,       ?,        ?,        ?,         0,         0,           0)
+`;
+
+// 발주누적: receipt_qty 증가 (트리거가 미입고/상태 처리)
+const updatePurMatOnReceipt = `
+UPDATE pur_mat
+   SET receipt_qty = IFNULL(receipt_qty, 0) + ?
+ WHERE pur_code = ?
+   AND mat_code = ?
+`;
+
+// 입고이력: pass_qty를 넣어야 함(트리거가 lot_mat 합계/재고 갱신)
+const insertMatReceipt = `
+INSERT INTO mat_receipt
+  (iis_id, mat_lot, receipt_date, receipt_qty)
+VALUES
+  (?,      ?,       CURDATE(),   ?)
+`;
+
+// iis 상태 변경
+const updateIisStatusDone = `
+UPDATE iis
+   SET insp_status = '입고완료'
+ WHERE iis_id IN (?)
+`;
 module.exports = {
   // 목록/검색
   selectPurList,
@@ -322,21 +383,27 @@ module.exports = {
   iisList,
   iisModalBcnc,
   iisModalMat,
+
   // 단건 조회
   selectPurHeaderByCode,
   selectPurLinesByCode,
+
   // 자재 목록/검색
   selectPurMatList,
   selectPurMatTarget,
   selectIisMatTarget,
-  // 매입처 목록/검색
+
+  // 매입처
   selectBcncList,
   searchBcncTarget,
+
   // 코드 생성
   purCode,
+
   // 삭제
   deletePur,
   deleteIis,
+
   // 저장 관련
   existsPurForm,
   upsertPurForm,
@@ -344,4 +411,13 @@ module.exports = {
   upsertOnePurMat,
   deleteOnePurMat,
   insertIis,
+
+  // 입고등록
+  selectIisForRegister,
+  selectLotForReuse,
+  nextLotSeqByDate,
+  insertLotIgnore,
+  updatePurMatOnReceipt,
+  insertMatReceipt,
+  updateIisStatusDone,
 };

@@ -1,10 +1,19 @@
-// const mariadb = require("../database/mapper.js");
-// const sqlList = require("../database/sqlList.js");
-import mariadb from "../database/mapper.js";
-import sqlList from "../database/sqlList.js";
+const mariadb = require("../database/mapper.js");
+const sqlList = require("../database/sqlList.js");
+// import mariadb from "../database/mapper.js";
+// import sqlList from "../database/sqlList.js";
 
 const iisModalBcnc = sqlList.iisModalBcnc;
 const iisModalMat = sqlList.iisModalMat;
+
+const toYYYYMMDD = (d) => {
+  const dt = new Date(d);
+  const y = dt.getFullYear();
+  const m = String(dt.getMonth() + 1).padStart(2, "0");
+  const dd = String(dt.getDate()).padStart(2, "0");
+  return `${y}${m}${dd}`;
+};
+
 // ----- 목록/검색 -----
 const findPurList = async () => {
   let list = await mariadb
@@ -276,7 +285,92 @@ const findIisMatList = async (matData) => {
   }
 };
 
-export {
+// (B) 검사완료 다건 → 입고등록
+const registerIisBatch = async (ids = []) => {
+  if (!Array.isArray(ids) || !ids.length)
+    return { ok: false, message: "EMPTY_IDS" };
+
+  try {
+    // 1) 대상 로딩
+    const rows = await mariadb.query("selectIisForRegister", [ids]);
+    if (!rows?.length) return { ok: false, message: "NO_MATCHED_ROWS" };
+
+    // 2) 트랜잭션
+    await mariadb.query("START TRANSACTION");
+
+    let inserted = 0;
+    const doneIds = [];
+
+    for (const r of rows) {
+      const { iis_id, pur_code, mat_code, exp_date, prod_date } = r;
+      const pass_qty = Number(r.pass_qty || 0); // ✅ LOT/입고이력
+      const receipt_qty = Number(r.receipt_qty || 0); // ✅ 발주 누적
+
+      if (pass_qty <= 0) continue;
+
+      // 2-1) 같은 자재+같은 유통기한 LOT 재사용
+      const re = await mariadb.query("selectLotForReuse", [mat_code, exp_date]);
+      let lotNo = re?.[0]?.mat_lot;
+
+      // 2-2) 없으면 전역 시퀀스로 채번해서 LOT 생성
+      if (!lotNo) {
+        await mariadb.query("nextLotSeqByDate", [exp_date]); // LAST_INSERT_ID() 세팅
+        const seqRow = await mariadb.query(
+          `SELECT LPAD(LAST_INSERT_ID(), 3, '0') AS seq`
+        );
+        const seq = seqRow?.[0]?.seq || "001";
+
+        const base = String(mat_code).split("-")[0];
+        lotNo = `${base}-${toYYYYMMDD(exp_date)}-${seq}`;
+
+        // 동시성 대비 IGNORE (이미 누가 만들었으면 0행)
+        await mariadb.query("insertLotIgnore", [
+          lotNo,
+          mat_code,
+          exp_date,
+          prod_date,
+        ]);
+      }
+
+      // 2-3) 입고이력 인서트: pass_qty (합격량) ✅
+      const ins = await mariadb.query("insertMatReceipt", [
+        iis_id,
+        lotNo,
+        pass_qty,
+      ]);
+      const affected = ins?.affectedRows ?? ins?.affected_rows ?? 0;
+      if (affected !== 1) continue; // 멱등(이미 처리된 iis_id) 보호
+
+      // 2-4) 발주 누적: receipt_qty (가입고 시 기입) ✅
+      if (receipt_qty < 0) throw new Error(`INVALID_RECEIPT_QTY:${iis_id}`);
+      await mariadb.query("updatePurMatOnReceipt", [
+        receipt_qty,
+        pur_code,
+        mat_code,
+      ]);
+
+      doneIds.push(iis_id);
+      inserted++;
+    }
+
+    // 2-5) 실제 처리된 iis_id만 '입고완료'
+    if (doneIds.length) {
+      await mariadb.query("updateIisStatusDone", [doneIds]);
+    }
+
+    await mariadb.query("COMMIT");
+    return { ok: true, inserted, updated: doneIds.length };
+  } catch (err) {
+    await mariadb.query("ROLLBACK").catch(() => {});
+    console.error("[registerIisBatch] ERROR:", err);
+    return {
+      ok: false,
+      message: err?.sqlMessage || err?.message || "REGISTER_FAILED",
+    };
+  }
+};
+
+module.exports = {
   // 목록/검색
   findPurList,
   findPurTarget,
@@ -301,4 +395,5 @@ export {
   deletePurList,
   insertIisOne,
   deleteIisList,
+  registerIisBatch,
 };

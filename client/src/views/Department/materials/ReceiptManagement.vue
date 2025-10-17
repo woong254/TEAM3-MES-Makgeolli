@@ -25,6 +25,7 @@ const isBcncModalOpen = ref(false)
 const isMatModalOpen = ref(false)
 const isPurMatModalOpen = ref(false)
 const selectComplete = ref([])
+const isRegistering = ref(false)
 const selectPending = ref([])
 const isSavingIis = ref(false)
 const activeTab = ref(0)
@@ -197,30 +198,87 @@ onMounted(async () => {
 })
 
 const deleteIis = async () => {
-  const ids = (selectPending.value || []).map((r) => r.iis_id)
+  // 1) 선택행 백업(알림에 쓸 정보 보존)
+  const selected = (selectPending.value || []).map((r) => ({ ...r }))
+  const ids = selected.map((r) => r.iis_id)
+
   if (!ids.length) return alert('삭제할 행을 선택하세요.')
   if (!confirm(`${ids.length}건을 삭제하시겠습니까?`)) return
 
   try {
+    // 2) 삭제 시도
     const { data } = await axios.post('/api/iis/delete', { ids })
-    if (data?.ok) {
-      const kill = new Set(ids)
-      pending.value = pending.value.filter((r) => !kill.has(r.iis_id))
-      selectPending.value = []
-      alert(`삭제되었습니다. (${data.deleted ?? ids.length}건)`)
-    } else {
-      alert(data?.msg || '삭제 실패')
+
+    if (!data?.ok) {
+      return alert(data?.msg || '삭제 실패')
     }
+
+    // 3) 항상 서버 기준으로 동기화(정확도 ↑)
+    await refreshBoth() // 검사대기/검사완료 모두 재조회
+
+    // 4) 재조회 결과로 "삭제 안 된 것" 판별 + 이유 만들기
+    const pendingSet = new Set((pending.value || []).map((r) => r.iis_id))
+    const completeSet = new Set((complete.value || []).map((r) => r.iis_id))
+
+    const notDeleted = selected.filter((s) => pendingSet.has(s.iis_id) || completeSet.has(s.iis_id))
+    const deletedCnt = data.deleted ?? ids.length - notDeleted.length
+
+    // 5) 알림 메시지 구성(요청한 포맷)
+    let msg = `삭제 처리 완료: ${deletedCnt}건`
+    if (notDeleted.length) {
+      const lines = notDeleted.map((s) => {
+        const reason = completeSet.has(s.iis_id)
+          ? '검사완료 상태로 변경되어 삭제되지 않았습니다.'
+          : '삭제 조건을 충족하지 않아 삭제되지 않았습니다.' // (예: 동시 수정/서버 거부)
+        return `• ${s.pur_name ?? '-'} ${s.pre_receipt_date ?? '-'} ${s.bcnc_name ?? '-'} ${s.mat_name ?? '-'} ${s.mat_spec ?? '-'} ${s.mat_unit ?? '-'} ${s.receipt_qty ?? '-'} → ${reason}`
+      })
+      msg += `\n\n아래 ${notDeleted.length}건은 삭제되지 않았습니다:\n` + lines.join('\n')
+    }
+
+    // 6) 선택 해제
+    selectPending.value = []
+
+    alert(msg)
   } catch (e) {
     console.error(e)
     alert('삭제 중 오류가 발생했습니다.')
+  }
+}
+
+const registerIis = async () => {
+  if (isRegistering.value) return
+
+  // 검사완료 탭에서 체크된 행들
+  const ids = (selectComplete.value || []).map((r) => r.iis_id)
+  if (!ids.length) return alert('입고등록할 행을 선택하세요.')
+
+  if (!confirm(`${ids.length}건을 입고등록 하시겠습니까?`)) return
+
+  isRegistering.value = true
+  try {
+    // 백엔드 트랜잭션 호출(검사완료 → 입고)
+    const { data } = await axios.post('/api/iis/register', { ids })
+
+    if (data?.ok) {
+      // 성공하면 목록 갱신 + 선택 해제
+      await refreshBoth()
+      selectComplete.value = []
+      alert(`입고등록 완료! (${data.done ?? ids.length}건)`)
+    } else {
+      alert(data?.message || '입고등록 실패')
+    }
+  } catch (e) {
+    console.error(e)
+    alert('입고등록 중 오류가 발생했습니다.')
+  } finally {
+    isRegistering.value = false
   }
 }
 </script>
 <template>
   <AdminLayout>
     <PageBreadcrumb :pageTitle="currentPageTitle" />
-    <div class="space-y-5 sm:space-y-6">
+    <div class="space-y-5 sm:space-y-3">
       <ComponentCard title="가입고">
         <template #header-right>
           <div class="flex justify-end space-x-2 mb-1">
@@ -424,11 +482,18 @@ const deleteIis = async () => {
           </DataTable>
         </template>
       </ComponentCard>
-      <ComponentWoong style="height: 500px">
+      <ComponentWoong style="height: 530px">
         <template #body-content>
           <div class="relative">
             <div class="flex justify-end space-x-2 mb-1 absolute right-0 top-0 z-10">
-              <button v-if="activeTab != 0" type="button" class="btn-color btn-common">등록</button>
+              <button
+                v-if="activeTab != 0"
+                type="button"
+                class="btn-color btn-common"
+                @click="registerIis"
+              >
+                등록
+              </button>
               <button
                 v-if="activeTab != 1"
                 type="button"
@@ -451,6 +516,7 @@ const deleteIis = async () => {
                 v-model:selection="selectPending"
                 data-key="iis_id"
                 show-gridlines
+                size="small"
                 scrollable
                 scroll-height="350px"
               >
@@ -529,8 +595,9 @@ const deleteIis = async () => {
                 show-gridlines
                 v-model:selection="selectComplete"
                 data-key="iis_id"
+                size="small"
                 scrollable
-                scroll-height="350px"
+                scroll-height="380px"
               >
                 <template #empty>
                   <div class="text-center">검사완료된 자재가 없습니다.</div>

@@ -6,7 +6,8 @@ import { ref, shallowRef, computed, onBeforeMount, onMounted } from 'vue'
 import axios from 'axios'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
-import ComponentCard from '@/components/common/ComponentCardButton.vue'
+import ComponentCard from '@/components/common/ComponentCardOrder.vue'
+import ComponentCardWoong from '@/components/common/ComponentCardButtonWoong.vue'
 import DataTable from 'primevue/datatable'
 import DataCol from 'primevue/column'
 import flatPickr from 'vue-flatpickr-component'
@@ -15,6 +16,8 @@ import equipSelectModal from './equipSelectModal.vue'
 import TabView from 'primevue/tabview'
 import TabPanel from 'primevue/tabpanel'
 import '@/assets/common.css'
+import { useRouter } from 'vue-router'
+const router = useRouter()
 
 /* ========================
  * Types
@@ -23,8 +26,10 @@ interface EquipItem {
   equipCode: string
   equipName: string
   equipType: string
+  equipTypeName?: string // ← 화면표시용
   manager: string | null
-  equipStatus: string | number | null
+  equipStatus: string
+  equipStatusName?: string // ← 화면표시용
   inspCycle: number | null
   installDate: string | null
   modelName: string | null
@@ -66,8 +71,10 @@ const toCamel = (r: any): EquipItem => ({
   equipCode: r.equipCode ?? r.equip_code ?? '',
   equipName: r.equipName ?? r.equip_name ?? '',
   equipType: r.equipType ?? r.equip_type ?? '',
+  equipTypeName: r.equipTypeName ?? r.equip_type_name ?? '',
   manager: r.manager ?? null,
-  equipStatus: r.equipStatus ?? r.equip_status ?? null,
+  equipStatus: r.equipStatus ?? r.equip_status ?? '',
+  equipStatusName: r.equipStatusName ?? r.equip_status_name ?? '',
   inspCycle: r.inspCycle ?? r.insp_cycle ?? null,
   installDate: r.installDate ?? r.install_date ?? null,
   modelName: r.modelName ?? r.model_name ?? null,
@@ -80,7 +87,7 @@ const toSnake = (p: CreateEquipPayload) => ({
   equip_name: p.equipName?.trim(),
   equip_type: p.equipType?.trim(),
   manager: p.manager ?? null,
-  equip_status: p.equipStatus ?? null,
+  equip_status: p.equipStatus || 'j2',
   insp_cycle: p.inspCycle ?? null,
   install_date: p.installDate || null,
   model_name: p.modelName || null,
@@ -88,15 +95,26 @@ const toSnake = (p: CreateEquipPayload) => ({
   mfg_dt: p.mfgDt || null,
   maker: p.maker || null,
 })
-const initSearch = () => ({ equipCode: '', equipName: '', equipType: '', equipStatus: '' })
+const initSearch = () => ({ equipCode: '', equipName: '', equipType: '', equipStatus: 'j1' })
 
+//등록페이지로 이동하는 라우터
+const goDowntimeRegister = () => {
+  if (!selectedRow.value) {
+    alert('설비를 선택하세요.')
+    return
+  }
+  // ✅ URL은 간단히 equipCode만 전달
+  router.push({
+    name: 'DownTimeRegister',
+    query: { equipCode: selectedRow.value.equipCode },
+  })
+}
 /* ========================
  * State
  * ======================== */
 const searchForm = ref(initSearch())
 const equipList = shallowRef<EquipItem[]>([])
 const selectedRow = ref<EquipItem | null>(null)
-const count = computed(() => equipList.value.length)
 
 /** 비가동 탭 상태 */
 const activeTab = ref(0) // 0=진행중, 1=비가동 이력
@@ -143,6 +161,23 @@ const getEquipList = async () => {
   } catch (e) {
     console.error(e)
     equipList.value = []
+  }
+}
+
+// 설비유형 공통코드
+interface ViewType {
+  code: string // ✅ 코드값
+  name: string // ✅ 화면 표시용 이름
+}
+
+const TypeInfo = ref<ViewType[]>([])
+
+const viewType = async () => {
+  try {
+    const result = await axios.get('/api/equipments')
+    TypeInfo.value = result.data
+  } catch (err) {
+    console.error(err)
   }
 }
 
@@ -209,13 +244,13 @@ const onTabChange = async (e: { index: number }) => {
 /* ========================
  * Lifecycle
  * ======================== */
-onBeforeMount(async () => {
-  await getEquipList()
-})
+
 onMounted(async () => {
   // 초기 탭(진행중)과 이력 둘 다 한 번 로드해도 좋음
   await refreshPending()
   await refreshComplete()
+  await viewType()
+  await getEquipList()
 })
 
 /* (등록/수정에서 쓰면) 폼 상태 — 필요하면 그대로 추가 */
@@ -260,27 +295,23 @@ const createForm = ref<CreateEquipPayload>({
             </div>
             <div class="w-1/4">
               <label :class="labelStyle">설비유형</label>
-              <input v-model="searchForm.equipType" type="text" :class="inputStyle" />
+              <select v-model="searchForm.equipType" :class="inputStyle">
+                <option value="">설비유형 선택</option>
+                <option v-for="(item, index) in TypeInfo" :key="index" :value="item.code">
+                  {{ item.name }}
+                </option>
+              </select>
             </div>
-            <div class="flex items-center gap-6">
+            <div class="w-1/4">
               <div :class="labelStyle">설비상태</div>
               <label class="flex items-center gap-2">
                 <input
                   v-model="searchForm.equipStatus"
                   type="radio"
                   name="equip-using"
-                  value="가동중"
+                  value="j1"
                 />
                 가동중
-              </label>
-              <label class="flex items-center gap-2">
-                <input
-                  v-model="searchForm.equipStatus"
-                  type="radio"
-                  name="equip-using"
-                  value="비가동"
-                />
-                비가동
               </label>
             </div>
           </div>
@@ -293,7 +324,7 @@ const createForm = ref<CreateEquipPayload>({
       <ComponentCard title="설비목록">
         <template #header-right>
           <div class="flex justify-end">
-            <button class="btn-common btn-color">비가동</button>
+            <button class="btn-common btn-color" @click="goDowntimeRegister">비가동</button>
           </div>
         </template>
 
@@ -314,9 +345,9 @@ const createForm = ref<CreateEquipPayload>({
             <DataCol selectionMode="single" headerStyle="width: 2.5rem" />
             <DataCol field="equipCode" header="설비코드" />
             <DataCol field="equipName" header="설비명" />
-            <DataCol field="equipType" header="설비유형" sortable />
+            <DataCol field="equipTypeName" header="설비유형" sortable />
             <DataCol field="manager" header="담당자" sortable />
-            <DataCol field="equipStatus" header="설비상태" sortable />
+            <DataCol field="equipStatusName" header="설비상태" sortable />
             <DataCol
               field="inspCycle"
               header="점검주기"
@@ -331,10 +362,10 @@ const createForm = ref<CreateEquipPayload>({
     <!-- 비가동 목록 (탭) -->
     <!-- 비가동 목록 (탭) -->
     <div class="space-y-5 sm:space-y-6 mt-2">
-      <ComponentCard title="">
+      <ComponentCardWoong title="">
         <template #body-content>
           <!-- ✅ 슬롯 flatten 충돌 방지: 한 겹 감싸기 -->
-          <div>
+          <div class="h-78">
             <TabView
               v-model:activeIndex="activeTab"
               @tab-change="onTabChange"
@@ -355,11 +386,11 @@ const createForm = ref<CreateEquipPayload>({
                 >
                   <DataCol field="equipCode" header="설비코드" />
                   <DataCol field="equipName" header="설비명" />
-                  <DataCol field="equipType" header="설비유형" />
+                  <DataCol field="downtimeType" header="비가동유형" />
                   <DataCol field="manager" header="담당자" />
-                  <DataCol field="startAt" header="비가동 시작" />
-                  <DataCol field="reason" header="사유" />
-                  <DataCol field="progress" header="진행상태" />
+                  <DataCol field="downtimeStart" header="비가동시작일시" />
+                  <DataCol field="downtimeEnd" header="비가동종료일시" />
+                  <DataCol field="progressStatus" header="진행상태" />
                 </DataTable>
               </TabPanel>
 
@@ -377,18 +408,17 @@ const createForm = ref<CreateEquipPayload>({
                 >
                   <DataCol field="equipCode" header="설비코드" />
                   <DataCol field="equipName" header="설비명" />
-                  <DataCol field="equipType" header="설비유형" />
+                  <DataCol field="downtimeType" header="비가동유형" />
                   <DataCol field="manager" header="담당자" />
-                  <DataCol field="startAt" header="시작" />
-                  <DataCol field="endAt" header="종료" />
-                  <DataCol field="durationMin" header="소요(분)" />
-                  <DataCol field="reason" header="사유" />
+                  <DataCol field="downtimeStart" header="비가동시작일시" />
+                  <DataCol field="downtimeEnd" header="비가동종료일시" />
+                  <DataCol field="progressStatus" header="진행상태" />
                 </DataTable>
               </TabPanel>
             </TabView>
           </div>
         </template>
-      </ComponentCard>
+      </ComponentCardWoong>
     </div>
   </AdminLayout>
 </template>

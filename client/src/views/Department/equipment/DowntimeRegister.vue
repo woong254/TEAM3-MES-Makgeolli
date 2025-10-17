@@ -1,11 +1,39 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, reactive } from 'vue'
 import axios from 'axios'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import ComponentCard from '@/components/common/ComponentCardButton.vue'
 import flatPickr from 'vue-flatpickr-component'
 import 'flatpickr/dist/flatpickr.css'
+import { useRoute, useRouter } from 'vue-router'
+
+const route = useRoute()
+const router = useRouter()
+
+// form 타입
+type Form = {
+  equipCode: string
+  equipName: string
+  manager: string
+  downtimeType: string
+  description: string
+  progressStatus: string
+  downtimeStart: string
+  downtimeEnd: string | null
+}
+
+// 반응형 form
+const form = reactive<Form>({
+  equipCode: '',
+  equipName: '',
+  manager: '',
+  downtimeType: '비계획정지',
+  description: '',
+  progressStatus: '진행중',
+  downtimeStart: '',
+  downtimeEnd: null,
+})
 
 const currentPageTitle = ref('비가동 등록')
 const inputStyle =
@@ -20,42 +48,23 @@ const dtConfig = {
   altFormat: 'Y-m-d H:i',
 }
 
-type DowntimeStartPayload = {
-  equip_code: string
-  equip_name: string | null
-  downtime_type: string
-  description: string | null
-  progress_status: '진행중'
-  downtime_start?: string
-}
-
-const form = ref({
-  equipCode: '',
-  equipName: '',
-  downtimeType: '비계획정지',
-  description: '',
-  startAt: '', // 선택 시 전송, 미입력 시 서버 NOW
-  endAt: '', // 등록 화면에서는 표시만(전송 X)
-})
-
+// 상태값
 const starting = ref(false)
 const currentCode = ref<string | null>(null)
 const isRunning = () => !!currentCode.value
 
 function resetForm() {
-  form.value = {
-    equipCode: '',
-    equipName: '',
-    downtimeType: '비계획정지',
-    description: '',
-    startAt: '',
-    endAt: '',
-  }
+  form.equipCode = ''
+  form.equipName = ''
+  form.downtimeType = '비계획정지'
+  form.description = ''
+  form.downtimeStart = ''
+  form.downtimeEnd = null
   currentCode.value = null
 }
 
 async function startDowntime() {
-  if (!form.value.equipCode.trim()) {
+  if (!form.equipCode.trim()) {
     alert('설비코드를 입력하세요.')
     return
   }
@@ -63,15 +72,14 @@ async function startDowntime() {
 
   try {
     starting.value = true
-
-    const body: DowntimeStartPayload = {
-      equip_code: form.value.equipCode.trim(),
-      equip_name: form.value.equipName.trim() || null,
-      downtime_type: form.value.downtimeType || '비계획정지',
-      description: form.value.description.trim() || null,
+    const body = {
+      equip_code: form.equipCode.trim(),
+      equip_name: form.equipName.trim() || null,
+      downtime_type: form.downtimeType || '비계획정지',
+      description: form.description.trim() || null,
       progress_status: '진행중',
+      downtime_start: form.downtimeStart.trim() || undefined,
     }
-    if (form.value.startAt.trim()) body.downtime_start = form.value.startAt.trim()
 
     const { data } = await axios.post('/api/downtime', body)
     currentCode.value = data?.downtime_code || null
@@ -83,6 +91,26 @@ async function startDowntime() {
     starting.value = false
   }
 }
+
+// ✅ 설비코드로 기본정보 불러오기
+onMounted(async () => {
+  const code = route.query.equipCode as string
+  if (!code) {
+    alert('선택된 설비가 없습니다.')
+    router.push('/downtimelist')
+    return
+  }
+
+  try {
+    const { data } = await axios.get(`/api/equipment/${encodeURIComponent(code)}`)
+    form.equipCode = data.equip_code
+    form.equipName = data.equip_name
+    form.manager = data.manager
+  } catch (err) {
+    console.error(err)
+    alert('설비 정보를 불러오는 중 오류가 발생했습니다.')
+  }
+})
 </script>
 
 <template>
@@ -101,7 +129,6 @@ async function startDowntime() {
                 <col />
               </colgroup>
               <tbody>
-                <!-- 설비코드 / 설비명 -->
                 <tr>
                   <th class="border border-gray-200 bg-gray-50 text-sm text-center p-2">
                     설비코드
@@ -109,25 +136,26 @@ async function startDowntime() {
                   <td class="border border-gray-200 p-2">
                     <input
                       v-model="form.equipCode"
+                      readonly
                       :disabled="isRunning() || starting"
                       type="text"
                       :class="inputStyle"
-                      placeholder="EQ-001"
+                      placeholder="설비코드를 입력해주세요"
                     />
                   </td>
                   <th class="border border-gray-200 bg-gray-50 text-sm text-center p-2">설비명</th>
                   <td class="border border-gray-200 p-2">
                     <input
                       v-model="form.equipName"
+                      readonly
                       :disabled="isRunning() || starting"
                       type="text"
                       :class="inputStyle"
-                      placeholder="프레스 1호기"
+                      placeholder="설비명을 입력해주세요"
                     />
                   </td>
                 </tr>
 
-                <!-- 비가동유형 / 담당자(선택 입력란 자리만 유지) -->
                 <tr>
                   <th class="border border-gray-200 bg-gray-50 text-sm text-center p-2">
                     비가동유형
@@ -146,15 +174,15 @@ async function startDowntime() {
                   <th class="border border-gray-200 bg-gray-50 text-sm text-center p-2">담당자</th>
                   <td class="border border-gray-200 p-2">
                     <input
+                      v-model="form.manager"
+                      readonly
+                      :disabled="isRunning() || starting"
                       type="text"
                       :class="inputStyle"
-                      placeholder="선택/입력"
-                      :disabled="isRunning() || starting"
                     />
                   </td>
                 </tr>
 
-                <!-- 비고 -->
                 <tr>
                   <th class="border border-gray-200 bg-gray-50 text-sm text-center p-2">비고</th>
                   <td colspan="3" class="border border-gray-200 p-2">
@@ -170,27 +198,25 @@ async function startDowntime() {
                   </td>
                 </tr>
 
-                <!-- 시작/종료 일시 -->
                 <tr>
                   <th class="border border-gray-200 bg-gray-50 text-sm text-center p-2">
                     비가동 시작일시
                   </th>
                   <td class="border border-gray-200 p-2">
                     <flat-pickr
-                      v-model="form.startAt"
+                      v-model="form.downtimeStart"
                       :config="dtConfig"
                       :class="inputStyle"
                       :disabled="isRunning() || starting"
                       placeholder="미입력 시 현재시간으로 저장"
                     />
                   </td>
-
                   <th class="border border-gray-200 bg-gray-50 text-sm text-center p-2">
                     비가동 종료일시
                   </th>
                   <td class="border border-gray-200 p-2">
                     <flat-pickr
-                      v-model="form.endAt"
+                      v-model="form.downtimeEnd"
                       :config="dtConfig"
                       :class="inputStyle"
                       :disabled="true"
@@ -202,24 +228,13 @@ async function startDowntime() {
             </table>
           </form>
 
-          <!-- 버튼 -->
-          <div class="mt-6 flex items-center justify-center gap-2">
+          <div class="mt-6 w-full flex items-center justify-center">
             <button
               @click="startDowntime"
-              class="btn-common btn-color disabled:opacity-50"
+              class="btn-common btn-color disabled:opacity-50 w-48 h-12 text-base font-semibold whitespace-nowrap"
               :disabled="starting || !form.equipCode || isRunning()"
-              title="설비코드 입력 후 시작"
             >
               {{ starting ? '시작 중...' : isRunning() ? '진행중' : '비가동 시작' }}
-            </button>
-
-            <button
-              @click="resetForm"
-              class="btn-common btn-white"
-              :disabled="starting || isRunning()"
-              title="진행중에는 초기화 불가"
-            >
-              신규
             </button>
           </div>
         </template>

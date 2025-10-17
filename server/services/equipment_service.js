@@ -19,6 +19,33 @@ const {
  * 공통 유틸 영역 (설명하기 쉬운 이름/주석)
  * ========================= */
 
+// 'YYYY-MM-DD HH:mm:ss' 포맷 허용 헬퍼
+function toYmdHmsOrNull(v) {
+  if (!v) return null;
+  const pad = (n) => String(n).padStart(2, "0");
+  if (v instanceof Date) {
+    const d = v;
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(
+      d.getDate()
+    )} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  }
+  const s = toNullTrim(v);
+  return typeof s === "string" &&
+    /^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}$/.test(s)
+    ? s
+    : null;
+}
+function makeDowntimeCode() {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  const ymd = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`;
+  const hms = `${pad(d.getHours())}${pad(d.getMinutes())}${pad(
+    d.getSeconds()
+  )}`;
+  const rnd = Math.random().toString(36).slice(2, 6).toUpperCase();
+  return `DT-${ymd}-${hms}-${rnd}`;
+}
+
 // 1) 공백/빈문자 → null (DB에 깔끔하게 저장하기 위함)
 function toNullTrim(v) {
   if (v === undefined || v === null) return null;
@@ -141,7 +168,7 @@ async function create(payload = {}) {
   const manager = toNullTrim(pick(payload, "manager", "manager"));
 
   const equipStatus =
-    toNullTrim(pick(payload, "equip_status", "equipStatus")) || "비가동";
+    toNullTrim(pick(payload, "equip_status", "equipStatus")) || "j2";
   const inspCycle = toNullTrim(pick(payload, "insp_cycle", "inspCycle"));
 
   const installDate = toYmdOrNull(pick(payload, "install_date", "installDate")); // 'YYYY-MM-DD'
@@ -166,7 +193,6 @@ async function create(payload = {}) {
   const params = [
     equipCode,
     equipName,
-    equipType,
     manager,
     inspCycle,
     installDate,
@@ -174,6 +200,7 @@ async function create(payload = {}) {
     equipImage,
     mfgDt,
     maker,
+    equipType,
     equipStatus,
   ];
 
@@ -223,9 +250,9 @@ async function update(equip_code, payload = {}) {
   }
 
   const params = [
-    equip_status, // ① JOIN용 상태코드
-    equip_name, // ②
-    equip_type, // ③
+    equip_status, // ① 상태코드
+    equip_type, // ② 설비유형코드
+    equip_name, // ③
     manager, // ④
     insp_cycle, // ⑤
     maker, // ⑥

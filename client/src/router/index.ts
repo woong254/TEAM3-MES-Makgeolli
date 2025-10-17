@@ -224,7 +224,14 @@ const router = createRouter({
         title: '입고관리',
       },
     },
-
+    {
+      path: '/purListPage',
+      name: '발주조회',
+      component: () => import('../views/Department/materials/PurList.vue'),
+      meta: {
+        title: '발주조회',
+      },
+    },
     // 품질
     {
       path: '/quamaster',

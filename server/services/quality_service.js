@@ -392,64 +392,143 @@ const getMatInspWithQcMasternNG = async (param) => {
 };
 
 // 2-3. 자재입고검사 등록
-const registerMatInsp = async () => {
+const registerMatInsp = async (payload) => {
   let conn = null;
   try {
-    conn = await mariadb.getConnection();
+    conn = await mariadb.getConnection(); 
     await conn.beginTransaction();
 
-    // 쿼리 문자열 변수가 "정상"인지 먼저 확인
-    console.log(
-      "[DEBUG] makeMatInspId defined?",
-      typeof makeMatInspId,
-      "length:",
-      makeMatInspId?.length
-    );
+    // 1) id 생성
+    const idRows = await conn.query(`
+     SELECT CONCAT(
+		 'IQC-',
+		 DATE_FORMAT(NOW(), '%Y%m%d'),
+		 '-',
+		 LPAD(IFNULL(MAX(CAST(RIGHT(insp_id,3) AS UNSIGNED)),0) + 1, 3, '0')
+	   ) AS makeMatInspId
+     FROM mat_insp
+     WHERE SUBSTR(insp_id, 5, 8) = DATE_FORMAT(NOW(), '%Y%m%d')
+     FOR UPDATE`); 
+    //  쿼리를 직접적으로 넣지 않으면 오류 나는 이유 : 트랜잭션을 유지하려면 같은 커넥션(conn)에서 실제 SQL문자열을 실행해야함. 
+    // 'makeMatINspId'와 같은 mapper.query()로 실행하게 되면 커넥션이 달라져 트랜잭션이 분리됨. 
+    // 해결방법1 -> 상단에 const sql = require('../database/sqlList.js') 가져오기 
 
-    const rows = await conn.query(makeMatInspId); // ← 변수 그대로
-    console.log("[DEBUG] ID rows:", rows); // ← 여기서 rows 출력 확인
+    console.log('idRows[0]: ', idRows[0]); // idRows 확인 -> [object Object]
+    console.log('idRows[0].makeMatInspId: ', idRows[0].makeMatInspId)
+    // mariadb 드라이버의 query결과는 보통 배열
+    // ** `` 백틱으로 작성하면 [object Object] -> 왜? **백틱 템플릿 리터럴**로 쓰면 자바스크립트는 내부적으로String(idRows[0])을 호출합니다.   그런데 객체(Object)는 toString()이 따로 오버라이드되지 않으면 기본적으로 **[object Object]`**를 반환 -> 뭔말임? (console.log(obj) 콘솔이 객체를 그대로 펼쳐서 보여줌 (개발자 도구에서 클릭해서 펼칠 수 있음).)
+    // 구조분해할당으로 const [{makeMatInspId}] = idRows;로 바로 넣어버릴 수도 있음
+    // 배열이기 때문에 [0]으로 넣어서 객체를 확인해보면, 
+    /*
+    {
+        "CONCAT(\ n\t\t 'IQC-',\n\t\t DATE_FORMAT(NOW(), '%Y%m%d'),\n\t\t '-',\n\t\t LPAD(IFNULL(MAX(CAST(RIGHT(insp_id,3) AS UNSIGNED)),0) + 1, 3, '0')\n\t   )": 'IQC-20251017-001'
+      } 이런형태로 나타남 
+      즉, "key" : value 의 형태로 나오고 있는데 alias를 줘서 그럼 그 값을 가져올 수 있음. -> idRows[0]:  { makeMatInspId: 'IQC-20251017-001' }
+      idRows[0].makeMatInspId:  IQC-20251017-001
+    */ 
 
-    // await conn.query("insertMatInsp", [
-    //   getMatInspId,
-    //   insp_name,
-    //   insp_date,
-    //   insp_qty,
-    //   pass_qty,
-    //   fail_qty,
-    //   remark,
-    //   t_result,
-    //   emp_id,
-    //   iis_id,
-    // ]);
-    // await conn.query("insertMatInspResult", [
-    //   insp_result_value,
-    //   r_value,
-    //   insp_item_id,
-    //   insp_id,
-    // ]);
-    // // insp_result_id, fail_id는 자동증가니깐 넣을 필요가 없지...?
-    // await conn.query("insertMatInspNg", [qty, def_item_id, insp_id]);
+    const new_mat_insp_id = idRows[0].makeMatInspId;
+    console.log('new_mat_insp_id:', new_mat_insp_id);
+    if(!new_mat_insp_id) throw new Error('mat_insp_id 생성 실패');
 
-    await conn.commit();
+    // 2) 공통 헤더 값 준비(payload에서 꺼내기)
+    const {
+      insp_name,
+      insp_date,
+      insp_qty,
+      pass_qty,
+      fail_qty,
+      remark = null,
+      t_result, 
+      emp_id,
+      iis_id,
+      results = [], // [{insp_result_value,r_value,insp_item_id}, ...]
+      ngs = [],     // [{qty, def_item_id}, ...]
+    } = payload || {};
 
-    let result = null;
-    result = {
-      isSuccessed: true,
-    };
-    return result;
-  } catch (err) {
-    console.log(err);
-    await conn.rollback();
-    result = {
-      isSuccessed: false,
-    };
-    return result;
-  } finally {
-    if (conn) {
-      conn.release();
+    // 필수값 최소 검증(서버에서 한번더 확인)
+    if (!insp_name || !insp_date || !emp_id || !iis_id) {
+      throw new Error('필수 값 누락(insp_name/insp_date/emp_id/iis_id)');
     }
+
+
+    // 2) 공통 mat_insp 값 넣기
+    await conn.query(`
+      INSERT INTO mat_insp
+        (insp_id
+        ,insp_name
+        ,insp_date
+        ,insp_qty
+        ,pass_qty
+        ,fail_qty
+        ,remark
+        ,t_result
+        ,emp_id
+        ,iis_id)
+      VALUES
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
+      [new_mat_insp_id,
+        insp_name,
+        insp_date,
+        insp_qty,
+        pass_qty,
+        fail_qty,
+        remark,
+        t_result,
+        emp_id,
+        iis_id,
+      ]);
+
+
+      // 3) mat_insp_result INSERT (여러건)
+      for(const r of payload.results ?? []){
+        await conn.query(`
+          INSERT INTO mat_insp_result
+            (insp_result_value
+            ,r_value
+            ,insp_item_id
+            ,insp_id)
+          VALUES
+            (?, ?, ?, ?)`, 
+          [r.insp_result_value,
+            r.r_value,
+            r.insp_item_id,
+            new_mat_insp_id,]);
+      }
+
+      // 4) mat_insp_ng 불량 INSERT (여러건)
+      for(const n of payload.ngs ?? []){
+        await conn.query(`
+          INSERT INTO mat_insp_ng
+            (qty
+            ,def_item_id
+            ,insp_id)
+          VALUES
+            (?, ?, ?)`, 
+          [n.qty,
+            n.def_item_id,
+            new_mat_insp_id,]);
+      }
+
+      // 결과/NG 루프 전에 길이 확인
+      console.log('results length:', (payload.results || []).length);
+      console.log('ngs length:', (payload.ngs || []).length);
+
+      await conn.commit();
+      return { ok: true, insp_id: new_mat_insp_id };
+  } catch (err) {
+    console.error(err);
+    if (conn) await conn.rollback();
+    return { ok: false, message: err.message || String(err) };
+  } finally {
+    if (conn) conn.release();
   }
 };
+
+
+
+
+
 
 module.exports = {
   findInspTarget,

@@ -337,7 +337,7 @@ INSERT INTO mat_insp_ng
   ,def_item_id
   ,insp_id)
 VALUES
-	(?, ?, ?);
+	(?, ?, ?)
 `;
 
 // 자재입고검사 수정
