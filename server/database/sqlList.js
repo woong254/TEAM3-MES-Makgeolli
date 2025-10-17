@@ -9,7 +9,7 @@ const edcts = require("./sqls/edcts.js");
 
 // 생산
 const prodOrd = require("./sqls/prodOrd.js");
-const prodOrdManage = require('./sqls/prodOrdManage.js');
+const prodOrdManage = require("./sqls/prodOrdManage.js");
 
 // 자재
 const materials = require("./sqls/materials.js");

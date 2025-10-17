@@ -1055,3 +1055,166 @@ FROM def_master_target dmt
  JOIN def_master dm
    ON dmt.def_item_id = dm.def_item_id
 WHERE dmt.mat_code = 'M-20250201-001';
+
+
+
+
+
+-- 2-4. 자재입고검사 등록
+-- 2-4-1. mat_insp ID (IQC-20251016-001)
+const makeMatInspId = `
+SELECT CONCAT(
+		 'IQC-',
+		 DATE_FORMAT(NOW(), '%Y%m%d'),
+		 '-',
+		 LPAD(IFNULL(MAX(CAST(RIGHT(insp_id,3) AS UNSIGNED)),0) + 1, 3, '0')
+	   )
+  FROM mat_insp
+ WHERE SUBSTR(insp_id, 5, 8) = DATE_FORMAT(NOW(), '%Y%m%d')
+ FOR UPDATE
+`;
+-- 2-4-2. mat_insp INSERT
+const insertMatInsp = `
+INSERT INTO mat_insp
+	(insp_id
+  ,insp_name
+  ,insp_date
+  ,insp_qty
+  ,pass_qty
+  ,fail_qty
+  ,remark
+  ,t_result
+  ,emp_id
+  ,iis_id)
+VALUES
+	(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+`;
+
+-- 2-4-3. mat_insp_result INSERT
+const insertMatInspResult = `
+INSERT INTO mat_insp_result
+	(insp_result_value
+  ,r_value
+  ,insp_item_id
+  ,insp_id)
+VALUES
+	(?, ?, ?, ?)
+`;
+
+-- 2-4-4. mat_insp_ng INSERT
+const insertMatInspNg = `
+INSERT INTO mat_insp_ng
+	(qty
+  ,def_item_id
+  ,insp_id)
+VALUES
+	(?, ?, ?)
+`;
+
+
+
+
+--- 자재입고검사 관리 검색
+SELECT insp_name
+       ,insp_date
+       ,i.iis_id
+       ,m.mat_code
+       ,m.mat_name
+       ,b.bcnc_name
+       ,c.comncode_dtnm
+FROM mat_insp mi
+JOIN iis i
+  ON i.iis_id = mi.iis_id
+JOIN mat_master m
+ON   i.mat_code = m.mat_code
+JOIN bcnc_master b
+ON   i.bcnc_code = b.bcnc_code
+JOIN comncode_dt c
+ON   m.mat_item_code = c.comncode_detailid
+WHERE insp_name LIKE '%쌀%'
+  AND DATE(insp_date) >= '2025-10-16'
+  AND DATE(insp_date) < '2025-10-18'; 
+
+-- 기본틀은 위와 같은데, insp_name / insp_date 둘다 빈값이 들어갈 수 있음 (null) => 사용자가 검색할 때 입력/선택하지 않은 경우
+-- 그럴경우는 아래와 같이 처리
+
+-- :p_name  검사명(부분일치), '' 또는 NULL이면 무시
+-- :p_from  'YYYY-MM-DD' 시작일, 비어있으면 무시
+-- :p_to    'YYYY-MM-DD' 종료일, 비어있으면 무시
+SELECT 
+    mi.insp_name,
+    mi.insp_date,
+    i.iis_id,
+    m.mat_code,
+    m.mat_name,
+    b.bcnc_name,
+    c.comncode_dtnm
+FROM mat_insp mi
+JOIN iis         i ON i.iis_id        = mi.iis_id
+JOIN mat_master  m ON i.mat_code      = m.mat_code
+JOIN bcnc_master b ON i.bcnc_code     = b.bcnc_code
+JOIN comncode_dt c ON m.mat_item_code = c.comncode_detailid
+WHERE
+  /* 검사명 조건: 비면 무시 */
+  ( :p_name IS NULL OR :p_name = '' OR mi.insp_name LIKE CONCAT('%', :p_name, '%') )
+  /* 날짜조건: from/to 비어있음을 모두 고려 */
+  AND (
+    (:p_from IS NULL AND :p_to IS NULL)
+    OR (:p_from IS NOT NULL AND :p_to IS NULL  AND mi.insp_date >= :p_from)
+    OR (:p_from IS NULL  AND :p_to IS NOT NULL AND mi.insp_date <  DATE_ADD(:p_to, INTERVAL 1 DAY))
+    OR (:p_from IS NOT NULL AND :p_to IS NOT NULL AND mi.insp_date >= :p_from AND mi.insp_date < DATE_ADD(:p_to, INTERVAL 1 DAY))
+  )
+ORDER BY mi.insp_date DESC, i.iis_id DESC;
+
+-- mariaDB에서는 :p_form과 같은 직접 지정한 파라미터를 지원하지 않기 때문에 아래와 같은 형식으로 테스트 가능
+-- 세션 변수(@p_*) 사용
+-- ① 파라미터 흉내: 비우고 싶으면 NULL, 검색어는 '' 또는 NULL
+SET @p_name := NULL;         -- 예: '쌀' / '' / NULL
+SET @p_from := '2025-10-16'; -- 예: 'YYYY-MM-DD' / NULL
+SET @p_to   := '2025-10-18'; -- 예: 'YYYY-MM-DD' / NULL
+
+SELECT 
+    mi.insp_name,
+    mi.insp_date,
+    i.iis_id,
+    m.mat_code,
+    m.mat_name,
+    b.bcnc_name,
+    c.comncode_dtnm
+FROM mat_insp mi
+JOIN iis         i ON i.iis_id        = mi.iis_id
+JOIN mat_master  m ON i.mat_code      = m.mat_code
+JOIN bcnc_master b ON i.bcnc_code     = b.bcnc_code
+JOIN comncode_dt c ON m.mat_item_code = c.comncode_detailid
+WHERE
+  /* 검사명: 비면 무시 */
+  ( @p_name IS NULL OR @p_name = '' OR mi.insp_name LIKE CONCAT('%', @p_name, '%') )
+  /* 날짜: from/to 각각 비어 있어도 안전하게 */
+  AND (
+    (@p_from IS NULL AND @p_to IS NULL)
+    OR (@p_from IS NOT NULL AND @p_to IS NULL  AND mi.insp_date >= @p_from)
+    OR (@p_from IS NULL  AND @p_to IS NOT NULL AND mi.insp_date <  DATE_ADD(@p_to, INTERVAL 1 DAY))
+    OR (@p_from IS NOT NULL AND @p_to IS NOT NULL AND mi.insp_date >= @p_from AND mi.insp_date < DATE_ADD(@p_to, INTERVAL 1 DAY))
+  )
+ORDER BY mi.insp_date DESC, i.iis_id DESC;
+
+-- 실제 node에 들어가야할 쿼리 (중복 최소화)
+SELECT 
+    mi.insp_name,
+    mi.insp_date,
+    i.iis_id,
+    m.mat_code,
+    m.mat_name,
+    b.bcnc_name,
+    c.comncode_dtnm
+FROM mat_insp mi
+JOIN iis         i ON i.iis_id        = mi.iis_id
+JOIN mat_master  m ON i.mat_code      = m.mat_code
+JOIN bcnc_master b ON i.bcnc_code     = b.bcnc_code
+JOIN comncode_dt c ON m.mat_item_code = c.comncode_detailid
+WHERE
+  ( COALESCE(?, '') = '' OR mi.insp_name LIKE CONCAT('%', ?, '%') )
+  AND ( (? IS NULL OR mi.insp_date >= ?) 
+        AND (? IS NULL OR mi.insp_date < DATE_ADD(?, INTERVAL 1 DAY)) )
+ORDER BY mi.insp_date DESC, i.iis_id DESC;
+-- 데이터 바인딩 순서 : [p_name, p_name, p_from, p_from, p_to, p_to]

@@ -15,6 +15,8 @@ import MatInspTargetSelectModal from './MatInspTargetSelectModal.vue' // 검사�
 import axios from 'axios'
 import InspMethodModal from './MatInspMethodModal.vue' // 검사방법 모달
 import InspRubricModal from './MatInspRubricModal.vue' // 채점기준 모달
+import MatInspSearchModal from './MatInspSearchModal.vue' // 검색 모달
+import { Korean } from 'flatpickr/dist/l10n/ko.js' // 달력 한글 import
 
 // 1. 페이지 타이틀
 const currentPageTitle = ref('자재입고검사 관리')
@@ -93,16 +95,29 @@ interface qcDT {
   score_desc: string | null //문자열JSON
   sens_questions: string | null //문자열JSON
 }
+// 2-5. 검색 모달
+interface modalRowDT {
+  insp_id: string
+  insp_name: string
+  insp_date: string
+  iis_id: number | string
+  mat_code: string
+  mat_name: string
+  bcnc_name: string
+  comncode_dtnm: string
+}
 
 // 3. 변수
-// 3-1. 달력 pickr
-const date = ref(null)
-const flatpickrConfig = {
-  dateFormat: 'Y-m-d',
-  altInput: true,
-  altFormat: 'F j, Y',
-  wrap: true,
-}
+// 3-1. 공통 달력 설정
+// const start_date = ref(null)
+// const end_date = ref(null)
+// const flatpickrConfig = {
+//   dateFormat: 'Y-m-d',
+//   altInput: false,
+//   wrap: true,
+//   locale: Korean,
+// }
+
 // 3-2. 검사자
 const inspector = ref('이한솔')
 // 3-3. 검사대상(가입고)
@@ -377,16 +392,16 @@ const finalResult = computed(() => {
 
 // 12. 검사방법 모달
 // 12-1. 검사방법 모달 상태
-const isMethodModalOpen = ref(false)
-const selectedMethod = ref<string | null>(null)
+const isMethodModalOpen = ref(false) // 모달 열림/닫힘(boolean)
+const selectedMethod = ref<string | null>(null) // 모달에 넘겨줄 "내용" (검사방법 텍스트 등)
 const openMethodModal = async (row: RangeRow) => {
   selectedMethod.value = row?.insp_method ?? null // ① 값 먼저 세팅
   await nextTick() // ② DOM/반응성 반영 대기
   isMethodModalOpen.value = true // ③ 모달 열기
 }
 const closeMethodModal = () => {
-  isMethodModalOpen.value = false
-  selectedMethod.value = null
+  isMethodModalOpen.value = false // 닫기
+  selectedMethod.value = null // 다음 열림 때 이전 값 안 섞이게 초기화
 }
 
 // 13. 채점기준 모달
@@ -481,7 +496,7 @@ const submitRegister = async () => {
     console.log('[FE] payload:', payload)
 
     // 5) 전송 (프록시가 '^/api' → '/' rewrite라면 프론트는 /api로 호출)
-    const { data } = await axios.post('/api/matInspRegister', payload)
+    const { data } = await axios.post('/api/matInsp', payload)
     if (data?.ok) {
       alert(`등록되었습니다.\n검사ID: ${data.insp_id ?? ''}`)
       // TODO: 필요 시 폼 초기화
@@ -492,6 +507,160 @@ const submitRegister = async () => {
     console.error('[FE] 등록 오류:', e)
     alert('서버 오류가 발생했습니다.')
   }
+}
+
+// 15. 날짜 선택
+// 일자 시작일 설정 (종료일이 있다면 maxDate 설정)
+const startDateConfig = computed(() => ({
+  dateFormat: 'Y-m-d',
+  altInput: false,
+  wrap: true,
+  // 종료일이 설정되어 있으면 해당 날짜를 최대 날짜로 설정하여 범위를 제한
+  // maxDate: search.value.ord_end_date || 'today',
+  locale: Korean,
+}))
+
+// 일자 종료일 설정 (시작일이 있다면 minDate 설정)
+const endDateConfig = computed(() => ({
+  dateFormat: 'Y-m-d',
+  altInput: false,
+  wrap: true,
+  // 시작일이 설정되어 있으면 해당 날짜를 최소 날짜로 설정하여 범위를 제한
+  // minDate: search.value.ord_start_date || undefined, // 시작일 없으면 minDate 설정 안함
+  // maxDate: 'today',
+  locale: Korean,
+}))
+
+// 16. 검색 모달
+// 16-1. 검색 조건 폼
+const cond = reactive({
+  insp_name_word: '',
+  start_date: '', // 'YYYY-MM-DD'
+  end_date: '', // 'YYYY-MM-DD'
+})
+// 16-2. 모달 상태/데이터
+const isSearchModalOpen = ref(false)
+const modalRows = ref<modalRowDT[]>([])
+
+// 16-3. 조회 버튼 클릭 → 서버 검색 → 모달 열기
+const openSearchModal = async () => {
+  try {
+    const { data } = await axios.post('/api/matInspSearch', {
+      insp_name_word: cond.insp_name_word || undefined,
+      start_date: cond.start_date || undefined,
+      end_date: cond.end_date || undefined,
+    })
+    modalRows.value = Array.isArray(data) ? data : data?.data || [] // 서버 응답 구조에 맞게
+    await nextTick() // rows 반영된 뒤
+    console.log('검색기능 : ', data) // 확인값
+    isSearchModalOpen.value = true // 모달 오픈
+    // 초기화
+    cond.insp_name_word = '' // 검사명 input 초기화
+    cond.start_date = ''
+    cond.end_date = ''
+  } catch (e) {
+    alert('검색에 실패했습니다.')
+    console.error(e)
+  }
+}
+
+// 16-4. 부모 script setup
+// function onPickedRow(row: modalRowDT) {
+//   // row.iis_id 로 상세조회 → 폼 주입
+//   isSearchModalOpen.value = false
+// }
+function onPickedRow(row: modalRowDT) {
+  // 1) 모달 닫기
+  isSearchModalOpen.value = false
+
+  // 2) 상세조회 호출
+  axios
+    .get(`/api/matInsp/${row.insp_id}`)
+    .then(({ data }) => {
+      if (!data?.ok) {
+        alert(data?.message || '상세 조회 실패')
+        return
+      }
+
+      const { header, results, ngs } = data
+
+      // 3) 상단 기본정보 주입
+      inspName.value = header.insp_name || ''
+      inspector.value = header.emp_id || inspector.value
+
+      // 가입고(타겟) 영역
+      matInspTargetData.iis_id = String(header.iis_id || '')
+      matInspTargetData.pur_code = header.pur_code || ''
+      matInspTargetData.pur_name = header.pur_name || ''
+      matInspTargetData.pur_date = header.pur_date || ''
+      matInspTargetData.bcnc_name = header.bcnc_name || ''
+      matInspTargetData.mat_code = header.mat_code || ''
+      matInspTargetData.mat_name = header.mat_name || ''
+      matInspTargetData.mat_spec = header.mat_spec || ''
+      matInspTargetData.mat_unit = header.mat_unit || ''
+      matInspTargetData.pur_qty = Number(header.pur_qty || 0)
+      matInspTargetData.receipt_qty = Number(header.receipt_qty || 0)
+
+      // 수량
+      matInspQty.value = Number(header.insp_qty || 0)
+      matInspNG.value = Number(header.fail_qty || 0)
+      matInspPass.value = Number(header.pass_qty || 0)
+      remark.value = header.remark || ''
+
+      // 4) 결과 rows → 기존 테이블(inspDataRan / inspDataSen)로 매핑
+      const ran: RangeRow[] = []
+      const sen: SensoryRow[] = []
+
+      for (const r of results || []) {
+        if (r.insp_type === 'R') {
+          ran.push({
+            insp_item_id: r.insp_item_id,
+            insp_item_name: r.insp_item_name,
+            min_range: r.min_range ?? '',
+            min_label: specLabel(r.min_range_spec),
+            max_range: r.max_range ?? '',
+            max_label: specLabel(r.max_range_spec),
+            unit: r.unit ?? '',
+            insp_method: r.insp_method ?? null,
+            file_name: r.file_name ?? null,
+            insp_result_value: Number(r.insp_result_value ?? 0),
+            r_value: r.r_value || '',
+          })
+        } else if (r.insp_type === 'S') {
+          // 상세 질문(라디오 선택)까지 복구하려면 저장 테이블이 추가로 필요.
+          // 지금은 평균점수/판정만 복구.
+          sen.push({
+            insp_item_id: r.insp_item_id,
+            insp_item_name: r.insp_item_name,
+            pass_score: Number(r.pass_score ?? 0),
+            pass_score_spec: (r.pass_score_spec ?? '').toLowerCase(),
+            score_desc: [], // 필요시 상세 테이블 추가해서 채우기
+            max_score: Number(r.max_score ?? 5),
+            insp_result_value: Number(r.insp_result_value ?? 0),
+            r_value: r.r_value || '',
+            details: [], // 질문 스코어 복구하려면 서버 설계 추가
+          })
+        }
+      }
+
+      inspDataRan.value = ran
+      inspDataSen.value = sen
+
+      // 5) 불량 복구
+      ng.value = (ngs || []).map((n: any) => ({
+        def_item_id: n.def_item_id,
+        def_item_name: n.def_item_name,
+      }))
+      // 값 채우기
+      Object.keys(ngValues).forEach((k) => delete ngValues[k]) // 초기화
+      for (const n of ngs || []) {
+        ngValues[n.def_item_id] = Number(n.qty || 0)
+      }
+    })
+    .catch((e) => {
+      console.error(e)
+      alert('상세 조회 중 오류')
+    })
 }
 
 // style
@@ -513,14 +682,14 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
       <template #header-right>
         <div class="flex justify-end">
           <button class="btn-common btn-white">초기화</button>
-          <button class="btn-common btn-color">조회</button>
+          <button class="btn-common btn-color" @click="openSearchModal">조회</button>
         </div>
       </template>
       <template #body-content>
         <div class="flex gap-4">
           <div class="w-1/4">
             <label :class="labelStyle"> 검사명 </label>
-            <input type="text" :class="inputStyle" />
+            <input type="text" :class="inputStyle" v-model="cond.insp_name_word" />
           </div>
           <div>
             <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
@@ -529,8 +698,8 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
             <div class="flex items-center gap-2">
               <div class="relative">
                 <flat-pickr
-                  v-model="date"
-                  :config="flatpickrConfig"
+                  v-model="cond.start_date"
+                  :config="startDateConfig"
                   class="dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pl-4 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
                   placeholder=" "
                 />
@@ -557,9 +726,9 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
               <div>-</div>
               <div class="relative">
                 <flat-pickr
-                  v-model="date"
-                  :config="flatpickrConfig"
-                  class="dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pl-4 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:b≈order-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+                  v-model="cond.end_date"
+                  :config="endDateConfig"
+                  class="dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pl-4 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
                   placeholder=" "
                 />
                 <span
@@ -587,9 +756,16 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
         </div>
       </template>
     </ComponentCard>
+    <MatInspSearchModal
+      :visible="isSearchModalOpen"
+      :rows="modalRows"
+      @close="isSearchModalOpen = false"
+      @checked="onPickedRow"
+    />
     <ComponentCard title="등록" className="shadow-sm">
       <template #header-right>
         <div class="flex justify-end">
+          <button class="btn-common btn-white">초기화</button>
           <button class="btn-common btn-color">PDF</button>
           <button class="btn-common btn-color" @click="submitRegister">등록</button>
           <button class="btn-common btn-white">삭제</button>

@@ -1,5 +1,10 @@
 // 품질 서비스
+// import mariadb from "../database/mapper.js";
+// import sqlList from "../database/sqlList.js";
+const sqlList = require("../database/sqlList.js");
 const mariadb = require("../database/mapper.js");
+
+const matInspSearch = sqlList.matInspSearch;
 
 // 1. 품질 기준 관리
 // 1-1. 검사대상 조회
@@ -395,7 +400,7 @@ const getMatInspWithQcMasternNG = async (param) => {
 const registerMatInsp = async (payload) => {
   let conn = null;
   try {
-    conn = await mariadb.getConnection(); 
+    conn = await mariadb.getConnection();
     await conn.beginTransaction();
 
     // 1) id 생성
@@ -408,28 +413,28 @@ const registerMatInsp = async (payload) => {
 	   ) AS makeMatInspId
      FROM mat_insp
      WHERE SUBSTR(insp_id, 5, 8) = DATE_FORMAT(NOW(), '%Y%m%d')
-     FOR UPDATE`); 
-    //  쿼리를 직접적으로 넣지 않으면 오류 나는 이유 : 트랜잭션을 유지하려면 같은 커넥션(conn)에서 실제 SQL문자열을 실행해야함. 
-    // 'makeMatINspId'와 같은 mapper.query()로 실행하게 되면 커넥션이 달라져 트랜잭션이 분리됨. 
-    // 해결방법1 -> 상단에 const sql = require('../database/sqlList.js') 가져오기 
+     FOR UPDATE`);
+    //  쿼리를 직접적으로 넣지 않으면 오류 나는 이유 : 트랜잭션을 유지하려면 같은 커넥션(conn)에서 실제 SQL문자열을 실행해야함.
+    // 'makeMatINspId'와 같은 mapper.query()로 실행하게 되면 커넥션이 달라져 트랜잭션이 분리됨.
+    // 해결방법1 -> 상단에 const sql = require('../database/sqlList.js') 가져오기
 
-    console.log('idRows[0]: ', idRows[0]); // idRows 확인 -> [object Object]
-    console.log('idRows[0].makeMatInspId: ', idRows[0].makeMatInspId)
+    console.log("idRows[0]: ", idRows[0]); // idRows 확인 -> [object Object]
+    console.log("idRows[0].makeMatInspId: ", idRows[0].makeMatInspId);
     // mariadb 드라이버의 query결과는 보통 배열
     // ** `` 백틱으로 작성하면 [object Object] -> 왜? **백틱 템플릿 리터럴**로 쓰면 자바스크립트는 내부적으로String(idRows[0])을 호출합니다.   그런데 객체(Object)는 toString()이 따로 오버라이드되지 않으면 기본적으로 **[object Object]`**를 반환 -> 뭔말임? (console.log(obj) 콘솔이 객체를 그대로 펼쳐서 보여줌 (개발자 도구에서 클릭해서 펼칠 수 있음).)
     // 구조분해할당으로 const [{makeMatInspId}] = idRows;로 바로 넣어버릴 수도 있음
-    // 배열이기 때문에 [0]으로 넣어서 객체를 확인해보면, 
+    // 배열이기 때문에 [0]으로 넣어서 객체를 확인해보면,
     /*
     {
         "CONCAT(\ n\t\t 'IQC-',\n\t\t DATE_FORMAT(NOW(), '%Y%m%d'),\n\t\t '-',\n\t\t LPAD(IFNULL(MAX(CAST(RIGHT(insp_id,3) AS UNSIGNED)),0) + 1, 3, '0')\n\t   )": 'IQC-20251017-001'
       } 이런형태로 나타남 
       즉, "key" : value 의 형태로 나오고 있는데 alias를 줘서 그럼 그 값을 가져올 수 있음. -> idRows[0]:  { makeMatInspId: 'IQC-20251017-001' }
       idRows[0].makeMatInspId:  IQC-20251017-001
-    */ 
+    */
 
     const new_mat_insp_id = idRows[0].makeMatInspId;
-    console.log('new_mat_insp_id:', new_mat_insp_id);
-    if(!new_mat_insp_id) throw new Error('mat_insp_id 생성 실패');
+    console.log("new_mat_insp_id:", new_mat_insp_id);
+    if (!new_mat_insp_id) throw new Error("mat_insp_id 생성 실패");
 
     // 2) 공통 헤더 값 준비(payload에서 꺼내기)
     const {
@@ -439,21 +444,21 @@ const registerMatInsp = async (payload) => {
       pass_qty,
       fail_qty,
       remark = null,
-      t_result, 
+      t_result,
       emp_id,
       iis_id,
       results = [], // [{insp_result_value,r_value,insp_item_id}, ...]
-      ngs = [],     // [{qty, def_item_id}, ...]
+      ngs = [], // [{qty, def_item_id}, ...]
     } = payload || {};
 
     // 필수값 최소 검증(서버에서 한번더 확인)
     if (!insp_name || !insp_date || !emp_id || !iis_id) {
-      throw new Error('필수 값 누락(insp_name/insp_date/emp_id/iis_id)');
+      throw new Error("필수 값 누락(insp_name/insp_date/emp_id/iis_id)");
     }
 
-
-    // 2) 공통 mat_insp 값 넣기
-    await conn.query(`
+    // 3) 공통 mat_insp 값 넣기
+    await conn.query(
+      `
       INSERT INTO mat_insp
         (insp_id
         ,insp_name
@@ -466,8 +471,9 @@ const registerMatInsp = async (payload) => {
         ,emp_id
         ,iis_id)
       VALUES
-        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
-      [new_mat_insp_id,
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        new_mat_insp_id,
         insp_name,
         insp_date,
         insp_qty,
@@ -477,45 +483,54 @@ const registerMatInsp = async (payload) => {
         t_result,
         emp_id,
         iis_id,
-      ]);
+      ]
+    );
 
-
-      // 3) mat_insp_result INSERT (여러건)
-      for(const r of payload.results ?? []){
-        await conn.query(`
+    // 4) mat_insp_result INSERT (여러건)
+    for (const r of payload.results ?? []) {
+      await conn.query(
+        `
           INSERT INTO mat_insp_result
             (insp_result_value
             ,r_value
             ,insp_item_id
             ,insp_id)
           VALUES
-            (?, ?, ?, ?)`, 
-          [r.insp_result_value,
-            r.r_value,
-            r.insp_item_id,
-            new_mat_insp_id,]);
-      }
+            (?, ?, ?, ?)`,
+        [r.insp_result_value, r.r_value, r.insp_item_id, new_mat_insp_id]
+      );
+    }
 
-      // 4) mat_insp_ng 불량 INSERT (여러건)
-      for(const n of payload.ngs ?? []){
-        await conn.query(`
+    // 5) mat_insp_ng 불량 INSERT (여러건)
+    for (const n of payload.ngs ?? []) {
+      await conn.query(
+        `
           INSERT INTO mat_insp_ng
             (qty
             ,def_item_id
             ,insp_id)
           VALUES
-            (?, ?, ?)`, 
-          [n.qty,
-            n.def_item_id,
-            new_mat_insp_id,]);
-      }
+            (?, ?, ?)`,
+        [n.qty, n.def_item_id, new_mat_insp_id]
+      );
+    }
 
-      // 결과/NG 루프 전에 길이 확인
-      console.log('results length:', (payload.results || []).length);
-      console.log('ngs length:', (payload.ngs || []).length);
+    // 6) iis(가입고) UPDATE '검사완료'
+    await conn.query(
+      `
+        UPDATE iis
+        SET insp_status = '검사완료'
+            ,pass_qty = ?
+        WHERE iis_id = ?`,
+      [pass_qty, iis_id]
+    );
 
-      await conn.commit();
-      return { ok: true, insp_id: new_mat_insp_id };
+    // 결과/NG 루프 전에 길이 확인
+    console.log("results length:", (payload.results || []).length);
+    console.log("ngs length:", (payload.ngs || []).length);
+
+    await conn.commit();
+    return { ok: true, insp_id: new_mat_insp_id };
   } catch (err) {
     console.error(err);
     if (conn) await conn.rollback();
@@ -525,10 +540,83 @@ const registerMatInsp = async (payload) => {
   }
 };
 
+// 2-4. 자재입고검사 관리 검색
+const searchMatInsp = async (data) => {
+  // 매개변수
+  const {
+    insp_name_word, //검사명
+    start_date, //검사일시(시작)
+    end_date, //검사일시(끝)
+  } = data;
 
+  try {
+    let sql = matInspSearch;
+    let params = [];
 
+    // 공백처리 안할시 오류 (WHERE 1=1로 마지막 처리되어있음)
+    if (insp_name_word && insp_name_word.trim() !== "") {
+      sql += ` AND mi.insp_name LIKE ?`;
+      params.push(`%${insp_name_word.trim()}%`);
+    }
+    if (start_date && start_date.trim() !== "") {
+      sql += ` AND mi.insp_date >= ?`;
+      params.push(start_date.trim());
+    }
+    if (end_date && end_date.trim() !== "") {
+      sql += ` AND mi.insp_date < DATE_ADD(?, INTERVAL 1 DAY)`;
+      params.push(end_date.trim());
+    }
+    // DATE_ADD(날짜, INTERVAL n 단위)
+    // SELECT DATE_ADD('2025-10-17', INTERVAL 1 DAY);
+    // -- 결과 : '2025-10-18'
 
+    // 정렬
+    sql += " ORDER BY mi.insp_date DESC, i.iis_id DESC";
 
+    console.log("실제 SQL: ", sql);
+    console.log("파라미터: ", params);
+
+    const list = await mariadb.query(sql, params);
+    console.log("list 조회: ", list);
+
+    return list;
+  } catch (err) {
+    console.error("자재입고검사 검색 오류: ", err);
+    return [];
+  }
+};
+
+// 2-5. 자재입고검사 관리 상세조회
+const matInspDetail = async (inspId) => {
+  try {
+    if (!inspId) return { ok: false, message: "inspId가 없습니다." };
+    let matInsp = await mariadb
+      .query("selectMatInspHeaderById", [inspId])
+      .catch((err) => console.log(err));
+    let matInspResult = await mariadb
+      .query("selectMatInspResultsById", [inspId])
+      .catch((err) => console.log(err));
+    let matInspNg = await mariadb
+      .query("selectMatInspNGsById", [inspId])
+      .catch((err) => console.log(err));
+
+    const [header] = matInsp || [];
+    if (!header) return { ok: false, message: "데이터가 없습니다." };
+
+    return {
+      ok: true,
+      header,
+      results: matInspResult || [],
+      ngs: matInspNg || [],
+    };
+  } catch (err) {
+    console.error("matInspDetail ERROR:", err);
+    return {
+      ok: false,
+      message: err.sqlMessage || err.message || "상세 조회 실패",
+    };
+  }
+};
 
 module.exports = {
   findInspTarget,
@@ -542,4 +630,6 @@ module.exports = {
   findMatInspTarget,
   getMatInspWithQcMasternNG,
   registerMatInsp,
+  searchMatInsp,
+  matInspDetail,
 };

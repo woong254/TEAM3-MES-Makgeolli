@@ -289,61 +289,118 @@ WHERE qt.mat_code = ?
 ORDER BY qt.insp_item_id
 `;
 
-// 2-4. 자재입고검사 등록
-// 2-4-1. mat_insp ID (IQC-20251016-001)
-const makeMatInspId = `
-SELECT CONCAT(
-		 'IQC-',
-		 DATE_FORMAT(NOW(), '%Y%m%d'),
-		 '-',
-		 LPAD(IFNULL(MAX(CAST(RIGHT(insp_id,3) AS UNSIGNED)),0) + 1, 3, '0')
-	   )
-  FROM mat_insp
- WHERE SUBSTR(insp_id, 5, 8) = DATE_FORMAT(NOW(), '%Y%m%d')
- FOR UPDATE
-`;
-// 2-4-2. mat_insp INSERT
-const insertMatInsp = `
-INSERT INTO mat_insp
-	(insp_id
-  ,insp_name
-  ,insp_date
-  ,insp_qty
-  ,pass_qty
-  ,fail_qty
-  ,remark
-  ,t_result
-  ,emp_id
-  ,iis_id)
-VALUES
-	(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+// 2-4. 자재입고검사 검색
+const matInspSearch = `
+SELECT 
+    mi.insp_id,
+    mi.insp_name,
+    mi.insp_date,
+    i.iis_id,
+    m.mat_code,
+    m.mat_name,
+    b.bcnc_name,
+    c.comncode_dtnm
+FROM mat_insp mi
+JOIN iis         i ON i.iis_id        = mi.iis_id
+JOIN mat_master  m ON i.mat_code      = m.mat_code
+JOIN bcnc_master b ON i.bcnc_code     = b.bcnc_code
+JOIN comncode_dt c ON m.mat_item_code = c.comncode_detailid
+WHERE 1=1
 `;
 
-// 2-4-3. mat_insp_result INSERT
-const insertMatInspResult = `
-INSERT INTO mat_insp_result
-	(insp_result_value
-  ,r_value
-  ,insp_item_id
-  ,insp_id)
-VALUES
-	(?, ?, ?, ?)
+// 2-5. 자재입고검사 상세조회 (검색->insp_id 기준으로 상세조회)
+// 2-5-1. mat_insp + iis 정보
+const selectMatInspHeaderById = `SELECT
+  -- mat_insp(자재입고) 테이블
+  mi.insp_id,          -- 검사ID
+  mi.insp_name,        -- 검사명
+  mi.insp_date,        -- 검사일시
+  mi.insp_qty,         -- 검사량
+  mi.pass_qty,         -- 합격량
+  mi.fail_qty,         -- 불량량(합계)
+  mi.remark,           -- 비고 
+  mi.t_result,         -- 총결과(합격:P/불합격:F)
+  mi.emp_id,           -- 사용자
+
+  -- iis(가입고) 테이블
+  i.iis_id,            -- 가입고번호
+  i.pur_code,          -- 발주코드
+  i.mat_code,          -- 자재코드
+  i.receipt_qty,       -- 입고량
+  
+  -- pur_form(발주서) 테이블
+  pf.pur_name,         -- 발주서명
+  pf.pur_date,         -- 발주날짜
+
+  -- bcnc_master(거래처) 테이블
+  b.bcnc_name,         -- 거래처명
+
+  -- mat_master(자재 기준정보) 테이블
+  m.mat_name,          -- 자재명
+  m.mat_spec,          -- 자재 규격
+  m.mat_unit,          -- 자재 단위
+  m.mat_item_code,     -- 자재 품목구분코드
+  c.comncode_dtnm AS item_type_name,   -- 품목구분 라벨(한글)
+
+  -- pur_mat(발주자재) 테이블
+  pm.pur_qty           -- 발주수량
+FROM mat_insp mi
+JOIN iis            i  ON i.iis_id    = mi.iis_id
+LEFT JOIN pur_form  pf ON pf.pur_code = i.pur_code
+LEFT JOIN pur_mat   pm ON pm.pur_code = i.pur_code AND pm.mat_code = i.mat_code
+JOIN bcnc_master    b  ON b.bcnc_code = i.bcnc_code
+JOIN mat_master     m  ON m.mat_code  = i.mat_code
+LEFT JOIN comncode_dt c ON c.comncode_id = '0A' AND c.comncode_detailid = m.mat_item_code
+WHERE mi.insp_id = ?`;
+
+// 2-5-2. 자재입고검사 결과 + 품질기준관리 정보
+const selectMatInspResultsById = `
+SELECT
+  -- mat_insp_result(자재입고검사 결과) 테이블
+  r.insp_result_id,           -- 자재입고검사결과 ID
+  r.insp_item_id,             -- 품질기준관리 ID
+  r.insp_result_value,        -- 결과값
+  r.r_value,                  -- 적합(P)/부적합(F)
+
+  -- qc_master(품질기준관리) 테이블 
+  qm.insp_item_name,          -- 품질기준관리 항목명
+  qm.insp_type,               -- R(범위), S(관능)
+  qm.insp_method,             -- 검사방법
+  qm.file_name,               -- 파일이름
+
+  -- qc_master_ran(품질기준관리-범위)테이블 
+  qr.min_range,               
+  qr.min_range_spec,
+  qr.max_range,
+  qr.max_range_spec,
+  qr.unit,
+
+  -- qc_master(품질기준관리)인데 관능에 관련된 칼럼
+  qm.max_score,
+  qm.pass_score,
+  qm.pass_score_spec
+FROM mat_insp_result r
+JOIN qc_master      qm ON qm.insp_item_id = r.insp_item_id
+LEFT JOIN qc_master_ran qr ON qr.insp_item_id = r.insp_item_id
+WHERE r.insp_id = ?
+ORDER BY r.insp_item_id;
 `;
 
-// 2-4-4. mat_insp_ng INSERT
-const insertMatInspNg = `
-INSERT INTO mat_insp_ng
-	(qty
-  ,def_item_id
-  ,insp_id)
-VALUES
-	(?, ?, ?)
-`;
+// 2-5-3. 불량목록 + 불량기준관리(이름)
+const selectMatInspNGsById = `
+SELECT
+  n.fail_id,
+  n.def_item_id,
+  n.qty,
+  d.def_item_name
+FROM mat_insp_ng n
+JOIN def_master d ON d.def_item_id = n.def_item_id
+WHERE n.insp_id = 'IQC-20251017-001'
+ORDER BY d.def_item_name`;
 
 // 자재입고검사 수정
 // 자재입고검사 삭제
 // 자재입고검사 조회
-// 자재입고검사 검색
 
 module.exports = {
   selectInspTargetList,
@@ -363,8 +420,5 @@ module.exports = {
   matInspTargetSelect,
   selectMatInspQcMaster,
   selectNGMaster,
-  makeMatInspId,
-  insertMatInsp,
-  insertMatInspResult,
-  insertMatInspNg,
+  matInspSearch,
 };
