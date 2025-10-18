@@ -1,6 +1,6 @@
 <!-- 자재입고검사 조회 -->
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import '@/assets/common.css'
 import ComponentCard from '@/components/common/ComponentCardButton.vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
@@ -8,14 +8,32 @@ import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import 'primeicons/primeicons.css'
-import Button from 'primevue/button'
 import flatPickr from 'vue-flatpickr-component'
 import 'flatpickr/dist/flatpickr.css'
 import * as XLSX from 'xlsx'
 import { Korean } from 'flatpickr/dist/l10n/ko.js' // 달력 한글 import
+import axios from 'axios'
 
+// 1. 제목
 const currentPageTitle = ref('자재입고검사 조회')
 
+// 2. TS 인터페이스
+// 2-1. 테이블
+interface InspRow {
+  insp_id: string
+  insp_name: string
+  insp_date: string
+  emp_id: string
+  mat_name: string
+  comncode_dtnm: string
+  mat_spec: string
+  mat_unit: string
+  insp_qty: string | number
+  t_result: string
+}
+
+// 3. 데이터
+// 3-1. 달력
 const formData = reactive({
   date: '',
 })
@@ -26,223 +44,82 @@ const flatpickrConfig = {
   wrap: true,
   locale: Korean,
 }
+// 검색 폼 상태(나중에 쿼리 붙일 때 재사용)
+const cond = reactive({
+  insp_name: '',
+  mat_name: '',
+  item_group: '', // 품목구분 값 (a1..a5)
+  emp_name: '',
+  start_date: '',
+  end_date: '',
+})
 
-// table data
-const inspData = ref([
-  {
-    inspCode: 'IQC-20250821-001',
-    inspName: '예담 쌀 입고 검사',
-    inspDate: '2025-08-21 15:32:22',
-    inspector: '이한솔',
-    inspTarget: '쌀',
-    inspType: '원자재',
-    inspStandard: '20kg',
-    inspUnit: '포대',
-    inspQty: '1,000.00',
-    inspPass: '합격',
-  },
-  {
-    inspCode: '-',
-    inspName: '-',
-    inspDate: '-',
-    inspector: '-',
-    inspTarget: '-',
-    inspType: '-',
-    inspStandard: '-',
-    inspUnit: '-',
-    inspQty: '-',
-    inspPass: '-',
-  },
-  {
-    inspCode: '-',
-    inspName: '-',
-    inspDate: '-',
-    inspector: '-',
-    inspTarget: '-',
-    inspType: '-',
-    inspStandard: '-',
-    inspUnit: '-',
-    inspQty: '-',
-    inspPass: '-',
-  },
-  {
-    inspCode: '-',
-    inspName: '-',
-    inspDate: '-',
-    inspector: '-',
-    inspTarget: '-',
-    inspType: '-',
-    inspStandard: '-',
-    inspUnit: '-',
-    inspQty: '-',
-    inspPass: '-',
-  },
-  {
-    inspCode: '-',
-    inspName: '-',
-    inspDate: '-',
-    inspector: '-',
-    inspTarget: '-',
-    inspType: '-',
-    inspStandard: '-',
-    inspUnit: '-',
-    inspQty: '-',
-    inspPass: '-',
-  },
-  {
-    inspCode: '-',
-    inspName: '-',
-    inspDate: '-',
-    inspector: '-',
-    inspTarget: '-',
-    inspType: '-',
-    inspStandard: '-',
-    inspUnit: '-',
-    inspQty: '-',
-    inspPass: '-',
-  },
-  {
-    inspCode: '-',
-    inspName: '-',
-    inspDate: '-',
-    inspector: '-',
-    inspTarget: '-',
-    inspType: '-',
-    inspStandard: '-',
-    inspUnit: '-',
-    inspQty: '-',
-    inspPass: '-',
-  },
-  {
-    inspCode: '-',
-    inspName: '-',
-    inspDate: '-',
-    inspector: '-',
-    inspTarget: '-',
-    inspType: '-',
-    inspStandard: '-',
-    inspUnit: '-',
-    inspQty: '-',
-    inspPass: '-',
-  },
-  {
-    inspCode: '-',
-    inspName: '-',
-    inspDate: '-',
-    inspector: '-',
-    inspTarget: '-',
-    inspType: '-',
-    inspStandard: '-',
-    inspUnit: '-',
-    inspQty: '-',
-    inspPass: '-',
-  },
-  {
-    inspCode: '-',
-    inspName: '-',
-    inspDate: '-',
-    inspector: '-',
-    inspTarget: '-',
-    inspType: '-',
-    inspStandard: '-',
-    inspUnit: '-',
-    inspQty: '-',
-    inspPass: '-',
-  },
-  {
-    inspCode: '-',
-    inspName: '-',
-    inspDate: '-',
-    inspector: '-',
-    inspTarget: '-',
-    inspType: '-',
-    inspStandard: '-',
-    inspUnit: '-',
-    inspQty: '-',
-    inspPass: '-',
-  },
-  {
-    inspCode: '-',
-    inspName: '-',
-    inspDate: '-',
-    inspector: '-',
-    inspTarget: '-',
-    inspType: '-',
-    inspStandard: '-',
-    inspUnit: '-',
-    inspQty: '-',
-    inspPass: '-',
-  },
-  {
-    inspCode: '-',
-    inspName: '-',
-    inspDate: '-',
-    inspector: '-',
-    inspTarget: '-',
-    inspType: '-',
-    inspStandard: '-',
-    inspUnit: '-',
-    inspQty: '-',
-    inspPass: '-',
-  },
-  {
-    inspCode: '-',
-    inspName: '-',
-    inspDate: '-',
-    inspector: '-',
-    inspTarget: '-',
-    inspType: '-',
-    inspStandard: '-',
-    inspUnit: '-',
-    inspQty: '-',
-    inspPass: '-',
-  },
-  {
-    inspCode: '-',
-    inspName: '-',
-    inspDate: '-',
-    inspector: '-',
-    inspTarget: '-',
-    inspType: '-',
-    inspStandard: '-',
-    inspUnit: '-',
-    inspQty: '-',
-    inspPass: '-',
-  },
-  {
-    inspCode: '-',
-    inspName: '-',
-    inspDate: '-',
-    inspector: '-',
-    inspTarget: '-',
-    inspType: '-',
-    inspStandard: '-',
-    inspUnit: '-',
-    inspQty: '-',
-    inspPass: '-',
-  },
-])
+// 4. 조회
+// 4-1. 호출함수
+const inspData = ref<InspRow[]>([]) // 테이블 데이터
+const fetchMatInspList = async () => {
+  try {
+    const { data } = await axios.get('/api/matInspList')
+    const rows = Array.isArray(data) ? data : data?.data || []
+    inspData.value = rows
+  } catch (e) {
+    console.error('[FE] 목록 조회 오류:', e)
+    alert('목록 조회에 실패했습니다.')
+  }
+}
+// 4-2. 초기화
+const resetFilters = () => {
+  cond.insp_name = ''
+  cond.mat_name = ''
+  cond.item_group = ''
+  cond.emp_name = ''
+  cond.start_date = ''
+  cond.end_date = ''
+  date.value = null
+}
+// 4-3. 처음 진입시 목록 조회
+onMounted(fetchMatInspList)
+
+// 4-4. 검색(조건 post)
+const runSearch = async () => {
+  try {
+    const payload = {
+      insp_name_word: (cond.insp_name || '').trim(),
+      mat_name_word: (cond.mat_name || '').trim(),
+      comncode_code: cond.item_group || '', // a1~a5
+      emp_id_name: (cond.emp_name || '').trim(),
+      start_date: cond.start_date || '', // 'YYYY-MM-DD'
+      end_date: cond.end_date || '', // 'YYYY-MM-DD'
+    }
+    const { data } = await axios.post('/api/matInspListSearch', payload)
+    const rows = Array.isArray(data) ? data : data?.data || []
+    inspData.value = rows
+  } catch (e) {
+    console.error('[FE] 검색 오류:', e)
+    alert('검색에 실패했습니다.')
+  }
+}
 
 // 엑셀 (https://kongda.tistory.com/118)
 // xlsx 내보내기
 const excelColumns = [
-  { key: 'inspCode', header: '검사ID' },
-  { key: 'inspName', header: '검사명' },
-  { key: 'inspDate', header: '검사일시' },
-  { key: 'inspector', header: '검사자' },
-  { key: 'inspTarget', header: '검사대상' },
-  { key: 'inspType', header: '품목구분' },
-  { key: 'inspStandard', header: '규격' },
-  { key: 'inspUnit', header: '단위' },
-  { key: 'inspQty', header: '검사량' },
-  { key: 'inspPass', header: '합격여부' },
+  { key: 'insp_id', header: '검사ID' },
+  { key: 'insp_name', header: '검사명' },
+  { key: 'insp_date', header: '검사일시' },
+  { key: 'emp_id', header: '검사자' },
+  { key: 'mat_name', header: '검사대상' },
+  { key: 'comncode_dtnm', header: '품목구분' },
+  { key: 'mat_spec', header: '규격' },
+  { key: 'mat_unit', header: '단위' },
+  { key: 'insp_qty', header: '검사량' },
+  { key: 't_result', header: '합격여부' },
 ]
 // 3) 값 포맷터(숫자/날짜 등 필요 시 정리)
 function formatCell(key: string, value: unknown) {
   if (value == null || value === '-') return '' // 빈칸 정리
 
   // 숫자 문자열을 실제 숫자로 (엑셀에서 합계/정렬 가능)
-  if (key === 'inspQty') {
+  if (key === 'insp_qty') {
     const n = Number(String(value).replace(/,/g, ''))
     return isNaN(n) ? String(value) : n
   }
@@ -303,29 +180,41 @@ const fileStyle =
     <ComponentCard title="조회" className="shadow-sm mb-2">
       <template #header-right>
         <div class="flex justify-end">
-          <button class="btn-common btn-white">초기화</button>
-          <button class="btn-common btn-color">조회</button>
+          <button
+            class="btn-common btn-white"
+            @click="
+              () => {
+                resetFilters()
+                fetchMatInspList()
+              }
+            "
+          >
+            초기화
+          </button>
+          <button class="btn-common btn-color" @click="runSearch">조회</button>
         </div>
       </template>
       <template #body-content>
         <div class="flex flex-wrap gap-4">
           <div class="w-1/4">
             <label :class="labelStyle"> 검사명 </label>
-            <input type="text" :class="inputStyle" />
+            <input
+              type="text"
+              :class="inputStyle"
+              @click="fetchMatInspList"
+              v-model="cond.insp_name"
+            />
           </div>
           <div class="w-1/4">
             <label :class="labelStyle"> 검사대상 </label>
-            <input type="text" :class="inputStyle" />
+            <input type="text" :class="inputStyle" v-model="cond.mat_name" />
           </div>
           <div class="w-1/4">
             <label :class="labelStyle" for="insp-type"> 품목구분 </label>
             <div class="relative z-20 bg-transparent">
-              <select id="insp-type" :class="selectStyle">
+              <select id="insp-type" :class="selectStyle" v-model="cond.item_group">
                 <option value="a1">주자재</option>
                 <option value="a2">부자재</option>
-                <option value="a3">재공품</option>
-                <option value="a4">반제품</option>
-                <option value="a5">완제품</option>
               </select>
               <span
                 class="absolute z-30 text-gray-500 -translate-y-1/2 pointer-events-none right-4 top-1/2 dark:text-gray-400"
@@ -352,7 +241,7 @@ const fileStyle =
 
           <div class="w-1/4">
             <label :class="labelStyle"> 검사자 </label>
-            <input type="text" :class="inputStyle" />
+            <input type="text" :class="inputStyle" v-model="cond.emp_name" />
           </div>
 
           <div>
@@ -362,7 +251,7 @@ const fileStyle =
             <div class="flex items-center gap-2">
               <div class="relative">
                 <flat-pickr
-                  v-model="date"
+                  v-model="cond.start_date"
                   :config="flatpickrConfig"
                   class="dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pl-4 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:b≈order-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
                   placeholder=" "
@@ -390,7 +279,7 @@ const fileStyle =
               <div>-</div>
               <div class="relative">
                 <flat-pickr
-                  v-model="date"
+                  v-model="cond.end_date"
                   :config="flatpickrConfig"
                   class="dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pl-4 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:b≈order-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
                   placeholder=" "
@@ -443,51 +332,63 @@ const fileStyle =
             <div class="text-center">조회된 데이터가 없습니다.</div>
           </template>
           <Column
-            field="inspCode"
+            field="insp_id"
             header="검사ID"
             sortable
             :pt="{ columnHeaderContent: 'justify-center' }"
             bodyStyle="text-align: center"
           />
           <Column
-            field="inspName"
+            field="insp_name"
             header="검사명"
             sortable
             :pt="{ columnHeaderContent: 'justify-center' }"
           />
           <Column
-            field="inspDate"
+            field="insp_date"
             header="검사일시"
             sortable
             :pt="{ columnHeaderContent: 'justify-center' }"
-          />
+          >
+            <template #body="slotProps">
+              {{ slotProps.data.insp_date ? slotProps.data.insp_date.slice(0, 10) : '' }}
+            </template>
+          </Column>
+          <Column field="emp_id" header="검사자" :pt="{ columnHeaderContent: 'justify-center' }" />
           <Column
-            field="inspector"
-            header="검사자"
-            :pt="{ columnHeaderContent: 'justify-center' }"
-          />
-          <Column
-            field="inspTarget"
+            field="mat_name"
             header="검사대상"
             :pt="{ columnHeaderContent: 'justify-center' }"
           />
           <Column
-            field="inspType"
+            field="comncode_dtnm"
             header="품목구분"
             :pt="{ columnHeaderContent: 'justify-center' }"
           />
+          <Column field="mat_spec" header="규격" :pt="{ columnHeaderContent: 'justify-center' }" />
+          <Column field="mat_unit" header="단위" :pt="{ columnHeaderContent: 'justify-center' }" />
           <Column
-            field="inspStandard"
-            header="규격"
+            field="insp_qty"
+            header="검사량"
             :pt="{ columnHeaderContent: 'justify-center' }"
+            style="text-align: right"
           />
-          <Column field="inspUnit" header="단위" :pt="{ columnHeaderContent: 'justify-center' }" />
-          <Column field="inspQty" header="검사량" :pt="{ columnHeaderContent: 'justify-center' }" />
           <Column
-            field="inspPass"
+            field="t_result"
             header="합격여부"
             :pt="{ columnHeaderContent: 'justify-center' }"
-          />
+            style="text-align: center"
+          >
+            <template #body="slotProps">
+              {{
+                slotProps.data.t_result === 'P'
+                  ? '합격'
+                  : slotProps.data.t_result === 'F'
+                    ? '불합격'
+                    : ''
+              }}
+            </template>
+          </Column>
         </DataTable>
       </template>
     </ComponentCard>

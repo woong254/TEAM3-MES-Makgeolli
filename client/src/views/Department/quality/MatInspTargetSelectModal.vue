@@ -109,19 +109,19 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
       width="900px"
       @close="closeModal"
     >
-      <template #modal-header>
+      <!-- <template #modal-header>
         <div class="flex justify-end">
           <button type="button" class="btn-common-modal btn-white">초기화</button>
           <button type="button" class="btn-common-modal btn-color">조회</button>
         </div>
-      </template>
+      </template> -->
       <template #modal-body>
-        <div class="modal-container flex gap-2 mb-2">
+        <!-- <div class="modal-container flex gap-2 mb-2">
           <div class="w-1/3">
             <label :class="labelStyle" for="insp-name"> 발주명 </label>
             <input type="text" id="insp-name" :class="inputStyle" />
           </div>
-        </div>
+        </div> -->
         <div class="modal-container">
           <DataTable
             :value="inspTargetData"

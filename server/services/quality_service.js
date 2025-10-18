@@ -1,10 +1,9 @@
 // 품질 서비스
-// import mariadb from "../database/mapper.js";
-// import sqlList from "../database/sqlList.js";
 const sqlList = require("../database/sqlList.js");
 const mariadb = require("../database/mapper.js");
 
 const matInspSearch = sqlList.matInspSearch;
+const matInspSelect = sqlList.matInspSelect;
 
 // 1. 품질 기준 관리
 // 1-1. 검사대상 조회
@@ -618,6 +617,250 @@ const matInspDetail = async (inspId) => {
   }
 };
 
+// 2-6. 자재입고검사 관리 수정
+const updateMatInsp = async (payload) => {
+  let conn = null;
+  try {
+    conn = await mariadb.getConnection();
+    await conn.beginTransaction();
+
+    // 0) 필수값 검증
+    const {
+      insp_id,          // 수정 대상 고유 ID (새로 생성 X, 그대로 사용)
+      insp_name,
+      insp_date,
+      insp_qty,
+      pass_qty,
+      fail_qty,
+      remark = null,
+      t_result,
+      emp_id,           // 수정자 사번 등
+      // iis_id는 payload에 있더라도, 신뢰하지 말고 DB에서 조회하여 사용 권장
+      results = [],     // [{insp_result_value, r_value, insp_item_id}, ...]
+      ngs = [],         // [{qty, def_item_id}, ...]
+    } = payload || {};
+
+    if (!insp_id) throw new Error("insp_id가 없습니다(수정 대상 식별 불가).");
+    if (!insp_name || !insp_date || !emp_id)
+      throw new Error("필수 값 누락(insp_name/insp_date/emp_id)");
+
+    // 1) 헤더 로우 잠금(동시 수정 방지) + iis_id 조회
+    const [lockRow] = await conn.query(
+      `
+      SELECT insp_id, iis_id
+      FROM mat_insp
+      WHERE insp_id = ?
+      FOR UPDATE
+      `,
+      [insp_id]
+    );
+    if (!lockRow) throw new Error("대상 insp_id가 존재하지 않습니다.");
+
+    const current_iis_id = lockRow.iis_id;
+
+    // 2) 헤더 UPDATE
+    await conn.query(
+      `
+      UPDATE mat_insp
+      SET
+          insp_name = ?
+        , insp_date = ?
+        , insp_qty  = ?
+        , pass_qty  = ?
+        , fail_qty  = ?
+        , remark    = ?
+        , t_result  = ?
+        , emp_id    = ?   -- 수정자(필요시 upd_emp_id 컬럼 분리 권장)
+      WHERE insp_id = ?
+      `,
+      [
+        insp_name,
+        insp_date,
+        insp_qty,
+        pass_qty,
+        fail_qty,
+        remark,
+        t_result,
+        emp_id,
+        insp_id,
+      ]
+    );
+
+    // 3) 자식 결과/NG 재기록 전략
+    //  - 가장 안전한 방법: 기존 행 전량 삭제 후, 화면 값으로 재삽입(트랜잭션이므로 원자성 OK)
+    //  - 테이블에 (insp_id, insp_item_id) / (insp_id, def_item_id) 유니크키가 있다면
+    //    ON DUPLICATE KEY UPDATE로도 가능(아래 대안 참고)
+
+    // 3-1) 결과 삭제
+    await conn.query(`DELETE FROM mat_insp_result WHERE insp_id = ?`, [insp_id]);
+
+    // 3-2) 결과 재삽입
+    for (const r of results) {
+      await conn.query(
+        `
+        INSERT INTO mat_insp_result
+          (insp_result_value, r_value, insp_item_id, insp_id)
+        VALUES
+          (?, ?, ?, ?)
+        `,
+        [r.insp_result_value, r.r_value, r.insp_item_id, insp_id]
+      );
+    }
+
+    // 3-3) 불량 삭제
+    await conn.query(`DELETE FROM mat_insp_ng WHERE insp_id = ?`, [insp_id]);
+
+    // 3-4) 불량 재삽입
+    for (const n of ngs) {
+      await conn.query(
+        `
+        INSERT INTO mat_insp_ng
+          (qty, def_item_id, insp_id)
+        VALUES
+          (?, ?, ?)
+        `,
+        [n.qty, n.def_item_id, insp_id]
+      );
+    }
+
+    // 4) iis(가입고) 동기화: pass_qty 변경 반영
+    //    (검사 결과가 확정 상태라면 상태값은 유지/정책에 맞추어 조정)
+    await conn.query(
+      `
+      UPDATE iis
+      SET pass_qty = ?
+      WHERE iis_id = ?
+      `,
+      [pass_qty, current_iis_id]
+    );
+
+    await conn.commit();
+    return { ok: true, insp_id };
+  } catch (err) {
+    console.error(err);
+    if (conn) await conn.rollback();
+    return { ok: false, message: err.message || String(err) };
+  } finally {
+    if (conn) conn.release();
+  }
+};
+
+// 2-7. 자재입고검사 관리 삭제 
+const deleteMatInsp = async (insp_id) => {
+  let conn = null;
+  try {
+    conn = await mariadb.getConnection();
+    await conn.beginTransaction();
+
+    // 대상행 잠금 + iis_id 조회
+    const [hdr] = await conn.query(
+      `SELECT insp_id, iis_id 
+         FROM mat_insp 
+        WHERE insp_id = ? 
+          FOR UPDATE`,
+      [insp_id]
+    );
+    if (!hdr) throw new Error("삭제 대상이 존재하지 않습니다.");
+
+    await conn.query(`DELETE FROM mat_insp_result WHERE insp_id = ?`, [insp_id]);
+    await conn.query(`DELETE FROM mat_insp_ng WHERE insp_id = ?`, [insp_id]);
+    await conn.query(`DELETE FROM mat_insp WHERE insp_id = ?`, [insp_id]);
+
+    // 3) iis 합격량/상태 초기화
+    await conn.query(
+      `UPDATE iis 
+          SET pass_qty = 0,
+              insp_status = '검사대기'
+        WHERE iis_id = ?`,
+      [hdr.iis_id]
+    );
+
+    await conn.commit();
+    return { ok: true };
+  } catch (err) {
+    console.error(err);
+    if (conn) await conn.rollback();
+    return { ok: false, message: err.message || String(err) };
+  } finally {
+    if (conn) conn.release();
+  }
+};
+
+
+// 3. 자재입고검사 조회 
+// 3-1. 자재입고검사 조회 
+const matInspectSelect = async () => {
+  let list = await mariadb
+    .query("matInspSelect")
+    .catch((err) => console.log(err));
+  return list;
+};
+
+// 3-2. 자재입고검사 검색
+const searchMatInspList = async (data) => {
+  // 매개변수
+  const {
+    insp_name_word, //검사명
+    mat_name_word, //검사대상
+    comncode_code, //품목구분코드
+    emp_id_name, //검사자
+    start_date, //시작날짜
+    end_date //끝날짜
+  } = data;
+
+  try {
+    let sql = matInspSelect;
+    let params = [];
+
+    // 공백처리 안할시 오류 (WHERE 1=1로 마지막 처리되어있음)
+    // 검사명 검색
+    if (insp_name_word && insp_name_word.trim() !== "") {
+      sql += ` AND mi.insp_name LIKE ?`;
+      params.push(`%${insp_name_word.trim()}%`);
+    }
+    // 검사대상 검색
+    if (mat_name_word && mat_name_word.trim() !== "") {
+      sql += ` AND m.mat_name LIKE ?`;
+      params.push(`%${mat_name_word.trim()}%`);
+    }
+    // 품목구분 검색
+    if (comncode_code !== "") {
+      sql += ` AND cd.comncode_detailid = ?`;
+      params.push(comncode_code);
+    }
+    // 검사자 검색
+    if (emp_id_name && emp_id_name.trim() !== "") {
+      sql += ` AND mi.emp_id LIKE ?`;
+      params.push(`%${emp_id_name.trim()}%`);
+    }
+    // 시작날짜 검색
+        if (start_date && start_date.trim() !== "") {
+      sql += ` AND mi.insp_date >= ?`;
+      params.push(start_date.trim());
+    }
+    // 끝날짜 검색 
+        if (end_date && end_date.trim() !== "") {
+      sql += ` AND mi.insp_date < DATE_ADD(?, INTERVAL 1 DAY)`;
+      params.push(end_date.trim());
+    }
+
+    // 정렬
+    sql += " ORDER BY mi.insp_date DESC, i.iis_id DESC";
+
+    console.log("실제 SQL: ", sql);
+    console.log("파라미터: ", params);
+
+    const list = await mariadb.query(sql, params);
+    console.log("list 조회: ", list);
+
+    return list;
+  } catch (err) {
+    console.error("자재입고검사 검색 오류: ", err);
+    return [];
+  }
+};
+
+
 module.exports = {
   findInspTarget,
   findInspTargetSearch,
@@ -632,4 +875,8 @@ module.exports = {
   registerMatInsp,
   searchMatInsp,
   matInspDetail,
+  updateMatInsp,
+  deleteMatInsp,
+  matInspectSelect,
+  searchMatInspList,
 };
