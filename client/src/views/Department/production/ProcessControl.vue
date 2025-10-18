@@ -3,7 +3,7 @@ import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import ComponentCard from '@/components/common/ComponentCardOrder.vue'
 import '@/assets/common.css'
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import axios from 'axios' // axios 연결
 
 // 제목이름 지정 변수
@@ -91,6 +91,28 @@ const processStart = async () => {
     console.error('processStart 오류 : ', err)
   }
 }
+
+// 서버에서 가져온 데이터를 저장할 반응형 변수 선언
+const makeData = ref()
+const equipData = ref()
+const empData = ref()
+// 화면이 켜질때 가져올 데이터 함수
+const fetchProcessData = async () => {
+  try {
+    const response = await axios.get('/api/getSavedProcessData')
+    makeData.value = response.data.make
+    equipData.value = response.data.equip
+    empData.value = response.data.emp
+    console.log({ makeData, equipData, empData })
+  } catch (err) {
+    console.error('fetchProcessData에서 오류가 생겼습니다. 오류내용 : ', err)
+  }
+}
+
+// 화면이 켜질때 나타남
+onMounted(() => {
+  fetchProcessData()
+})
 </script>
 
 <template>
