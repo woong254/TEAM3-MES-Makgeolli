@@ -87,10 +87,20 @@ const insertProcessForm = async (params) => {
   }
 };
 
-/*
+
 // 공정실적에서 입력한 값이 공정 제어에 값이 있는지 비교
 const calculateRemainingQty = async (prod_code, target_qty) => {
   try {
+
+    // 입력값 검증
+    if (!prod_code || typeof target_qty !== 'number') {
+      return {
+        success: false,
+        error: 'Invalid input: prod_code and target_qty are required',
+      };
+    }
+
+    // DB 조회
     const [rows] = await db.query(
       `SELECT COALESCE(SUM(inpt_qty), 0) AS total_inpt_qty
        FROM processform
@@ -100,27 +110,34 @@ const calculateRemainingQty = async (prod_code, target_qty) => {
 
     const total_inpt_qty = rows[0].total_inpt_qty;
 
-    // 2️⃣ 남은 생산 가능 수량 계산
+    // 남은 생산 가능 수량 계산
     const remaining_qty = target_qty - total_inpt_qty;
 
+    // 메시지 구성
     let message;
     if (remaining_qty > 0) {
-      message = `이미 ${total_inpt_qty}개가 생산 지시됨. ${remaining_qty}개만 추가 생산 필요.`;
+      message = `현재 ${total_inpt_qty}개가 이미 생산되었습니다. ${remaining_qty}개 추가 생산이 필요합니다.`;
+    } else if (total_inpt_qty === 0) {
+      message = `아직 생산이 시작되지 않았습니다. 전체 ${target_qty}개 생산이 필요합니다.`;
     } else {
-      message = `이미 ${total_inpt_qty}개가 생산 지시되어 추가 지시 불필요.`;
+      message = `이미 ${total_inpt_qty}개가 생산되어 추가 생산 지시가 필요하지 않습니다.`;
     }
 
     return {
       success: true,
+      status: remaining_qty > 0 ? 'incomplete' : 'complete',
       total_inpt_qty,
-      remaining_qty: remaining_qty > 0 ? remaining_qty : 0,
+      remaining_qty,
       message,
     };
   } catch (err) {
-    return { success: false, error: err.message };
+    console.error(err);
+    return { 
+      success: false, 
+      error: err.message 
+    };
   }
 };
-*/
 
 module.exports = {
   findByEmpId,
@@ -128,4 +145,5 @@ module.exports = {
   findAllMakeList,
   chooseAboutEquip,
   insertProcessForm,
+  calculateRemainingQty,
 };
