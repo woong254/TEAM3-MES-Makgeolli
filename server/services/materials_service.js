@@ -5,6 +5,7 @@ const sqlList = require("../database/sqlList.js");
 
 const iisModalBcnc = sqlList.iisModalBcnc;
 const iisModalMat = sqlList.iisModalMat;
+const purPagePurList = sqlList.purPagePurList;
 
 const toYYYYMMDD = (d) => {
   const dt = new Date(d);
@@ -370,6 +371,76 @@ const registerIisBatch = async (ids = []) => {
   }
 };
 
+const findPurPagePurList = async (purData) => {
+  const {
+    pur_name,
+    bcnc_name,
+    receipt_status, // '입고대기' | '입고완료' | ...
+    start_pur, // 'YYYY-MM-DD'
+    end_pur, // 'YYYY-MM-DD'
+    start_receipt, // 'YYYY-MM-DD'
+    end_receipt, // 'YYYY-MM-DD'
+  } = purData || {};
+
+  let sql = purPagePurList + ` WHERE 1=1`;
+  let params = [];
+
+  if (pur_name) {
+    sql += ` AND pf.pur_name LIKE ?`;
+    params.push(`%${pur_name}%`);
+  }
+
+  if (bcnc_name) {
+    sql += ` AND b.bcnc_name LIKE ?`;
+    params.push(`%${bcnc_name}%`);
+  }
+
+  if (receipt_status) {
+    sql += ` AND pf.pur_status = ?`;
+    params.push(receipt_status);
+  }
+
+  // 발주일자 구간
+  if (start_pur && end_pur) {
+    sql += ` AND pf.pur_date BETWEEN ? AND ?`;
+    params.push(start_pur, end_pur);
+  } else {
+    if (start_pur) {
+      sql += ` AND pf.pur_date >= ?`;
+      params.push(start_pur);
+    }
+    if (end_pur) {
+      sql += ` AND pf.pur_date <= ?`;
+      params.push(end_pur);
+    }
+  }
+
+  // 입고요청일자 구간
+  if (start_receipt && end_receipt) {
+    sql += ` AND pf.receipt_date BETWEEN ? AND ?`;
+    params.push(start_receipt, end_receipt);
+  } else {
+    if (start_receipt) {
+      sql += ` AND pf.receipt_date >= ?`;
+      params.push(start_receipt);
+    }
+    if (end_receipt) {
+      sql += ` AND pf.receipt_date <= ?`;
+      params.push(end_receipt);
+    }
+  }
+
+  sql += ` ORDER BY pf.pur_code DESC, pm.mat_code`;
+
+  try {
+    const list = await mariadb.query(sql, params);
+    return list;
+  } catch (err) {
+    console.error("[findPurPagePurList] ERROR:", err);
+    return [];
+  }
+};
+
 module.exports = {
   // 목록/검색
   findPurList,
@@ -378,6 +449,7 @@ module.exports = {
   purIisList,
   findIisBcncList,
   findIisMatList,
+  findPurPagePurList,
   // 단건 조회
   findPurHeaderByCode,
   findPurLinesByCode,

@@ -196,4 +196,14 @@ router.post("/iis/register", async (req, res) => {
     .catch(() => ({ ok: false, message: "ERR" }));
   res.status(out.ok ? 200 : 400).json(out);
 });
+
+router.get("/purchase/search", async (req, res) => {
+  try {
+    const rows = await materialsService.findPurPagePurList(req.query);
+    res.send(rows || []);
+  } catch (e) {
+    console.error(e);
+    res.status(500).send({ ok: false, message: "SEARCH_FAILED" });
+  }
+});
 module.exports = router;

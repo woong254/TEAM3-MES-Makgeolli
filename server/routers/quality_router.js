@@ -151,5 +151,68 @@ router.post("/matInspListSearch", async (req, res) => {
   res.send(result);
 });
 
+// 4. 완제품검사 관리
+// 4-1. 완제품검사 타겟(공정실적관리) 조회
+router.get("/prodInspTargetSearch", async (req, res) => {
+  let result = await qualityService
+    .findProdInspTarget()
+    .catch((err) => console.error(err));
+  res.send(result);
+  console.log('완제품검사 타겟 조회: ', result);
+});
+
+// 4-2. 완제품검사 타겟 조회 선택시 -> 해당 품질기준관리 조회 + 불량조회
+router.get("/prodInspQcMasternNg/:prodCode", async (req, res) => {
+  const { prodCode } = req.params;
+  let result = await qualityService
+    .getProdInspWithQcMasternNG(prodCode)
+    .catch((err) => console.error(err));
+  res.send(result);
+});
+
+// 4-3. 완제품검사 관리 등록
+router.post("/prodInsp", async (req, res) => {
+  let result = await qualityService
+    .registerProdInsp(req.body)
+    .catch((err) => console.error(err));
+  res.send(result);
+});
+
+// 4-4. 완제품 관리 검색
+router.post("/prodInspSearch", async (req, res) => {
+  let result = await qualityService
+    .searchMatInsp(req.body)
+    .catch((err) => console.error(err));
+  res.send(result);
+});
+
+// 4-5. 완제품 관리 상세조회
+router.get("/prodInspDetail/:inspId", async (req, res) => {
+  const { inspId } = req.params;
+  let result = await qualityService
+    .matInspDetail(inspId)
+    .catch((err) => ({ ok: false, message: err?.message || "서버 오류" }));
+  res.send(result);
+});
+
+// 4-6. 완제품 관리 수정
+router.put("/prodInsp/:id", async (req, res) => {
+  const { id } = req.params;
+  const payload = { ...req.body, insp_id: id }; 
+  let result = await qualityService
+    .updateMatInsp(payload)
+    .catch((err) => ({ ok: false, message: err?.message || "서버 오류" }));
+  res.send(result);
+});
+
+// 4-7. 완제품 관리 삭제
+router.delete("/prodInsp/:id", async (req, res) => {
+  const { id } = req.params;
+  let result = await qualityService
+    .deleteMatInsp(id)
+    .catch((err) => console.error(err));
+  res.send(result);
+});
+
 
 module.exports = router;

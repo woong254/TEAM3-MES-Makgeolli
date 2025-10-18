@@ -4,29 +4,103 @@ import DataCol from 'primevue/column'
 import ComponentCard from '@/components/common/ComponentCardButton.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
-import { ref, computed } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import flatPickr from 'vue-flatpickr-component'
 import 'flatpickr/dist/flatpickr.css'
 import { Korean } from 'flatpickr/dist/l10n/ko.js'
 import axios from 'axios'
 import '@/assets/common.css'
+import userDateUtils from '@/utils/useDates.js' // 날짜 유틸
+
+// ✅ PDF 미리보기 모달
+import PurPdfModal from './MatModal/PurPdfModal.vue'
+
 const currentPageTitle = ref('발주서조회')
 const selectStyle =
   'dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-950 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
 const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400'
 const inputStyle =
   'dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-950 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
-const purSearch = ref([
-  {
-    pur_name: '',
-    bcnc_name: '',
-    start_pur: null,
-    end_pur: null,
-    receipt_status: '',
-    start_receipt: null,
-    end_receipt: null,
-  },
-])
+
+// ✅ 배열 → 단일 객체 + 같은 참조 유지
+const purSearch = reactive({
+  pur_name: '',
+  bcnc_name: '',
+  start_pur: null,
+  end_pur: null,
+  receipt_status: '',
+  start_receipt: null,
+  end_receipt: null,
+})
+
+const selectPur = ref([])
+const purList = ref([])
+const loading = ref(false)
+
+// ✅ PDF 모달 상태/데이터 (에러 원인 해결)
+const isPdfOpen = ref(false)
+const pdfHeader = ref({
+  pur_code: '',
+  pur_name: '',
+  bcnc_name: '',
+  emp_name: '',
+  pur_date: '',
+  receipt_date: '',
+  remark: '', // 발주서 비고(헤더)
+})
+const pdfItems = ref([]) // [{ mat_name, mat_spec, mat_unit, pur_qty, pur_remark }]
+
+// ✅ 선택한 발주서로 모달 열기 (헤더/라인 API 호출 후 세팅)
+const openPdfPreview = async () => {
+  const row = selectPur.value?.[0]
+  if (!row?.pur_code) {
+    alert('발주서를 한 건 선택하세요.')
+    return
+  }
+  try {
+    const [hRes, lRes] = await Promise.all([
+      axios.get('/api/pur/header', { params: { pur_code: row.pur_code } }),
+      axios.get('/api/pur/lines', { params: { pur_code: row.pur_code } }),
+    ])
+    const h = hRes.data || {}
+
+    pdfHeader.value = {
+      pur_code: h.pur_code || '',
+      pur_name: h.pur_name || '',
+      bcnc_name: h.bcnc_name || '',
+      emp_name: h.emp_name || '',
+      pur_date: h.pur_date ? toYmd(h.pur_date) : '',
+      receipt_date: h.receipt_date ? toYmd(h.receipt_date) : '',
+      remark: h.remark || '', // 발주서 비고(헤더)
+    }
+
+    pdfItems.value = (Array.isArray(lRes.data) ? lRes.data : []).map((r) => ({
+      mat_name: r.mat_name,
+      mat_spec: r.mat_spec,
+      mat_unit: r.mat_unit,
+      pur_qty: r.pur_qty,
+      pur_remark: r.remark || '', // 발주자재 비고(라인)
+    }))
+
+    isPdfOpen.value = true
+  } catch (e) {
+    console.error(e)
+    alert('PDF 미리보기 데이터를 불러오는 중 오류가 발생했습니다.')
+  }
+}
+
+const toYmd = (v) => {
+  if (!v) return null
+  try {
+    return userDateUtils.dateFormat(v, 'yyyy-MM-dd')
+  } catch {
+    const d = new Date(v)
+    if (isNaN(d)) return null
+    const mm = String(d.getMonth() + 1).padStart(2, '0')
+    const dd = String(d.getDate()).padStart(2, '0')
+    return `${d.getFullYear()}-${mm}-${dd}`
+  }
+}
 
 // 헬퍼: YYYY-MM-DD 비교 (둘 중 더 이른/늦은 날짜 반환)
 const earlier = (a, b, c) => {
@@ -40,11 +114,7 @@ const startPur = computed(() => ({
   altInput: true,
   altFormat: 'Y-m-d',
   altInputClass: `${inputStyle} text-center px-8`,
-  maxDate: earlier(
-    purSearch.value[0]?.end_pur,
-    purSearch.value[0]?.end_receipt,
-    purSearch.value[0]?.start_receipt,
-  ),
+  maxDate: earlier(purSearch.end_pur, purSearch.end_receipt, purSearch.start_receipt),
   locale: Korean,
 }))
 
@@ -53,7 +123,7 @@ const endPur = computed(() => ({
   altInput: true,
   altFormat: 'Y-m-d',
   altInputClass: `${inputStyle} text-center px-8`,
-  minDate: purSearch.value[0]?.start_pur || null,
+  minDate: purSearch.start_pur || null,
   locale: Korean,
 }))
 
@@ -62,8 +132,8 @@ const startReceipt = computed(() => ({
   altInput: true,
   altFormat: 'Y-m-d',
   altInputClass: `${inputStyle} text-center px-8`,
-  minDate: purSearch.value[0]?.start_pur || null,
-  maxDate: purSearch.value[0]?.end_receipt || null,
+  minDate: purSearch.start_pur || null,
+  maxDate: purSearch.end_receipt || null,
   locale: Korean,
 }))
 
@@ -72,9 +142,49 @@ const endReceipt = computed(() => ({
   altInput: true,
   altFormat: 'Y-m-d',
   altInputClass: `${inputStyle} text-center px-8`,
-  minDate: later(purSearch.value[0]?.start_pur, purSearch.value[0]?.start_receipt),
+  minDate: later(purSearch.start_pur, purSearch.start_receipt),
   locale: Korean,
 }))
+
+const fetchPurList = async () => {
+  loading.value = true
+  try {
+    const { data } = await axios.get('/api/purchase/search', {
+      // ✅ 단일 객체 그대로 전달
+      params: purSearch,
+    })
+    purList.value = Array.isArray(data)
+      ? data.map((r) => ({
+          ...r,
+          pur_date: toYmd(r.pur_date),
+          receipt_date: toYmd(r.receipt_date),
+        }))
+      : []
+  } catch (e) {
+    console.error(e)
+    purList.value = []
+  } finally {
+    loading.value = false
+  }
+}
+
+// ✅ 참조 유지 초기화
+const resetBtn = () => {
+  Object.assign(purSearch, {
+    pur_name: '',
+    bcnc_name: '',
+    start_pur: null,
+    end_pur: null,
+    receipt_status: '',
+    start_receipt: null,
+    end_receipt: null,
+  })
+  fetchPurList()
+}
+
+onMounted(() => {
+  fetchPurList()
+})
 </script>
 
 <template>
@@ -84,24 +194,25 @@ const endReceipt = computed(() => ({
       <ComponentCard title="발주서 검색">
         <template #header-right>
           <div class="flex justify-end space-x-2 mb-1">
-            <button type="button" class="btn-color btn-common">초기화</button>
-            <button type="button" class="btn-color btn-common">조회</button>
+            <button type="button" class="btn-color btn-common" @click="resetBtn">초기화</button>
+            <button type="button" class="btn-color btn-common" @click="fetchPurList">조회</button>
           </div>
         </template>
         <template #body-content>
           <div class="flex flex-wrap gap-4">
             <div class="w-1/4">
               <label :class="labelStyle"> 발주서명 </label>
-              <input type="text" :class="inputStyle" />
+              <input type="text" :class="inputStyle" v-model="purSearch.pur_name" />
             </div>
             <div class="w-1/4">
               <label :class="labelStyle"> 매입처명 </label>
-              <input type="text" :class="inputStyle" />
+              <input type="text" :class="inputStyle" v-model="purSearch.bcnc_name" />
             </div>
             <div class="w-1/4">
               <label :class="labelStyle"> 입고상태 </label>
               <div class="relative z-20 bg-transparent">
-                <select :class="selectStyle">
+                <select :class="selectStyle" v-model="purSearch.receipt_status">
+                  <option value="">전체</option>
                   <option value="입고대기">입고대기</option>
                   <option value="부분입고">부분입고</option>
                   <option value="입고완료">입고완료</option>
@@ -134,7 +245,7 @@ const endReceipt = computed(() => ({
               <div class="flex items-center gap-2">
                 <div class="relative">
                   <flat-pickr
-                    v-model="purSearch[0].start_pur"
+                    v-model="purSearch.start_pur"
                     :config="startPur"
                     class="dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pl-4 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
                   />
@@ -153,7 +264,6 @@ const endReceipt = computed(() => ({
                         fill-rule="evenodd"
                         clip-rule="evenodd"
                         d="M6.66659 1.5415C7.0808 1.5415 7.41658 1.87729 7.41658 2.2915V2.99984H12.5833V2.2915C12.5833 1.87729 12.919 1.5415 13.3333 1.5415C13.7475 1.5415 14.0833 1.87729 14.0833 2.2915V2.99984L15.4166 2.99984C16.5212 2.99984 17.4166 3.89527 17.4166 4.99984V7.49984V15.8332C17.4166 16.9377 16.5212 17.8332 15.4166 17.8332H4.58325C3.47868 17.8332 2.58325 16.9377 2.58325 15.8332V7.49984V4.99984C2.58325 3.89527 3.47868 2.99984 4.58325 2.99984L5.91659 2.99984V2.2915C5.91659 1.87729 6.25237 1.5415 6.66659 1.5415ZM6.66659 4.49984H4.58325C4.30711 4.49984 4.08325 4.7237 4.08325 4.99984V6.74984H15.9166V4.99984C15.9166 4.7237 15.6927 4.49984 15.4166 4.49984H13.3333H6.66659ZM15.9166 8.24984H4.08325V15.8332C4.08325 16.1093 4.30711 16.3332 4.58325 16.3332H15.4166C15.6927 16.3332 15.9166 16.1093 15.9166 15.8332V8.24984Z"
-                        fill=""
                       />
                     </svg>
                   </span>
@@ -161,7 +271,7 @@ const endReceipt = computed(() => ({
                 <div>-</div>
                 <div class="relative">
                   <flat-pickr
-                    v-model="purSearch[0].end_pur"
+                    v-model="purSearch.end_pur"
                     :config="endPur"
                     class="dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pl-4 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
                   />
@@ -180,7 +290,6 @@ const endReceipt = computed(() => ({
                         fill-rule="evenodd"
                         clip-rule="evenodd"
                         d="M6.66659 1.5415C7.0808 1.5415 7.41658 1.87729 7.41658 2.2915V2.99984H12.5833V2.2915C12.5833 1.87729 12.919 1.5415 13.3333 1.5415C13.7475 1.5415 14.0833 1.87729 14.0833 2.2915V2.99984L15.4166 2.99984C16.5212 2.99984 17.4166 3.89527 17.4166 4.99984V7.49984V15.8332C17.4166 16.9377 16.5212 17.8332 15.4166 17.8332H4.58325C3.47868 17.8332 2.58325 16.9377 2.58325 15.8332V7.49984V4.99984C2.58325 3.89527 3.47868 2.99984 4.58325 2.99984L5.91659 2.99984V2.2915C5.91659 1.87729 6.25237 1.5415 6.66659 1.5415ZM6.66659 4.49984H4.58325C4.30711 4.49984 4.08325 4.7237 4.08325 4.99984V6.74984H15.9166V4.99984C15.9166 4.7237 15.6927 4.49984 15.4166 4.49984H13.3333H6.66659ZM15.9166 8.24984H4.08325V15.8332C4.08325 16.1093 4.30711 16.3332 4.58325 16.3332H15.4166C15.6927 16.3332 15.9166 16.1093 15.9166 15.8332V8.24984Z"
-                        fill=""
                       />
                     </svg>
                   </span>
@@ -195,7 +304,7 @@ const endReceipt = computed(() => ({
               <div class="flex items-center gap-2">
                 <div class="relative">
                   <flat-pickr
-                    v-model="purSearch[0].start_receipt"
+                    v-model="purSearch.start_receipt"
                     :config="startReceipt"
                     class="dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pl-4 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
                   />
@@ -214,7 +323,6 @@ const endReceipt = computed(() => ({
                         fill-rule="evenodd"
                         clip-rule="evenodd"
                         d="M6.66659 1.5415C7.0808 1.5415 7.41658 1.87729 7.41658 2.2915V2.99984H12.5833V2.2915C12.5833 1.87729 12.919 1.5415 13.3333 1.5415C13.7475 1.5415 14.0833 1.87729 14.0833 2.2915V2.99984L15.4166 2.99984C16.5212 2.99984 17.4166 3.89527 17.4166 4.99984V7.49984V15.8332C17.4166 16.9377 16.5212 17.8332 15.4166 17.8332H4.58325C3.47868 17.8332 2.58325 16.9377 2.58325 15.8332V7.49984V4.99984C2.58325 3.89527 3.47868 2.99984 4.58325 2.99984L5.91659 2.99984V2.2915C5.91659 1.87729 6.25237 1.5415 6.66659 1.5415ZM6.66659 4.49984H4.58325C4.30711 4.49984 4.08325 4.7237 4.08325 4.99984V6.74984H15.9166V4.99984C15.9166 4.7237 15.6927 4.49984 15.4166 4.49984H13.3333H6.66659ZM15.9166 8.24984H4.08325V15.8332C4.08325 16.1093 4.30711 16.3332 4.58325 16.3332H15.4166C15.6927 16.3332 15.9166 16.1093 15.9166 15.8332V8.24984Z"
-                        fill=""
                       />
                     </svg>
                   </span>
@@ -222,7 +330,7 @@ const endReceipt = computed(() => ({
                 <div>-</div>
                 <div class="relative">
                   <flat-pickr
-                    v-model="purSearch[0].end_receipt"
+                    v-model="purSearch.end_receipt"
                     :config="endReceipt"
                     class="dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pl-4 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
                   />
@@ -241,7 +349,6 @@ const endReceipt = computed(() => ({
                         fill-rule="evenodd"
                         clip-rule="evenodd"
                         d="M6.66659 1.5415C7.0808 1.5415 7.41658 1.87729 7.41658 2.2915V2.99984H12.5833V2.2915C12.5833 1.87729 12.919 1.5415 13.3333 1.5415C13.7475 1.5415 14.0833 1.87729 14.0833 2.2915V2.99984L15.4166 2.99984C16.5212 2.99984 17.4166 3.89527 17.4166 4.99984V7.49984V15.8332C17.4166 16.9377 16.5212 17.8332 15.4166 17.8332H4.58325C3.47868 17.8332 2.58325 16.9377 2.58325 15.8332V7.49984V4.99984C2.58325 3.89527 3.47868 2.99984 4.58325 2.99984L5.91659 2.99984V2.2915C5.91659 1.87729 6.25237 1.5415 6.66659 1.5415ZM6.66659 4.49984H4.58325C4.30711 4.49984 4.08325 4.7237 4.08325 4.99984V6.74984H15.9166V4.99984C15.9166 4.7237 15.6927 4.49984 15.4166 4.49984H13.3333H6.66659ZM15.9166 8.24984H4.08325V15.8332C4.08325 16.1093 4.30711 16.3332 4.58325 16.3332H15.4166C15.6927 16.3332 15.9166 16.1093 15.9166 15.8332V8.24984Z"
-                        fill=""
                       />
                     </svg>
                   </span>
@@ -251,20 +358,34 @@ const endReceipt = computed(() => ({
           </div>
         </template>
       </ComponentCard>
+
       <ComponentCard title="발주서 목록" style="height: 475px">
         <template #header-right>
           <div class="flex justify-end space-x-2 mb-1">
-            <button type="button" class="btn-color btn-common" style="width: 130px">
+            <button
+              type="button"
+              class="btn-color btn-common"
+              style="width: 130px"
+              @click="openPdfPreview"
+            >
               PDF내보내기
             </button>
           </div>
         </template>
         <template #body-content>
-          <DataTable showGridlines scrollable scrollHeight="380px" size="small">
+          <DataTable
+            showGridlines
+            v-model:selection="selectPur"
+            :value="purList"
+            dataKey="pur_code"
+            scrollable
+            scrollHeight="345px"
+            size="small"
+          >
             <template #empty>
               <div class="text-center">등록한 발주서가 없습니다.</div>
             </template>
-            <!-- <DataCol selectionMode="single" headerStyle="width: 37px" bodyStyle="width: 37px" /> -->
+            <DataCol selectionMode="multiple" headerStyle="width: 37px" bodyStyle="width: 37px" />
             <DataCol
               field="pur_code"
               header="발주코드"
@@ -276,8 +397,58 @@ const endReceipt = computed(() => ({
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
             <DataCol
+              field="pur_date"
+              header="발주일자"
+              sortable
+              style="text-align: center"
+              :pt="{ columnHeaderContent: 'justify-center' }"
+            />
+            <DataCol
               field="receipt_date"
               header="입고요청일자"
+              style="text-align: center"
+              sortable
+              :pt="{ columnHeaderContent: 'justify-center' }"
+            />
+            <DataCol
+              field="emp_name"
+              header="담당자"
+              :pt="{ columnHeaderContent: 'justify-center' }"
+            />
+            <DataCol
+              field="bcnc_code"
+              header="매입처코드"
+              :pt="{ columnHeaderContent: 'justify-center' }"
+            />
+            <DataCol
+              field="bcnc_name"
+              header="매입처명"
+              :pt="{ columnHeaderContent: 'justify-center' }"
+            />
+            <DataCol
+              field="mat_code"
+              header="자재코드"
+              :pt="{ columnHeaderContent: 'justify-center' }"
+            />
+            <DataCol
+              field="mat_name"
+              header="자재명"
+              :pt="{ columnHeaderContent: 'justify-center' }"
+            />
+            <DataCol
+              field="mat_spec"
+              header="규격"
+              :pt="{ columnHeaderContent: 'justify-center' }"
+            />
+            <DataCol
+              field="mat_unit"
+              header="단위"
+              :pt="{ columnHeaderContent: 'justify-center' }"
+            />
+            <DataCol
+              field="pur_qty"
+              header="발주수량"
+              style="text-align: right"
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
             <DataCol
@@ -285,10 +456,27 @@ const endReceipt = computed(() => ({
               header="입고상태"
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
-            <DataCol field="remark" header="비고" :pt="{ columnHeaderContent: 'justify-center' }" />
+            <DataCol
+              field="remark"
+              header="발주서 비고"
+              :pt="{ columnHeaderContent: 'justify-center' }"
+            />
+            <DataCol
+              field="pur_remark"
+              header="발주자재 비고"
+              :pt="{ columnHeaderContent: 'justify-center' }"
+            />
           </DataTable>
         </template>
       </ComponentCard>
     </div>
+
+    <!-- ✅ PDF 미리보기 모달 -->
+    <PurPdfModal
+      :visible="isPdfOpen"
+      :headerInfo="pdfHeader"
+      :items="pdfItems"
+      @close="isPdfOpen = false"
+    />
   </AdminLayout>
 </template>
