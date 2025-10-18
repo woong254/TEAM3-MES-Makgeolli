@@ -228,7 +228,8 @@ JOIN mat_master m ON m.mat_code  = i.mat_code
 JOIN bcnc_master b ON b.bcnc_code = i.bcnc_code
 JOIN pur_form f ON f.pur_code  = i.pur_code  
 WHERE i.insp_status = ?
-ORDER BY i.iis_id
+  AND (i.t_result IS NULL OR i.t_result = 'P')
+ORDER BY i.iis_id;
 `;
 
 const deleteIis = `
@@ -248,15 +249,27 @@ SELECT
   m.mat_name,
   m.mat_spec,
   m.mat_unit,
-  pm.unreceipt_qty,
+  ((pm.unreceipt_qty) - (
+            SELECT IFNULL(SUM(i.receipt_qty),0)
+            FROM iis i
+            WHERE i.pur_code = pf.pur_code
+              AND i.mat_code = pm.mat_code
+              AND i.insp_status IN ('검사대기','검사완료')
+          ))AS unreceipt_qty,
   pm.receipt_status
 FROM pur_mat pm
 JOIN pur_form pf ON pf.pur_code = pm.pur_code
 JOIN mat_master m ON m.mat_code = pm.mat_code
 JOIN bcnc_master b ON b.bcnc_code = pf.bcnc_code
-WHERE pm.receipt_status IN ('입고대기', '부분입고')
+WHERE ((pm.unreceipt_qty) - (
+            SELECT IFNULL(SUM(i.receipt_qty),0)
+            FROM iis i
+            WHERE i.pur_code = pf.pur_code
+              AND i.mat_code = pm.mat_code
+              AND i.insp_status IN ('검사대기','검사완료')
+          )) > 0
 AND pf.receipt_date = CURDATE()
-ORDER BY pm.pur_mat_id 
+ORDER BY pm.pur_mat_id
 `;
 
 const selectIisMatTarget = `
@@ -269,13 +282,25 @@ SELECT
   m.mat_name,
   m.mat_spec,
   m.mat_unit,
-  pm.unreceipt_qty,
+  ((pm.unreceipt_qty) - (
+            SELECT IFNULL(SUM(i.receipt_qty),0)
+            FROM iis i
+            WHERE i.pur_code = pf.pur_code
+              AND i.mat_code = pm.mat_code
+              AND i.insp_status IN ('검사대기','검사완료')
+          ))AS unreceipt_qty,
   pm.receipt_status
 FROM pur_mat pm
 JOIN pur_form pf ON pf.pur_code = pm.pur_code
 JOIN mat_master m ON m.mat_code = pm.mat_code
 JOIN bcnc_master b ON b.bcnc_code = pf.bcnc_code
-WHERE pm.receipt_status IN ('입고대기', '부분입고')
+WHERE ((pm.unreceipt_qty) - (
+            SELECT IFNULL(SUM(i.receipt_qty),0)
+            FROM iis i
+            WHERE i.pur_code = pf.pur_code
+              AND i.mat_code = pm.mat_code
+              AND i.insp_status IN ('검사대기','검사완료')
+          )) > 0
 AND pf.receipt_date = CURDATE()
 AND m.mat_name LIKE ?
 ORDER BY pm.pur_mat_id 
@@ -290,7 +315,13 @@ FROM pur_mat pm
 JOIN pur_form pf ON pf.pur_code = pm.pur_code
 JOIN mat_master m ON m.mat_code = pm.mat_code
 JOIN bcnc_master b ON b.bcnc_code = pf.bcnc_code
-WHERE pm.receipt_status IN ('입고대기', '부분입고')
+WHERE ((pm.unreceipt_qty) - (
+            SELECT IFNULL(SUM(i.receipt_qty),0)
+            FROM iis i
+            WHERE i.pur_code = pf.pur_code
+              AND i.mat_code = pm.mat_code
+              AND i.insp_status IN ('검사대기','검사완료')
+          )) > 0
 AND pf.receipt_date = CURDATE()
 `;
 
@@ -309,7 +340,13 @@ SELECT
 FROM pur_mat pm
 JOIN pur_form pf  ON pf.pur_code = pm.pur_code
 JOIN mat_master m ON m.mat_code  = pm.mat_code
-WHERE pm.receipt_status IN ('입고대기', '부분입고')
+WHERE ((pm.unreceipt_qty) - (
+            SELECT IFNULL(SUM(i.receipt_qty),0)
+            FROM iis i
+            WHERE i.pur_code = pf.pur_code
+              AND i.mat_code = pm.mat_code
+              AND i.insp_status IN ('검사대기','검사완료')
+          )) > 0
   AND pf.receipt_date = CURDATE()
 `;
 
@@ -375,6 +412,31 @@ UPDATE iis
    SET insp_status = '입고완료'
  WHERE iis_id IN (?)
 `;
+
+const purPagePurList = `
+SELECT
+  pf.pur_code,
+  pf.pur_name,
+  pf.pur_date,
+  pf.receipt_date,
+  e.emp_name,
+  pf.bcnc_code,
+  b.bcnc_name,
+  pm.mat_code,
+  m.mat_name,
+  m.mat_spec,
+  m.mat_unit,
+  pm.pur_qty,
+  pf.pur_status,
+  pf.remark,
+  pm.remark AS pur_remark
+FROM pur_form pf
+JOIN pur_mat pm ON pm.pur_code = pf.pur_code
+JOIN emp_master e ON e.emp_id = pf.emp_id
+JOIN bcnc_master b ON b.bcnc_code = pf.bcnc_code
+JOIN mat_master m ON m.mat_code = pm.mat_code
+`;
+
 module.exports = {
   // 목록/검색
   selectPurList,
@@ -383,6 +445,7 @@ module.exports = {
   iisList,
   iisModalBcnc,
   iisModalMat,
+  purPagePurList,
 
   // 단건 조회
   selectPurHeaderByCode,
