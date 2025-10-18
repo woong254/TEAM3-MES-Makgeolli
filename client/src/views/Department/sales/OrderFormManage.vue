@@ -884,6 +884,11 @@ const deleteOrder = async () => {
                       :class="baseInputClass"
                       style="height: 2rem"
                       step="1"
+                      @blur="
+                        data.op_qty = Number(
+                          Number.isFinite(+data.op_qty) ? Math.max(1, +data.op_qty) : 1,
+                        ).toFixed(2)
+                      "
                     />
                   </template>
                 </Column>
