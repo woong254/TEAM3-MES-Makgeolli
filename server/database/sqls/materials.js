@@ -429,7 +429,8 @@ SELECT
   pm.pur_qty,
   pf.pur_status,
   pf.remark,
-  pm.remark AS pur_remark
+  pm.remark AS pur_remark,
+  pm.pur_mat_id
 FROM pur_form pf
 JOIN pur_mat pm ON pm.pur_code = pf.pur_code
 JOIN emp_master e ON e.emp_id = pf.emp_id
