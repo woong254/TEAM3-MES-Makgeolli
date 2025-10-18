@@ -421,6 +421,85 @@ WHERE 1=1
 `;
 
 
+// 4. 완제품검사 관리
+// 4-1. 완제품검사 대상(검사대상) 조회
+const prodInspTargetSelect = `
+SELECT pf.procs_no        -- 공정실적번호
+       ,pf.prod_code      -- 제품코드
+       ,pm.prod_name      -- 제품명
+       ,pm.prod_spec      -- 규격
+       ,c.comncode_dtnm   -- 단위 공통코드 이름
+       ,pf.mk_qty         -- 생산량
+       ,pf.procs_endtm    -- 생산작업일시
+FROM processform pf
+JOIN prod_master pm
+  ON pf.prod_code = pm.prod_code
+JOIN comncode_dt c
+  ON pm.prod_unit = c.comncode_detailid
+WHERE now_procs = '포장'
+  AND procs_endtm IS NOT NULL
+`;
+
+
+// 4-2. 완제품검사 대상 조회시 -> 불량 자동조회 
+const prodInspTargetNg = `
+SELECT dmt.def_item_id
+       ,dm.def_item_name
+FROM def_master_target dmt
+ JOIN def_master dm
+   ON dmt.def_item_id = dm.def_item_id
+WHERE dmt.prod_code = ?
+`;
+
+// 4-3. 완제품검사 대상 조회시 -> 품질기준관리 자동조회
+const prodInspTargetQcMaster = `
+SELECT 
+    qt.insp_item_id
+  , qm.insp_item_name
+  , qm.insp_type
+  , qm.insp_method
+  , qm.file_name
+  , qm.max_score
+  , qm.pass_score
+  , qm.pass_score_spec
+  , qm.score_desc
+  , qr.min_range
+  , qr.min_range_spec
+  , qr.max_range
+  , qr.max_range_spec
+  , qr.unit
+  , qs.sens_questions  -- 문자열 JSON(프론트에서 JSON.parse)
+FROM qc_master_target qt
+JOIN qc_master qm
+  ON qt.insp_item_id = qm.insp_item_id
+LEFT JOIN qc_master_ran qr
+  ON qm.insp_item_id = qr.insp_item_id
+LEFT JOIN (
+    SELECT 
+        insp_item_id,
+        CONCAT(
+          '[',
+          GROUP_CONCAT(
+            CONCAT(
+              '{',
+              '"order":', ques_order, ',',
+              '"name":',  JSON_QUOTE(ques_name),
+              '}'
+            )
+            ORDER BY ques_order
+            SEPARATOR ','
+          ),
+          ']'
+        ) AS sens_questions
+    FROM qc_master_sen
+    GROUP BY insp_item_id
+) qs
+  ON qm.insp_item_id = qs.insp_item_id
+WHERE qt.product_code = ?
+  AND qm.use_yn = 'Y'
+ORDER BY qt.insp_item_id
+`;
+
 
 module.exports = {
   selectInspTargetList,
@@ -445,4 +524,7 @@ module.exports = {
   selectMatInspResultsById,
   selectMatInspHeaderById,
   matInspSelect,
+  prodInspTargetSelect,
+  prodInspTargetNg,
+  prodInspTargetQcMaster,
 };

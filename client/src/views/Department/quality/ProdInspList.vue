@@ -1,4 +1,4 @@
-<!-- 공정검사 조회 -->
+<!-- 완제품검사 조회 -->
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
 import '@/assets/common.css'

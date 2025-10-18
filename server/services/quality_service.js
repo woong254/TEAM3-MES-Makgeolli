@@ -860,6 +860,158 @@ const searchMatInspList = async (data) => {
   }
 };
 
+// 4. 완제품검사 관리
+// 4-1. 완제품검사 타겟(공정실적관리) 조회
+const findProdInspTarget = async () => {
+  let list = await mariadb
+    .query("prodInspTargetSelect")
+    .catch((err) => console.log(err));
+  return list;
+};
+
+// 4-2. 완제품검사 타겟 조회 -> 불량조회 및 해당 품질기준관리 조회
+const getProdInspWithQcMasternNG = async (prodCode) => {
+  let ng = await mariadb
+    .query("prodInspTargetNg", prodCode)
+    .catch((err) => console.log(err));
+  let qc = await mariadb
+    .query("prodInspTargetQcMaster", prodCode)
+    .catch((err) => console.log(err));
+  return { ok: true, ng, qc };
+};
+
+// 4-3. 완제품검사 등록
+const registerProdInsp = async (payload) => {
+  let conn = null;
+  try {
+    conn = await mariadb.getConnection();
+    await conn.beginTransaction();
+
+    // 1) id 생성
+    const idRows = await conn.query(`
+     SELECT CONCAT(
+		 'FQC-',
+		 DATE_FORMAT(NOW(), '%Y%m%d'),
+		 '-',
+		 LPAD(IFNULL(MAX(CAST(RIGHT(insp_id,3) AS UNSIGNED)),0) + 1, 3, '0')
+	   ) AS makeProdInspId
+     FROM prod_insp
+     WHERE SUBSTR(insp_id, 5, 8) = DATE_FORMAT(NOW(), '%Y%m%d')
+     FOR UPDATE`);
+
+    console.log("idRows[0]: ", idRows[0]); // idRows 확인 -> [object Object]
+    console.log("idRows[0].makeProdInspId: ", idRows[0].makeProdInspId);
+
+    const new_prod_insp_id = idRows[0].makeProdInspId;
+    console.log("new_prod_insp_id:", new_prod_insp_id);
+    if (!new_prod_insp_id) throw new Error("prod_insp_id 생성 실패");
+
+    // 2) 공통 헤더 값 준비(payload에서 꺼내기)
+    const {
+      insp_name,
+      insp_date,
+      insp_qty,
+      pass_qty,
+      fail_qty,
+      remark = null,
+      final_result,
+      emp_id,
+      procs_no,
+      results = [], // [{insp_result_value,r_value,insp_item_id}, ...]
+      ngs = [], // [{qty, def_item_id}, ...]
+    } = payload || {};
+
+    // 필수값 최소 검증(서버에서 한번더 확인)
+    if (!insp_name || !insp_date || !emp_id || !procs_no) {
+      throw new Error("필수 값 누락(insp_name/insp_date/emp_id/procs_no)");
+    }
+
+    // 3) 공통 prod_insp 값 넣기 + 유통기한계산(검사완료일+30일)
+    await conn.query(
+      `
+      INSERT INTO prod_insp
+        (insp_id
+        ,insp_name
+        ,insp_date
+        ,insp_qty
+        ,pass_qty
+        ,fail_qty
+        ,remark
+        ,final_result
+        ,emp_id
+        ,epep_dt
+        ,procs_no)
+      VALUES
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, DATE_ADD(?, INTERVAL 30 DAY), ?)`,
+      [
+        new_prod_insp_id,
+        insp_name,
+        insp_date,
+        insp_qty,
+        pass_qty,
+        fail_qty,
+        remark,
+        final_result,
+        emp_id,
+        insp_date,
+        procs_no,
+      ]
+    );
+
+    // 4) prod_insp_result INSERT (여러건)
+    for (const r of payload.results ?? []) {
+      await conn.query(
+        `
+          INSERT INTO prod_insp_result
+            (insp_result_value
+            ,r_value
+            ,insp_item_id
+            ,insp_id)
+          VALUES
+            (?, ?, ?, ?)`,
+        [r.insp_result_value, r.r_value, r.insp_item_id, new_prod_insp_id]
+      );
+    }
+
+    // 5) prod_insp_ng 불량 INSERT (여러건)
+    for (const n of payload.ngs ?? []) {
+      await conn.query(
+        `
+          INSERT INTO prod_insp_ng
+            (qty
+            ,def_item_id
+            ,insp_id)
+          VALUES
+            (?, ?, ?)`,
+        [n.qty, n.def_item_id, new_prod_insp_id]
+      );
+    }
+
+    // 6) processform (공정실적관리) 상태 업데이트
+    await conn.query(
+      `
+        UPDATE processform
+        SET insp_status = 'u2'
+            ,pass_qty = ?
+        WHERE procs_no = ?`,
+      [pass_qty, procs_no]
+    );
+
+    // 결과/NG 루프 전에 길이 확인
+    console.log("results length:", (payload.results || []).length);
+    console.log("ngs length:", (payload.ngs || []).length);
+
+    await conn.commit();
+    return { ok: true, insp_id: new_prod_insp_id };
+  } catch (err) {
+    console.error(err);
+    if (conn) await conn.rollback();
+    return { ok: false, message: err.message || String(err) };
+  } finally {
+    if (conn) conn.release();
+  }
+};
+
 
 module.exports = {
   findInspTarget,
@@ -879,4 +1031,7 @@ module.exports = {
   deleteMatInsp,
   matInspectSelect,
   searchMatInspList,
+  findProdInspTarget,
+  getProdInspWithQcMasternNG,
+  registerProdInsp,
 };
