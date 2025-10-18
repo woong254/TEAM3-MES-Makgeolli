@@ -301,10 +301,10 @@ SELECT
     b.bcnc_name,
     c.comncode_dtnm
 FROM mat_insp mi
-JOIN iis         i ON i.iis_id        = mi.iis_id
-JOIN mat_master  m ON i.mat_code      = m.mat_code
-JOIN bcnc_master b ON i.bcnc_code     = b.bcnc_code
-JOIN comncode_dt c ON m.mat_item_code = c.comncode_detailid
+LEFT JOIN iis         i ON i.iis_id        = mi.iis_id
+LEFT JOIN mat_master  m ON i.mat_code      = m.mat_code
+LEFT JOIN bcnc_master b ON i.bcnc_code     = b.bcnc_code
+LEFT JOIN comncode_dt c ON m.mat_item_code = c.comncode_detailid
 WHERE 1=1
 `;
 
@@ -411,11 +411,11 @@ SELECT mi.insp_id -- 검사ID
        ,mi.insp_qty -- 검사량
        ,mi.t_result -- 합격여부
 FROM mat_insp mi
-JOIN iis i
+LEFT JOIN iis i
   ON mi.iis_id = i.iis_id
-JOIN mat_master m
+LEFT JOIN mat_master m
   ON i.mat_code = m.mat_code
-JOIN comncode_dt cd
+LEFT JOIN comncode_dt cd
   ON m.mat_item_code = cd.comncode_detailid
 WHERE 1=1
 `;
@@ -438,6 +438,7 @@ JOIN comncode_dt c
   ON pm.prod_unit = c.comncode_detailid
 WHERE now_procs = '포장'
   AND procs_endtm IS NOT NULL
+  AND (pf.insp_status IS NULL OR pf.insp_status <> 'u2')
 `;
 
 
@@ -500,6 +501,109 @@ WHERE qt.product_code = ?
 ORDER BY qt.insp_item_id
 `;
 
+// 4-4. 완제품검사 검색
+const prodInspSearch = `
+SELECT pi.insp_id        -- 검사ID
+       ,pi.insp_name     -- 검사명
+       ,pi.insp_date     -- 검사일시
+       ,pm.prod_name     -- 제품명
+       ,pm.prod_spec     -- 제품규격
+       ,c.comncode_dtnm  -- 제품단위 이름
+       ,pi.insp_qty      -- 검사량
+FROM prod_insp pi
+LEFT JOIN processform pf
+  ON pi.procs_no = pf.procs_no
+LEFT JOIN prod_master pm
+  ON pf.prod_code = pm.prod_code
+LEFT JOIN comncode_dt c
+  ON pm.prod_unit = c.comncode_detailid
+WHERE 1=1
+`;
+
+// 4-5. 완제품 검사 상세조회 
+// 4-5-1. 헤더 (prod_insp + processform + prod_master 등)
+const selectProdInspHeaderById = `
+SELECT
+  -- prod_insp(완제품검사)
+  pi.insp_id,           -- 검사ID
+  pi.insp_name,         -- 검사명
+  pi.insp_date,         -- 검사일시
+  pi.insp_qty,          -- 검사량
+  pi.pass_qty,          -- 합격량
+  pi.fail_qty,          -- 불량량(합계)
+  pi.remark,            -- 비고
+  pi.final_result,      -- 총결과(합격:P/불합격:F)
+  pi.emp_id,            -- 사용자
+  pi.procs_no,          -- 공정실적번호
+  pi.epep_dt,           -- 유통기한(검사완료일+30일)
+
+  -- processform(공정실적)
+  pf.mk_qty,            -- 생산량
+  pf.procs_endtm,       -- 생산작업(종료)일시
+
+  -- prod_master(제품)
+  pm.prod_code,
+  pm.prod_name,
+  pm.prod_spec,
+
+  -- 단위 공통코드 라벨
+  c.comncode_dtnm AS prod_unit_name
+
+FROM prod_insp pi
+LEFT JOIN processform pf ON pf.procs_no = pi.procs_no
+LEFT JOIN prod_master pm ON pm.prod_code = pf.prod_code
+LEFT JOIN comncode_dt c ON c.comncode_detailid = pm.prod_unit
+WHERE pi.insp_id = ?
+`;
+
+// 4-5-2. 결과 (prod_insp_result + qc_master(+ran))
+const selectProdInspResultsById = `
+SELECT
+  -- prod_insp_result
+  r.insp_id,
+  r.insp_item_id,
+  r.insp_result_value,
+  r.r_value,
+
+  -- qc_master (공통 품질기준)
+  qm.insp_item_name,
+  qm.insp_type,           -- 'R' 또는 'S'
+  qm.insp_method,
+  qm.file_name,
+  qm.max_score,
+  qm.pass_score,
+  qm.pass_score_spec,
+
+  -- 범위형 세부 (있으면)
+  qr.min_range,
+  qr.min_range_spec,
+  qr.max_range,
+  qr.max_range_spec,
+  qr.unit
+
+FROM prod_insp_result r
+JOIN qc_master qm
+  ON qm.insp_item_id = r.insp_item_id
+LEFT JOIN qc_master_ran qr
+  ON qr.insp_item_id = r.insp_item_id
+WHERE r.insp_id = ?
+ORDER BY r.insp_item_id
+`;
+
+// 4-5-3. 불량 (prod_insp_ng + def_master)
+const selectProdInspNGsById = `
+SELECT
+  n.fail_id,
+  n.def_item_id,
+  n.qty,
+  d.def_item_name
+FROM prod_insp_ng n
+JOIN def_master d ON d.def_item_id = n.def_item_id
+WHERE n.insp_id = ?
+ORDER BY d.def_item_name
+`;
+
+
 
 module.exports = {
   selectInspTargetList,
@@ -527,4 +631,8 @@ module.exports = {
   prodInspTargetSelect,
   prodInspTargetNg,
   prodInspTargetQcMaster,
+  prodInspSearch,
+  selectProdInspHeaderById,
+  selectProdInspResultsById,
+  selectProdInspNGsById
 };

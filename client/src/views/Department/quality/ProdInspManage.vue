@@ -16,6 +16,7 @@ import axios from 'axios'
 import { Korean } from 'flatpickr/dist/l10n/ko.js' // 달력 한글 import
 import InspMethodModal from './MatInspMethodModal.vue' // 검사방법 모달
 import InspRubricModal from './MatInspRubricModal.vue' // 채점기준 모달
+import ProdInspSearchModal from './ProdInspSearchModal.vue' // 검색 모달
 
 // 1. 페이지 타이틀
 const currentPageTitle = ref('완제품검사 관리')
@@ -89,6 +90,17 @@ interface qcDT {
   score_desc: string | null //문자열JSON
   sens_questions: string | null //문자열JSON
 }
+// 2-5. 검색 모달
+interface modalRowDT {
+  insp_id: string
+  insp_name: string
+  insp_date: string
+  prod_name: string
+  prod_spec: string
+  comncode_dtnm: string
+  insp_qty: number
+  procs_no: number
+}
 
 // 3. 변수
 const inspector = ref('이한솔') // 검사자
@@ -145,7 +157,7 @@ const hour = String(dateValue.getHours()).padStart(2, '0')
 const minute = String(dateValue.getMinutes()).padStart(2, '0')
 const second = String(dateValue.getSeconds()).padStart(2, '0')
 // 4-3. YYYY-MM-DD HH:mm:ss 형식으로 조합
-const matInspTargetDataattedDateTime = `${year}-${month}-${day} ${hour}:${minute}:${second}`
+const prodInspTargetDataattedDateTime = `${year}-${month}-${day} ${hour}:${minute}:${second}`
 
 // 5. 테이블 확장
 const expandedRows = ref<Record<string, boolean> | null>(null)
@@ -413,7 +425,7 @@ const buildPayload = () => {
 
   return {
     insp_name: inspName.value,
-    insp_date: matInspTargetDataattedDateTime,
+    insp_date: prodInspTargetDataattedDateTime,
     insp_qty: Number(prodInspQty.value || 0),
     pass_qty: Number(prodInspPass.value || 0),
     fail_qty: Number(prodInspNG.value || 0),
@@ -519,15 +531,15 @@ const submitUpdate = async () => {
   }
 }
 
-// 삭제
+// 13-5. 삭제
 const confirmDelete = async () => {
   try {
     if (!currentInspId.value) return alert('삭제할 검사ID가 없습니다.')
     if (!confirm('정말 삭제하시겠습니까?')) return
-    const { data } = await axios.delete(`/api/matInsp/${currentInspId.value}`)
+    const { data } = await axios.delete(`/api/prodInsp/${currentInspId.value}`)
     if (data?.ok) {
       alert('삭제되었습니다.')
-      // resetForm() 작업중 !!!!!!!!
+      resetForm()
     } else {
       alert(data?.message || '삭제 실패')
     }
@@ -535,6 +547,174 @@ const confirmDelete = async () => {
     console.error('[FE] 삭제 오류:', e)
     alert('서버 오류가 발생했습니다.')
   }
+}
+
+// 14. 초기화
+const resetForm = () => {
+  // 상단 기본정보
+  inspName.value = ''
+  inspector.value = '이한솔'
+  remark.value = ''
+
+  // 타겟(공정실적관리)
+  Object.assign(prodInspTargetData, {
+    procs_no: '',
+    prod_code: '',
+    prod_name: '',
+    prod_spec: '',
+    comncode_dtnm: '',
+    mk_qty: 0,
+  })
+
+  // 수량
+  prodInspQty.value = 0
+  prodInspNG.value = 0
+  prodInspPass.value = 0
+
+  // 불량 목록/값
+  ng.value = []
+  Object.keys(ngValues).forEach((k) => delete ngValues[k])
+
+  // 검사 테이블
+  inspDataRan.value = []
+  inspDataSen.value = []
+  expandedRows.value = null
+
+  // 모드/ID
+  currentInspId.value = null
+  mode.value = 'create'
+}
+
+// 15. 검색 모달
+// 15-1. 검색 조건 폼
+const cond = reactive({
+  insp_name_word: '',
+  start_date: '', // 'YYYY-MM-DD'
+  end_date: '', // 'YYYY-MM-DD'
+})
+// 15-2. 초기화
+const resetSearch = () => {
+  cond.insp_name_word = ''
+  cond.start_date = ''
+  cond.end_date = ''
+  modalRows.value = []
+}
+// 15-3. 모달 상태/데이터
+const isSearchModalOpen = ref(false)
+const modalRows = ref<modalRowDT[]>([])
+
+// 15-4. 조회 버튼 클릭 → 서버 검색 → 모달 열기
+const openSearchModal = async () => {
+  try {
+    const { data } = await axios.post('/api/prodInspSearch', {
+      insp_name_word: cond.insp_name_word || undefined,
+      start_date: cond.start_date || undefined,
+      end_date: cond.end_date || undefined,
+    })
+    modalRows.value = Array.isArray(data) ? data : data?.data || [] // 서버 응답 구조에 맞게
+    await nextTick() // rows 반영된 뒤
+    console.log('검색기능 : ', data) // 확인값
+    isSearchModalOpen.value = true // 모달 오픈
+    // 초기화
+    cond.insp_name_word = '' // 검사명 input 초기화
+    cond.start_date = ''
+    cond.end_date = ''
+  } catch (e) {
+    alert('검색에 실패했습니다.')
+    console.error(e)
+  }
+}
+
+// 15-5. 부모 script setup (검색→상세조회→화면 주입)
+async function onPickedRow(row: modalRowDT) {
+  // 1) 모달 닫기
+  isSearchModalOpen.value = false
+
+  // 2) 상세조회 호출
+  await axios
+    .get(`/api/prodInspDetail/${row.insp_id}`)
+    .then(({ data }) => {
+      if (!data?.ok) {
+        alert(data?.message || '상세 조회 실패')
+        return
+      }
+
+      const { header, results, ngs } = data
+
+      // 3) 상단 기본정보 주입
+      inspName.value = header.insp_name || ''
+      inspector.value = header.emp_id || inspector.value // 검사자
+      // 수량/비고
+      prodInspQty.value = Number(header.insp_qty || 0)
+      prodInspNG.value = Number(header.fail_qty || 0)
+      prodInspPass.value = Number(header.pass_qty || 0)
+      remark.value = header.remark || ''
+
+      // 공정실적(완제품) 영역
+      // prodInspTargetData: { procs_no, prod_code, prod_name, prod_spec, comncode_dtnm, mk_qty, procs_endtm }
+      prodInspTargetData.procs_no = header.procs_no || ''
+      prodInspTargetData.prod_code = header.prod_code || ''
+      prodInspTargetData.prod_name = header.prod_name || ''
+      prodInspTargetData.prod_spec = header.prod_spec || ''
+      prodInspTargetData.comncode_dtnm = header.prod_unit_name || '' // 단위 라벨
+      prodInspTargetData.mk_qty = Number(header.mk_qty || 0)
+      prodInspTargetData.procs_endtm = header.procs_endtm || ''
+
+      // 4) 결과 rows → 기존 테이블(inspDataRan / inspDataSen)로 매핑
+      const ran: RangeRow[] = []
+      const sen: SensoryRow[] = []
+
+      for (const r of results || []) {
+        if (r.insp_type === 'R') {
+          ran.push({
+            insp_item_id: r.insp_item_id,
+            insp_item_name: r.insp_item_name,
+            min_range: r.min_range ?? '',
+            min_label: specLabel(r.min_range_spec),
+            max_range: r.max_range ?? '',
+            max_label: specLabel(r.max_range_spec),
+            unit: r.unit ?? '',
+            insp_method: r.insp_method ?? null,
+            file_name: r.file_name ?? null,
+            insp_result_value: Number(r.insp_result_value ?? 0),
+            r_value: r.r_value || '',
+          })
+        } else if (r.insp_type === 'S') {
+          sen.push({
+            insp_item_id: r.insp_item_id,
+            insp_item_name: r.insp_item_name,
+            pass_score: Number(r.pass_score ?? 0),
+            pass_score_spec: (r.pass_score_spec ?? '').toLowerCase(),
+            score_desc: [], // (필요 시 상세 설계 추가)
+            max_score: Number(r.max_score ?? 5),
+            insp_result_value: Number(r.insp_result_value ?? 0),
+            r_value: r.r_value || '',
+            details: [], // (질문별 점수 복구는 별도 저장 필요)
+          })
+        }
+      }
+
+      inspDataRan.value = ran
+      inspDataSen.value = sen
+
+      // 5) 불량 복구
+      ng.value = (ngs || []).map((n: any) => ({
+        def_item_id: n.def_item_id,
+        def_item_name: n.def_item_name,
+      }))
+      Object.keys(ngValues).forEach((k) => delete ngValues[k]) // 초기화
+      for (const n of ngs || []) {
+        ngValues[n.def_item_id] = Number(n.qty || 0)
+      }
+    })
+    .catch((e) => {
+      console.error(e)
+      alert('상세 조회 중 오류')
+    })
+
+  // 6) 모드 전환
+  currentInspId.value = row.insp_id
+  mode.value = 'edit'
 }
 
 // style
@@ -555,15 +735,15 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
     <ComponentCard title="조회" className="shadow-sm" class="mb-2">
       <template #header-right>
         <div class="flex justify-end">
-          <button class="btn-common btn-white">초기화</button>
-          <button class="btn-common btn-color">조회</button>
+          <button class="btn-common btn-white" @click="resetSearch">초기화</button>
+          <button class="btn-common btn-color" @click="openSearchModal">조회</button>
         </div>
       </template>
       <template #body-content>
         <div class="flex gap-4">
           <div class="w-1/4">
             <label :class="labelStyle"> 검사명 </label>
-            <input type="text" :class="inputStyle" />
+            <input type="text" :class="inputStyle" v-model="cond.insp_name_word" />
           </div>
           <div>
             <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
@@ -572,6 +752,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
             <div class="flex items-center gap-2">
               <div class="relative">
                 <flat-pickr
+                  v-model="cond.start_date"
                   :config="startDateConfig"
                   class="dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pl-4 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
                   placeholder=" "
@@ -599,6 +780,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
               <div>-</div>
               <div class="relative">
                 <flat-pickr
+                  v-model="cond.end_date"
                   :config="endDateConfig"
                   class="dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pl-4 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
                   placeholder=" "
@@ -628,19 +810,25 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
         </div>
       </template>
     </ComponentCard>
+    <ProdInspSearchModal
+      :visible="isSearchModalOpen"
+      :rows="modalRows"
+      @close="isSearchModalOpen = false"
+      @checked="onPickedRow"
+    />
     <ComponentCard title="등록" className="shadow-sm">
       <template #header-right>
         <div class="flex justify-end">
-          <button class="btn-common btn-white">초기화</button>
+          <button class="btn-common btn-white" @click="resetForm">초기화</button>
           <button class="btn-common btn-color">PDF</button>
-          <!-- 등록 모드 v-if="mode === 'create'" -->
-          <template>
-            <button class="btn-common btn-color">등록</button>
+          <!-- 등록 모드 -->
+          <template v-if="mode === 'create'">
+            <button class="btn-common btn-color" @click="submitRegister">등록</button>
           </template>
-          <!-- 수정 모드 v-else -->
-          <template>
-            <button class="btn-common btn-color">수정</button>
-            <button class="btn-common btn-white">삭제</button>
+          <!-- 수정 모드 -->
+          <template v-else>
+            <button class="btn-common btn-color" @click="submitUpdate">수정</button>
+            <button class="btn-common btn-white" @click="confirmDelete">삭제</button>
           </template>
         </div>
       </template>
@@ -783,7 +971,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                   type="text"
                   :class="inputDisabled"
                   class="w-2/3"
-                  v-model="matInspTargetDataattedDateTime"
+                  v-model="prodInspTargetDataattedDateTime"
                   disabled
                 />
               </div>
