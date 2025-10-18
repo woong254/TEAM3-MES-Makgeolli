@@ -157,7 +157,7 @@ const hour = String(dateValue.getHours()).padStart(2, '0')
 const minute = String(dateValue.getMinutes()).padStart(2, '0')
 const second = String(dateValue.getSeconds()).padStart(2, '0')
 // 4-3. YYYY-MM-DD HH:mm:ss 형식으로 조합
-const matInspTargetDataattedDateTime = `${year}-${month}-${day} ${hour}:${minute}:${second}`
+const prodInspTargetDataattedDateTime = `${year}-${month}-${day} ${hour}:${minute}:${second}`
 
 // 5. 테이블 확장
 const expandedRows = ref<Record<string, boolean> | null>(null)
@@ -425,7 +425,7 @@ const buildPayload = () => {
 
   return {
     insp_name: inspName.value,
-    insp_date: matInspTargetDataattedDateTime,
+    insp_date: prodInspTargetDataattedDateTime,
     insp_qty: Number(prodInspQty.value || 0),
     pass_qty: Number(prodInspPass.value || 0),
     fail_qty: Number(prodInspNG.value || 0),
@@ -536,7 +536,7 @@ const confirmDelete = async () => {
   try {
     if (!currentInspId.value) return alert('삭제할 검사ID가 없습니다.')
     if (!confirm('정말 삭제하시겠습니까?')) return
-    const { data } = await axios.delete(`/api/matInsp/${currentInspId.value}`)
+    const { data } = await axios.delete(`/api/prodInsp/${currentInspId.value}`)
     if (data?.ok) {
       alert('삭제되었습니다.')
       resetForm()
@@ -971,7 +971,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                   type="text"
                   :class="inputDisabled"
                   class="w-2/3"
-                  v-model="matInspTargetDataattedDateTime"
+                  v-model="prodInspTargetDataattedDateTime"
                   disabled
                 />
               </div>

@@ -301,10 +301,10 @@ SELECT
     b.bcnc_name,
     c.comncode_dtnm
 FROM mat_insp mi
-JOIN iis         i ON i.iis_id        = mi.iis_id
-JOIN mat_master  m ON i.mat_code      = m.mat_code
-JOIN bcnc_master b ON i.bcnc_code     = b.bcnc_code
-JOIN comncode_dt c ON m.mat_item_code = c.comncode_detailid
+LEFT JOIN iis         i ON i.iis_id        = mi.iis_id
+LEFT JOIN mat_master  m ON i.mat_code      = m.mat_code
+LEFT JOIN bcnc_master b ON i.bcnc_code     = b.bcnc_code
+LEFT JOIN comncode_dt c ON m.mat_item_code = c.comncode_detailid
 WHERE 1=1
 `;
 
@@ -411,11 +411,11 @@ SELECT mi.insp_id -- 검사ID
        ,mi.insp_qty -- 검사량
        ,mi.t_result -- 합격여부
 FROM mat_insp mi
-JOIN iis i
+LEFT JOIN iis i
   ON mi.iis_id = i.iis_id
-JOIN mat_master m
+LEFT JOIN mat_master m
   ON i.mat_code = m.mat_code
-JOIN comncode_dt cd
+LEFT JOIN comncode_dt cd
   ON m.mat_item_code = cd.comncode_detailid
 WHERE 1=1
 `;
