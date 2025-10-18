@@ -174,7 +174,7 @@ const onInspChecked = async (row: matInspTargetDT) => {
   isModalOpen.value = false
   // 3) 불량 + 품질기준 조회를 위한 함수 호출 및 매개변수 전달(9번)
   await findMatInspNgnQcMaster(row.mat_code)
-
+  // 4) 등록/수정 구분
   currentInspId.value = null
   mode.value = 'create'
 }
@@ -380,18 +380,6 @@ const finalResult = computed(() => {
   }
   return ranOk && senOk ? '합격' : '불합격'
 })
-
-// 11. 다운로드 버튼 이벤트
-// const downloadFile = (file?: string | null) => {
-//   if (!file) {
-//     alert('첨부된 파일이 없습니다.')
-//     return
-//   }
-//   const url = `/download?file=${encodeURIComponent(file)}`
-//   // window.location.href = url
-//   // 새 탭에서 열어서 다운로드 하고 싶다면
-//   window.open(url, '_blank', 'noopener')
-// }
 
 // 12. 검사방법 모달
 // 12-1. 검사방법 모달 상태
@@ -1362,7 +1350,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                   </div>
                 </template>
               </Column>
-              <Column
+              <!-- <Column
                 field="file_name"
                 header="첨부파일"
                 :pt="{ columnHeaderContent: 'justify-center' }"
@@ -1380,7 +1368,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                     />
                   </div>
                 </template>
-              </Column>
+              </Column> -->
               <Column
                 field="range_stand"
                 header="범위기준"
