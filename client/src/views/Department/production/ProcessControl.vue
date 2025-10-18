@@ -14,72 +14,54 @@ const inputStyle =
   'font-bold dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-lg text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
 const labelStyle = 'font-bold block text-lg text-gray-700 dark:text-gray-400 mb-2'
 
-// 공정실적관리 테이블에 넣을 데이터
+// 공정제어 화면 출력 데이터 타입
 interface processFormItem {
-  prod_code: string
-  equip_code: string
-  emp_no: string
-  prog: number
-  procs_st: string
-  now_procs: string
-  mk_list: number // 지시서상세목록
-  prod_name: string // 제품이름
-  proc_name: string // 공정명
-  equip_name: string // 설비명
-  emp_name: string // 작업자명
-  writing_date: string // 작업지시일
-  mk_num: number // 지시량
-  mk_qty: number // 생산량
-  inpt_qty: number // 현투입량
-  already_input_qty: number // 기투입량
-  remain_input_qty: number // 미투입량
-  fail_qty: number // 불량량
-  pass_qty: number // 합격량
-  procs_bgntm: string // 작업시작시간
-  procs_endtm: string // 작업종료시간
+  mk_num: number
+  prod_name: string
+  writing_date: string
+  equip_name: string
+  proc_name: string
+  emp_name: string
 }
 
 // 공정제어 화면 출력 데이터 초기값
 const processForm = ref<processFormItem>({
-  prod_code: 'test',
-  equip_code: 'test',
-  emp_no: 'test',
-  mk_list: 0,
-  prog: 0,
-  procs_st: 'test',
-  now_procs: 'test',
-  prod_name: 'test',
-  proc_name: 'test',
-  equip_name: 'test',
-  emp_name: 'test',
-  writing_date: 'test',
   mk_num: 0,
-  mk_qty: 0,
-  inpt_qty: 0,
-  already_input_qty: 0,
-  remain_input_qty: 0,
-  fail_qty: 0,
-  pass_qty: 0,
-  procs_bgntm: 'test',
-  procs_endtm: 'test',
+  prod_name: '',
+  writing_date: '',
+  equip_name: '',
+  proc_name: '',
+  emp_name: '',
 })
+
+// 서버에서 가져온 데이터를 저장할 반응형 변수 선언
+const makeData = ref()
+const equipData = ref()
+const empData = ref()
+
+// 화면이 켜질때 가져올 데이터 함수
+const fetchProcessData = async () => {
+  try {
+    const response = await axios.get('/api/getSavedProcessData')
+    makeData.value = response.data.processData.make
+    equipData.value = response.data.processData.equip
+    empData.value = response.data.processData.emp
+    processForm.value.prod_name = response.data.dbResult.prod_name
+    processForm.value.writing_date = response.data.dbResult.writing_date
+    processForm.value.equip_name = response.data.dbResult.equip_name
+    processForm.value.proc_name = response.data.dbResult.proc_name
+    processForm.value.emp_name = response.data.dbResult.emp_name
+    processForm.value.mk_num = makeData.value.inpt_qty
+  } catch (err) {
+    console.error('fetchProcessData에서 오류가 생겼습니다. 오류내용 : ', err)
+  }
+}
 
 // 작업시작 버튼 누르면 시작하는 함수
 const processStart = async () => {
   console.log(processForm.value)
-  const obj: processFormItem = {
-    mk_list: processForm.value.mk_list,
-    equip_code: processForm.value.equip_name,
-    emp_no: processForm.value.emp_no,
-    prod_code: processForm.value.prod_code,
-    inpt_qty: processForm.value.inpt_qty,
-    procs_bgntm: processForm.value.procs_bgntm,
-    prog: processForm.value.prog,
-    procs_st: processForm.value.procs_st,
-    now_procs: processForm.value.now_procs,
-  }
   try {
-    const result = await axios.post('/api/addProcessForm', obj)
+    const result = await axios.post('/api/addProcessForm')
     const addRes = result.data
     if (!addRes.isSuccessed) {
       alert('작업시작실패')
@@ -89,23 +71,6 @@ const processStart = async () => {
     }
   } catch (err) {
     console.error('processStart 오류 : ', err)
-  }
-}
-
-// 서버에서 가져온 데이터를 저장할 반응형 변수 선언
-const makeData = ref()
-const equipData = ref()
-const empData = ref()
-// 화면이 켜질때 가져올 데이터 함수
-const fetchProcessData = async () => {
-  try {
-    const response = await axios.get('/api/getSavedProcessData')
-    makeData.value = response.data.make
-    equipData.value = response.data.equip
-    empData.value = response.data.emp
-    console.log({ makeData, equipData, empData })
-  } catch (err) {
-    console.error('fetchProcessData에서 오류가 생겼습니다. 오류내용 : ', err)
   }
 }
 
@@ -200,7 +165,7 @@ onMounted(() => {
                   :class="inputStyle"
                   required
                   readonly
-                  v-model="processForm.mk_qty"
+                  v-model="processForm"
                   style="text-align: right"
                 />
               </div>
@@ -215,7 +180,7 @@ onMounted(() => {
                   :class="inputStyle"
                   required
                   readonly
-                  v-model="processForm.already_input_qty"
+                  v-model="processForm"
                   style="text-align: right"
                 />
               </div>
@@ -226,7 +191,7 @@ onMounted(() => {
                   :class="inputStyle"
                   required
                   readonly
-                  v-model="processForm.fail_qty"
+                  v-model="processForm"
                   style="text-align: right"
                 />
               </div>
@@ -241,7 +206,7 @@ onMounted(() => {
                   :class="inputStyle"
                   required
                   readonly
-                  v-model="processForm.remain_input_qty"
+                  v-model="processForm"
                   style="text-align: right"
                 />
               </div>
@@ -252,7 +217,7 @@ onMounted(() => {
                   :class="inputStyle"
                   required
                   readonly
-                  v-model="processForm.pass_qty"
+                  v-model="processForm"
                   style="text-align: right"
                 />
               </div>
@@ -288,7 +253,7 @@ onMounted(() => {
                   :class="inputStyle"
                   required
                   readonly
-                  v-model="processForm.procs_bgntm"
+                  v-model="processForm"
                   style="text-align: center"
                 />
               </div>
@@ -303,7 +268,7 @@ onMounted(() => {
                   :class="inputStyle"
                   required
                   readonly
-                  v-model="processForm.procs_endtm"
+                  v-model="processForm"
                   style="text-align: center"
                 />
               </div>

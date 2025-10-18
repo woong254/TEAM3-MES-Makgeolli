@@ -26,11 +26,16 @@ const saveProcessData = (make, equip, emp) => {
  * @returns {{make: object, equip: object, emp: object}}
  */
 const getProcessData = () => {
-  const data = processDataStore["currentProcessData"];
+  const data = processStorage["currentProcessData"];
   if (data) {
     console.log("서버 저장소에서 프로세스 데이터를 성공적으로 가져왔습니다.");
   } else {
     console.log("서버 저장소에서 프로세스 데이터를 찾을 수 없습니다.");
   }
   return data;
+};
+
+module.exports = {
+  saveProcessData,
+  getProcessData,
 };

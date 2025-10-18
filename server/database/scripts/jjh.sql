@@ -714,3 +714,37 @@ INSERT INTO processform(mk_list, equip_code, emp_no, prod_code, inpt_qty, procs_
 select * from processform;
 desc processform;
 select Now();
+
+-- data.mkd_no, 지시서 상세 목록
+-- data.prod_code, 제품코드
+-- data.equip_code, 설비 정보
+-- data.emp_id, 사원 정보
+select * from emp_master;
+select * from proc_master;
+select * from equip_master;
+select * from makedetail;
+select * from proc_flow_master;
+select * from proc_flow_detail;
+desc makedetail;
+
+-- 제품명, 작업지시일
+SELECT	pm.prod_name,
+		DATE_FORMAT(mf.writing_date, '%Y-%m-%d') AS writing_date
+FROM	makedetail md
+		JOIN prod_master pm
+        ON md.prod_code = pm.prod_code
+        JOIN makeform mf
+        ON md.mk_ord_no = mf.mk_ord_no
+WHERE 	pm.prod_code = 'PROD-20250101-003'
+		AND md.mkd_no = '59';
+-- 설비명, 공정명        
+SELECT	em.equip_name,
+		pm.proc_name
+FROM	proc_master pm
+		JOIN equip_master em
+        ON pm.equip_type = em.equip_type
+WHERE	em.equip_code = "EQ-021";
+-- 작업자명
+SELECT	emp_name
+FROM	emp_master
+WHERE	emp_id = 'EMP-20250616-0001';

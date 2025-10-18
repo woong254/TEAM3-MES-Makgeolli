@@ -62,14 +62,23 @@ router.post("/addProcessForm", async (req, res) => {
 
 // 공정제어 페이지가 켜질때 데이터를 가져오는 라우터
 router.get("/getSavedProcessData", async (req, res) => {
-  const data = getProcessData();
-  if (data) {
-    // 응답의 상태 코드를 200(OK)로 설정 이는 요청이 성공적으로 처리되었음을 의미합니다.
-    // json(data) JSON 형식 데이터 전송 data 변수에 담겨 있는 JavaScript 객체(공정 정보)를 JSON 형식의 문자열로 변환하여 클라이언트에게 응답 본문(Body)으로 전송합니다.
-    return res.status(200).json(data);
-  } else {
-    return res.status(404).json({ message: "저장된 공정 데이터가 없습니다." });
-  }
+  let data = getProcessData();
+  let dumnyData = {};
+
+  // 가져온 데이터 각각의 코드가 어떤건지 실체 확인
+  const param = {
+    mkd_no: data.make.mkd_no,
+    prod_code: data.make.prod_code,
+    equip_code: data.equip.equip_code,
+    emp_id: data.emp.emp_id,
+  };
+
+  const result = await prodOrdService.selectProcessControlData(param);
+  // 저장된 실제 데이터가 있는 경우
+  return res.status(200).json({
+    processData: data,
+    dbResult: result,
+  });
 });
 
 // 공정실적관리에서 서버로 보낸 데이터

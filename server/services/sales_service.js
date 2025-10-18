@@ -335,8 +335,6 @@ const getEpOsManage = async (data) => {
     OsIP,
     due_start_date,
     due_end_date,
-    ep_start_date,
-    ep_end_date,
   } = data;
   try {
     let sql = selectEpOsManage;
