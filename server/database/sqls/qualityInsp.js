@@ -398,9 +398,29 @@ JOIN def_master d ON d.def_item_id = n.def_item_id
 WHERE n.insp_id = 'IQC-20251017-001'
 ORDER BY d.def_item_name`;
 
-// 자재입고검사 수정
-// 자재입고검사 삭제
-// 자재입고검사 조회
+// 3. 자재입고검사 조회 
+const matInspSelect = `
+SELECT mi.insp_id -- 검사ID
+       ,mi.insp_name -- 검사명
+       ,mi.insp_date -- 검사일시
+       ,mi.emp_id -- 검사자
+       ,m.mat_name -- 검사대상(자재명)
+       ,cd.comncode_dtnm -- 품목구분
+       ,m.mat_spec -- 규격
+       ,m.mat_unit -- 단위
+       ,mi.insp_qty -- 검사량
+       ,mi.t_result -- 합격여부
+FROM mat_insp mi
+JOIN iis i
+  ON mi.iis_id = i.iis_id
+JOIN mat_master m
+  ON i.mat_code = m.mat_code
+JOIN comncode_dt cd
+  ON m.mat_item_code = cd.comncode_detailid
+WHERE 1=1
+`;
+
+
 
 module.exports = {
   selectInspTargetList,
@@ -424,4 +444,5 @@ module.exports = {
   selectMatInspNGsById,
   selectMatInspResultsById,
   selectMatInspHeaderById,
+  matInspSelect,
 };

@@ -3,6 +3,7 @@ const sqlList = require("../database/sqlList.js");
 const mariadb = require("../database/mapper.js");
 
 const matInspSearch = sqlList.matInspSearch;
+const matInspSelect = sqlList.matInspSelect;
 
 // 1. 품질 기준 관리
 // 1-1. 검사대상 조회
@@ -786,6 +787,80 @@ const deleteMatInsp = async (insp_id) => {
 };
 
 
+// 3. 자재입고검사 조회 
+// 3-1. 자재입고검사 조회 
+const matInspectSelect = async () => {
+  let list = await mariadb
+    .query("matInspSelect")
+    .catch((err) => console.log(err));
+  return list;
+};
+
+// 3-2. 자재입고검사 검색
+const searchMatInspList = async (data) => {
+  // 매개변수
+  const {
+    insp_name_word, //검사명
+    mat_name_word, //검사대상
+    comncode_code, //품목구분코드
+    emp_id_name, //검사자
+    start_date, //시작날짜
+    end_date //끝날짜
+  } = data;
+
+  try {
+    let sql = matInspSelect;
+    let params = [];
+
+    // 공백처리 안할시 오류 (WHERE 1=1로 마지막 처리되어있음)
+    // 검사명 검색
+    if (insp_name_word && insp_name_word.trim() !== "") {
+      sql += ` AND mi.insp_name LIKE ?`;
+      params.push(`%${insp_name_word.trim()}%`);
+    }
+    // 검사대상 검색
+    if (mat_name_word && mat_name_word.trim() !== "") {
+      sql += ` AND m.mat_name LIKE ?`;
+      params.push(`%${mat_name_word.trim()}%`);
+    }
+    // 품목구분 검색
+    if (comncode_code !== "") {
+      sql += ` AND cd.comncode_detailid = ?`;
+      params.push(comncode_code);
+    }
+    // 검사자 검색
+    if (emp_id_name && emp_id_name.trim() !== "") {
+      sql += ` AND mi.emp_id LIKE ?`;
+      params.push(`%${emp_id_name.trim()}%`);
+    }
+    // 시작날짜 검색
+        if (start_date && start_date.trim() !== "") {
+      sql += ` AND mi.insp_date >= ?`;
+      params.push(start_date.trim());
+    }
+    // 끝날짜 검색 
+        if (end_date && end_date.trim() !== "") {
+      sql += ` AND mi.insp_date < DATE_ADD(?, INTERVAL 1 DAY)`;
+      params.push(end_date.trim());
+    }
+
+    // 정렬
+    sql += " ORDER BY mi.insp_date DESC, i.iis_id DESC";
+
+    console.log("실제 SQL: ", sql);
+    console.log("파라미터: ", params);
+
+    const list = await mariadb.query(sql, params);
+    console.log("list 조회: ", list);
+
+    return list;
+  } catch (err) {
+    console.error("자재입고검사 검색 오류: ", err);
+    return [];
+  }
+};
+
+
 module.exports = {
   findInspTarget,
   findInspTargetSearch,
@@ -802,4 +877,6 @@ module.exports = {
   matInspDetail,
   updateMatInsp,
   deleteMatInsp,
+  matInspectSelect,
+  searchMatInspList,
 };

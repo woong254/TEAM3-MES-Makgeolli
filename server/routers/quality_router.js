@@ -134,4 +134,22 @@ router.delete("/matInsp/:id", async (req, res) => {
   res.send(result);
 });
 
+// 3. 자재입고검사 조회 
+// 3-1. 자재입고검사 리스트 조회
+router.get("/matInspList", async (req, res) => {
+  let result = await qualityService
+    .matInspectSelect()
+    .catch((err) => console.error(err));
+  res.send(result);
+});
+
+// 3-2. 자재입고검사 조회 검색
+router.post("/matInspListSearch", async (req, res) => {
+  let result = await qualityService
+    .searchMatInspList(req.body)
+    .catch((err) => console.error(err));
+  res.send(result);
+});
+
+
 module.exports = router;
