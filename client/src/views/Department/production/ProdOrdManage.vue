@@ -22,7 +22,6 @@ const goToProcessControl = () => {
   router.push({ name: 'processControl', query: { proc_code: '1' } }) // 라우트 이름을 사용
 }
 
-
 // 지시사항 검색 조건
 interface SearchMakeOrder {
   prod_name: string // 제품명
@@ -99,135 +98,152 @@ const endDateRange = computed(() => ({
 
 const state = ref({
   selected: null as MakeOrderDetail | null,
-});
+})
 
 const prevSelectedNo = ref<number | null>(null)
 
 // 선택한 지시건이 가진 공정명
 const selectProcName = (e: { data: MakeOrderDetail }) => {
-  const item = e.data;
+  const item = e.data
 
   // 이전 선택과 다를 때만 초기화하고 싶다면 조건 추가
   if (!state.value.selected || state.value.selected.mk_ord_no !== item.mk_ord_no) {
-    resetInputsAndSelections();
+    resetInputsAndSelections()
   }
 
-  state.value = { ...state.value, selected: item };
-  selectMake.value = item;
+  state.value = { ...state.value, selected: item }
+  selectMake.value = item
 
-  void onRowSelectEquip(item.proc_name);
-};
+  void onRowSelectEquip(item.proc_name)
+}
 
 const resetInputsAndSelections = () => {
   // 투입수량 초기화
-  makeRows.value = makeRows.value.map(row => ({
+  makeRows.value = makeRows.value.map((row) => ({
     ...row,
-  }));
+  }))
   // 선택 상태 초기화
-  selectMake.value = null;
-  selectEquip.value = null;
-  equipRows.value = [];
-};
+  selectMake.value = null
+  selectEquip.value = null
+  equipRows.value = []
+}
 
-const equipError = ref<string | null>(null);
+const equipError = ref<string | null>(null)
 
 // 선택한 지시건을 기준으로 사용 가능한 설비 조회
 const onRowSelectEquip = async (procName: string) => {
   try {
-    isEquipLoading.value = true;
-    equipError.value = null;
-    const res = await axios.get('/api/prodOrdManage/equipments', { params: { procName } });
-    equipRows.value = Array.isArray(res.data) ? res.data : [];
+    isEquipLoading.value = true
+    equipError.value = null
+    const res = await axios.get('/api/prodOrdManage/equipments', { params: { procName } })
+    equipRows.value = Array.isArray(res.data) ? res.data : []
   } catch (e) {
-    console.error(e);
-    equipRows.value = [];
-    equipError.value = '설비를 불러오지 못했습니다.';
+    console.error(e)
+    equipRows.value = []
+    equipError.value = '설비를 불러오지 못했습니다.'
   } finally {
-    isEquipLoading.value = false;
+    isEquipLoading.value = false
   }
-};
+}
 
 // 최초 로드
 onMounted(async () => {
-  const res = await axios.get('/api/prodOrdManage');
-  makeRows.value = res.data.makeRows ?? [];
-  empRows.value  = res.data.empRows  ?? [];
-});
+  const res = await axios.get('/api/prodOrdManage')
+  makeRows.value = res.data.makeRows ?? []
+  empRows.value = res.data.empRows ?? []
+})
 
-const isEquipLoading = ref(false);
+const isEquipLoading = ref(false)
 // 저장
-const isSubmitting = ref(false);
+const isSubmitting = ref(false)
 
 // 유효성 검사
 const validateBeforeGoToProcess = () => {
   if (!selectMake.value) {
-    alert('지시 목록에서 제품(행)을 선택하세요.');
-    return false;
+    alert('지시 목록에서 제품(행)을 선택하세요.')
+    return false
   }
 
-  const selectedRow = makeRows.value.find(row => row.mk_ord_no === selectMake.value!.mk_ord_no);
+  const selectedRow = makeRows.value.find((row) => row.mk_ord_no === selectMake.value!.mk_ord_no)
   if (!selectedRow || !selectedRow.inpt_qty) {
-    alert('선택한 지시의 투입수량을 작성하세요');
-    return false;
+    alert('선택한 지시의 투입수량을 작성하세요')
+    return false
   }
 
   if (!selectEquip.value) {
-    alert('설비를 선택하세요.');
-    return false;
+    alert('설비를 선택하세요.')
+    return false
   }
 
   if (!selectEmp.value) {
-    alert('작업자를 선택하세요.');
-    return false;
+    alert('작업자를 선택하세요.')
+    return false
   }
 
   // 최종 selectMake에도 반영
-  selectMake.value.inpt_qty = selectedRow.inpt_qty;
+  selectMake.value.inpt_qty = selectedRow.inpt_qty
 
-  return true;
-};
+  return true
+}
 
 const goToProcess = async () => {
-  if (isSubmitting.value) return;
-  if (!validateBeforeGoToProcess()) return;
+  if (isSubmitting.value) return
+  if (!validateBeforeGoToProcess()) return
 
-  const make = selectMake.value as MakeOrderDetail;
-  const equip = selectEquip.value as ChooseEquip;
-  const emp = selectEmp.value as ChooseEmp;
+  const make = selectMake.value as MakeOrderDetail
+  const equip = selectEquip.value as ChooseEquip
+  const emp = selectEmp.value as ChooseEmp
 
-  const makePayload  = {
-    mkd_no: make.mkd_no,           // 1. 지시서 상세 목록
-    prod_code: make.prod_code,     // 4. 제품코드
-    inpt_qty: make.inpt_qty        // 5. 현투입량
+  const makePayload = {
+    mkd_no: make.mkd_no, // 1. 지시서 상세 목록
+    prod_code: make.prod_code, // 4. 제품코드
+    inpt_qty: make.inpt_qty, // 5. 현투입량
   }
 
-  const equipPayload  = {
+  const equipPayload = {
     equip_code: equip.equip_code, // 2. 설비코드
   }
 
-  const empPayload  = {
-    emp_id: emp.emp_id,            // 3. 사원번호
+  const empPayload = {
+    emp_id: emp.emp_id, // 3. 사원번호
   }
 
-  console.log(makePayload);
-  console.log(equipPayload);
-  console.log(empPayload);
+  console.log(makePayload)
+  console.log(equipPayload)
+  console.log(empPayload)
 
   try {
-    isSubmitting.value = true;
-    const res = await axios.get('/api/goToProcess', { params: {
-      makePayload: JSON.stringify(makePayload),
-      equipPayload: JSON.stringify(equipPayload),
-      empPayload: JSON.stringify(empPayload),
-    }});
-    console.log(res);
+    isSubmitting.value = true
+    const res = await axios.get('/api/goToProcess', {
+      params: {
+        makePayload: JSON.stringify(makePayload),
+        equipPayload: JSON.stringify(equipPayload),
+        empPayload: JSON.stringify(empPayload),
+      },
+    })
+    console.log(res)
   } catch (err) {
-    console.error(err);
-    alert('등록 실패');
+    console.error(err)
+    alert('등록 실패')
   } finally {
-    isSubmitting.value = false;
+    isSubmitting.value = false
   }
-};
+}
+
+//preitteir 오류 input 빼내기
+const onInputInptQty = (data: MakeOrderDetail) => {
+  const max = Number(data.mk_num || 0)
+  const cur = Number(data.inpt_qty || 0)
+
+  // 1) 입력값을 0~max 범위로 보정
+  data.inpt_qty = Math.min(max, Math.max(0, cur))
+
+  // 2) 현재 선택행(selectMake)도 함께 동기화
+  // 주의: <script setup>함수 내부에서는 ref는 .value로 접근
+  if (selectMake.value && selectMake.value.mk_ord_no === data.mk_ord_no) {
+    selectMake.value.inpt_qty = data.inpt_qty
+  }
+}
 
 const currentPageTitle = ref('공정 실적 관리')
 
@@ -335,7 +351,12 @@ const baseInputClass =
           <ComponentCard title="작업지시목록">
             <template #header-right>
               <div class="flex items-center">
-                <button type="button" class="btn-color btn-common" @click="goToProcess" :disabled="isSubmitting">
+                <button
+                  type="button"
+                  class="btn-color btn-common"
+                  @click="goToProcess"
+                  :disabled="isSubmitting"
+                >
                   {{ isSubmitting ? '이동 중' : '공정 제어' }}
                 </button>
               </div>
@@ -412,13 +433,13 @@ const baseInputClass =
                     :pt="{ columnHeaderContent: 'justify-center' }"
                     headerStyle="width: 5%"
                   />
-                  
+
                   <Column
-                  field="inpt_qty"
-                  header="투입수량"
-                  :pt="{ columnHeaderContent: 'justify-center' }"
-                  style="text-align: right"
-                  headerStyle="width: 7%"
+                    field="inpt_qty"
+                    header="투입수량"
+                    :pt="{ columnHeaderContent: 'justify-center' }"
+                    style="text-align: right"
+                    headerStyle="width: 7%"
                   >
                     <template #body="{ data }">
                       <input
@@ -428,13 +449,7 @@ const baseInputClass =
                         :max="Number(data.mk_num || 0)"
                         :class="baseInputClass"
                         style="text-align: right; height: 2rem"
-
-                        @input="
-                          data.inpt_qty = Math.min(Number(data.mk_num || 0), Math.max(0, Number(data.inpt_qty || 0)));
-                          if (selectMake && selectMake.mk_ord_no === data.mk_ord_no) {
-                            selectMake.inpt_qty = data.inpt_qty;
-                          }
-                        "
+                        @input="onInputInptQty(data)"
                         placeholder="투입"
                       />
                     </template>
@@ -503,7 +518,11 @@ const baseInputClass =
                 >
                   <template #empty>
                     <div class="text-center">
-                      {{ isEquipLoading ? '설비를 불러오는 중...' : (equipError || '지시 목록을 선택해주세요') }}
+                      {{
+                        isEquipLoading
+                          ? '설비를 불러오는 중...'
+                          : equipError || '지시 목록을 선택해주세요'
+                      }}
                     </div>
                   </template>
                   <Column

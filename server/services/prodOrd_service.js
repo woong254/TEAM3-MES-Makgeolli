@@ -63,6 +63,31 @@ const chooseAboutEquip = async (procName) => {
   return equipRows;
 };
 
+// 공정제어 처음에 화면에 보여주기 위한 데이터 이름들 확인하는(코드만 보내줘서 select해서 찾아봐야함)
+const selectProcessControlData = async (data) => {
+  const mnPcResult = await mariadb.query(
+    "SELECT	pm.prod_name,	DATE_FORMAT(mf.writing_date, '%Y-%m-%d') AS writing_date FROM	makedetail md JOIN prod_master pm ON md.prod_code = pm.prod_code JOIN makeform mf ON md.mk_ord_no = mf.mk_ord_no WHERE 	pm.prod_code = ? AND md.mkd_no = ?",
+    [data.prod_code, data.mkd_no]
+  );
+  const ecResult = await mariadb.query(
+    "SELECT em.equip_name, pm.proc_name FROM	proc_master pm JOIN equip_master em ON pm.equip_type = em.equip_type WHERE	em.equip_code = ?",
+    [data.equip_code]
+  );
+  const eiResult = await mariadb.query(
+    "SELECT	emp_name FROM	emp_master WHERE	emp_id = ?",
+    [data.emp_id]
+  );
+
+  const processData = {
+    prod_name: mnPcResult[0].prod_name,
+    writing_date: mnPcResult[0].writing_date,
+    equip_name: ecResult[0].equip_name,
+    proc_name: ecResult[0].proc_name,
+    emp_name: eiResult[0].emp_name,
+  };
+  return processData;
+};
+
 // 공저제어 작업시작 버튼
 const insertProcessForm = async (params) => {
   try {
@@ -145,5 +170,7 @@ module.exports = {
   findAllMakeList,
   chooseAboutEquip,
   insertProcessForm,
+  selectProcessControlData,
   calculateRemainingQty,
+
 };
