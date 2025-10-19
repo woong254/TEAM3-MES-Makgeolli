@@ -358,13 +358,13 @@ const rowUnselectHook = () => {
                   field="insp_id"
                   header="검사ID"
                   :pt="{ columnHeaderContent: 'justify-center' }"
-                  style="min-width: 80px"
+                  style="min-width: 150px"
                 ></Column>
                 <Column
                   field="insp_name"
                   header="검사명"
                   :pt="{ columnHeaderContent: 'justify-center' }"
-                  style="min-width: 150px"
+                  style="min-width: 250px"
                 ></Column>
                 <Column
                   field="prod_code"
@@ -382,7 +382,7 @@ const rowUnselectHook = () => {
                   field="prod_spec"
                   header="규격"
                   :pt="{ columnHeaderContent: 'justify-center' }"
-                  style="min-width: 50px; text-align: right"
+                  style="min-width: 50px; text-align: left"
                 ></Column>
                 <Column
                   field="prod_unit"
@@ -418,7 +418,7 @@ const rowUnselectHook = () => {
                   field="remark"
                   header="비고"
                   :pt="{ columnHeaderContent: 'justify-center' }"
-                  style="min-width: 100px"
+                  style="min-width: 150px"
                 >
                   <template #body="{ data }">
                     <input v-model="data.remark" type="text" :class="baseInputClass" />

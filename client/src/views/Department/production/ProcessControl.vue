@@ -5,7 +5,10 @@ import ComponentCard from '@/components/common/ComponentCardOrder.vue'
 import '@/assets/common.css'
 import { ref, onMounted } from 'vue'
 import axios from 'axios' // axios 연결
-
+import { useRoute } from 'vue-router'
+const route = useRoute()
+const empId = route.query.emp_id as string
+console.log('넘어온 사원번호:', empId)
 // 제목이름 지정 변수
 const currentPageTitle = ref('공정제어')
 
@@ -16,54 +19,82 @@ const labelStyle = 'font-bold block text-lg text-gray-700 dark:text-gray-400 mb-
 
 // 공정제어 화면 출력 데이터 타입
 interface processFormItem {
+  procs_no: number
   mk_num: number
   prod_name: string
   writing_date: string
   equip_name: string
   proc_name: string
   emp_name: string
+  inpt_qty: number
 }
 
 // 공정제어 화면 출력 데이터 초기값
 const processForm = ref<processFormItem>({
+  procs_no: 0,
   mk_num: 0,
   prod_name: '',
   writing_date: '',
   equip_name: '',
   proc_name: '',
   emp_name: '',
+  inpt_qty: 0,
 })
-
-// 서버에서 가져온 데이터를 저장할 반응형 변수 선언
-const makeData = ref()
-const equipData = ref()
-const empData = ref()
 
 // 화면이 켜질때 가져올 데이터 함수
 const fetchProcessData = async () => {
   try {
-    const response = await axios.get('/api/getSavedProcessData')
-    makeData.value = response.data.processData.make
-    equipData.value = response.data.processData.equip
-    empData.value = response.data.processData.emp
-    processForm.value.prod_name = response.data.dbResult.prod_name
-    processForm.value.writing_date = response.data.dbResult.writing_date
-    processForm.value.equip_name = response.data.dbResult.equip_name
-    processForm.value.proc_name = response.data.dbResult.proc_name
-    processForm.value.emp_name = response.data.dbResult.emp_name
-    processForm.value.mk_num = makeData.value.inpt_qty
+    const response = await axios.get('/api/getProcessData', {
+      params: {
+        emp_id: empId,
+      },
+    })
+    const dbResult = response.data.result[0]
+    console.log(dbResult)
+    processForm.value.procs_no = dbResult.procs_no
+    processForm.value.prod_name = dbResult.prod_name
+    processForm.value.writing_date = dbResult.writing_date
+    processForm.value.equip_name = dbResult.equip_name
+    processForm.value.proc_name = dbResult.now_procs
+    processForm.value.emp_name = dbResult.emp_name
+    processForm.value.mk_num = dbResult.mk_num
+    processForm.value.inpt_qty = dbResult.inpt_qty
   } catch (err) {
     console.error('fetchProcessData에서 오류가 생겼습니다. 오류내용 : ', err)
   }
 }
-
+// 작업시작 버튼 누르면 시작하는 함수의 매개변수 데이터 타입
+interface processRequest {
+  procs_no: number
+}
+// 작업시작 버튼 누르고 나온 결과값 받는 함수
+const sf = ref({
+  prev_input_qty: 0, // 기투입량
+  remain_qty: 0, // 미투입량
+  procs_bgntm: '작업시작을 해주세요', // 작업시작시간
+})
+// 작업종료 버튼 누르고 나온 결과값 받는 함수
+const ed = ref({
+  procs_endtm: '작업종료를 해주세요', // 작업종료시간
+  procs_no: 0,
+  mk_qty: 10,
+  fail_qty: 0,
+  pass_qty: 0,
+})
 // 작업시작 버튼 누르면 시작하는 함수
 const processStart = async () => {
-  console.log(processForm.value)
+  const obj: processRequest = {
+    procs_no: processForm.value.procs_no,
+  }
   try {
-    const result = await axios.post('/api/addProcessForm')
-    const addRes = result.data
-    if (!addRes.isSuccessed) {
+    // 작업시작 버튼 누르고 받을 데이터 axios
+    const response = await axios.post('/api/processStart', obj)
+    console.log('작업시작 버튼 누르고 받은 데이터 response : ', response)
+
+    sf.value = response.data.result
+    console.log('sf.value:', sf.value)
+
+    if (!response.data.isSuccessed) {
       alert('작업시작실패')
       return
     } else {
@@ -71,6 +102,27 @@ const processStart = async () => {
     }
   } catch (err) {
     console.error('processStart 오류 : ', err)
+  }
+}
+
+// 작업종료버튼 눌렀을때 실행
+const processEnd = async () => {
+  const endObj = {
+    procs_no: processForm.value.procs_no,
+    mk_qty: ed.value.mk_qty,
+  }
+  try {
+    const response = await axios.post('/api/modifyProcessForm', endObj)
+    console.log('modifyProcessForm:', response)
+    ed.value = response.data.result // end data
+    if (!response.data.isSuccessed) {
+      alert('작업시작실패')
+      return
+    } else {
+      alert('작업종료성공')
+    }
+  } catch (error) {
+    console.error('processEnd오류 : ', error)
   }
 }
 
@@ -165,7 +217,7 @@ onMounted(() => {
                   :class="inputStyle"
                   required
                   readonly
-                  v-model="processForm"
+                  v-model="ed.mk_qty"
                   style="text-align: right"
                 />
               </div>
@@ -180,7 +232,7 @@ onMounted(() => {
                   :class="inputStyle"
                   required
                   readonly
-                  v-model="processForm"
+                  v-model="sf.prev_input_qty"
                   style="text-align: right"
                 />
               </div>
@@ -191,7 +243,7 @@ onMounted(() => {
                   :class="inputStyle"
                   required
                   readonly
-                  v-model="processForm"
+                  v-model="ed.fail_qty"
                   style="text-align: right"
                 />
               </div>
@@ -206,7 +258,7 @@ onMounted(() => {
                   :class="inputStyle"
                   required
                   readonly
-                  v-model="processForm"
+                  v-model="sf.remain_qty"
                   style="text-align: right"
                 />
               </div>
@@ -217,7 +269,7 @@ onMounted(() => {
                   :class="inputStyle"
                   required
                   readonly
-                  v-model="processForm"
+                  v-model="ed.pass_qty"
                   style="text-align: right"
                 />
               </div>
@@ -253,7 +305,7 @@ onMounted(() => {
                   :class="inputStyle"
                   required
                   readonly
-                  v-model="processForm"
+                  v-model="sf.procs_bgntm"
                   style="text-align: center"
                 />
               </div>
@@ -268,7 +320,7 @@ onMounted(() => {
                   :class="inputStyle"
                   required
                   readonly
-                  v-model="processForm"
+                  v-model="ed.procs_endtm"
                   style="text-align: center"
                 />
               </div>
@@ -285,7 +337,12 @@ onMounted(() => {
         >
           작업시작
         </button>
-        <button type="button" class="btn-reset btn-common btn-color" style="margin-left: 10px">
+        <button
+          type="button"
+          class="btn-reset btn-common btn-color"
+          style="margin-left: 10px"
+          @click="processEnd"
+        >
           작업종료
         </button>
       </div>

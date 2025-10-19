@@ -65,63 +65,130 @@ const chooseAboutEquip = async (procName) => {
 
 // 공정제어 처음에 화면에 보여주기 위한 데이터 이름들 확인하는(코드만 보내줘서 select해서 찾아봐야함)
 const selectProcessControlData = async (data) => {
-  const mnPcResult = await mariadb.query(
-    "SELECT	pm.prod_name,	DATE_FORMAT(mf.writing_date, '%Y-%m-%d') AS writing_date FROM	makedetail md JOIN prod_master pm ON md.prod_code = pm.prod_code JOIN makeform mf ON md.mk_ord_no = mf.mk_ord_no WHERE 	pm.prod_code = ? AND md.mkd_no = ?",
-    [data.prod_code, data.mkd_no]
-  );
-  const ecResult = await mariadb.query(
-    "SELECT em.equip_name, pm.proc_name FROM	proc_master pm JOIN equip_master em ON pm.equip_type = em.equip_type WHERE	em.equip_code = ?",
-    [data.equip_code]
-  );
-  const eiResult = await mariadb.query(
-    "SELECT	emp_name FROM	emp_master WHERE	emp_id = ?",
-    [data.emp_id]
-  );
+  const { emp_id } = data;
 
-  const processData = {
-    prod_name: mnPcResult[0].prod_name,
-    writing_date: mnPcResult[0].writing_date,
-    equip_name: ecResult[0].equip_name,
-    proc_name: ecResult[0].proc_name,
-    emp_name: eiResult[0].emp_name,
-  };
-  return processData;
+  const result = await mariadb.query(
+    `SELECT	pf.procs_no,
+	    	pm.prod_name,
+        now_procs,
+        em.equip_name,
+        empm.emp_name,
+        DATE_FORMAT(mf.writing_date, '%Y-%m-%d') AS writing_date,
+        md.mk_num,
+        pf.inpt_qty
+FROM	  processform pf
+		    JOIN prod_master pm 
+        ON pf.prod_code = pm.prod_code
+        JOIN makedetail md
+        ON pf.mk_list = md.mkd_no
+        JOIN makeform mf 
+        ON md.mk_ord_no = mf.mk_ord_no
+        JOIN equip_master em 
+        ON pf.equip_code = em.equip_code
+        JOIN emp_master empm
+        ON pf.emp_no = empm.emp_id
+WHERE	  empm.emp_id = ?
+AND     pf.procs_st = 't1'`,
+    [emp_id]
+  );
+  return result;
+};
+// 작업시작 버튼
+const processStart = async (params) => {
+  try {
+    const insertResult = await mariadb.query(
+      `UPDATE	processform
+SET		procs_bgntm = Now(),
+        procs_st = 't2'
+WHERE	procs_no = ?`,
+      [params.procs_no]
+    );
+
+    const [updatedRecord] = await mariadb.query(
+      `SELECT DATE_FORMAT(pf.procs_bgntm, '%Y-%m-%d %H:%i:%s') AS procs_bgntm,
+              sum(pf.inpt_qty) AS prev_input_qty,	
+              (md.mk_num - sum(pf.inpt_qty)) AS remain_qty	              
+       FROM processform pf
+            JOIN makedetail md
+            ON pf.mk_list = md.mkd_no
+       WHERE pf.procs_no = ?`,
+      [params.procs_no]
+    );
+    return { isSuccessed: true, result: updatedRecord };
+  } catch (err) {
+    console.error(err);
+  }
 };
 
-// 공저제어 작업시작 버튼
+// 공정제어 작업종료 버튼
+const updateProcessForm = async (params) => {
+  try {
+    // 작업종료 행 업데이트
+    const updateResult = await mariadb.query(
+      "UPDATE	processform SET	mk_qty = ?,	procs_endtm = Now(), procs_st = 't3' WHERE	procs_no = ?",
+      [params.mk_qty, params.procs_no]
+    );
+    console.log("updateResult:", updateResult);
+
+    // 업데이트된 행 다시 조회
+    const [updatedRow] = await mariadb.query(
+      "SELECT DATE_FORMAT(procs_endtm, '%Y-%m-%d %H:%i:%s') AS procs_endtm, mk_qty, fail_qty, pass_qty FROM processform WHERE procs_no = ?",
+      [params.procs_no]
+    );
+    console.log("updatedRow:", updatedRow);
+
+    return { isSuccessed: true, result: updatedRow };
+  } catch (error) {
+    console.error(error);
+  }
+};
+
+// 공정실적관리테이블에 입력
 const insertProcessForm = async (params) => {
   try {
-    await mariadb.query(
-      "INSERT INTO processform(mk_list, equip_code, emp_no, prod_code, inpt_qty, procs_bgntm, prog, procs_st, now_procs) VALUES(?,?,?,?,?,Now(),0,?,?);",
+    // 1. 현재 공정명 가져오기
+    const [procRow] = await mariadb.query(
+      `SELECT pm.proc_name 
+       FROM proc_master pm 
+       JOIN equip_master em ON pm.equip_type = em.equip_type 
+       WHERE em.equip_code = ?`,
+      [params.equip_code]
+    );
+
+    const now_procs = procRow ? procRow.proc_name : "";
+
+    // 2. 공정실적관리 테이블에 삽입
+    const insertResult = await mariadb.query(
+      `INSERT INTO processform
+      (mk_list, equip_code, emp_no, prod_code, inpt_qty, procs_st, now_procs)
+      VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [
         params.mk_list,
         params.equip_code,
         params.emp_no,
         params.prod_code,
         params.inpt_qty,
-        params.procs_bgntm,
-        params.prog,
         params.procs_st,
-        params.now_procs,
+        now_procs,
       ]
     );
-    return { isSuccessed: true };
+
+    console.log("insertResult:", insertResult);
+    return { isSuccessed: true, result: insertResult };
   } catch (err) {
     console.error("insertProcessForm 오류 : ", err);
     return { isSuccessed: false };
   }
 };
 
-
 // 공정실적에서 입력한 값이 공정 제어에 값이 있는지 비교
 const calculateRemainingQty = async (prod_code, target_qty) => {
   try {
-
     // 입력값 검증
-    if (!prod_code || typeof target_qty !== 'number') {
+    if (!prod_code || typeof target_qty !== "number") {
       return {
         success: false,
-        error: 'Invalid input: prod_code and target_qty are required',
+        error: "Invalid input: prod_code and target_qty are required",
       };
     }
 
@@ -150,16 +217,16 @@ const calculateRemainingQty = async (prod_code, target_qty) => {
 
     return {
       success: true,
-      status: remaining_qty > 0 ? 'incomplete' : 'complete',
+      status: remaining_qty > 0 ? "incomplete" : "complete",
       total_inpt_qty,
       remaining_qty,
       message,
     };
   } catch (err) {
     console.error(err);
-    return { 
-      success: false, 
-      error: err.message 
+    return {
+      success: false,
+      error: err.message,
     };
   }
 };
@@ -172,5 +239,6 @@ module.exports = {
   insertProcessForm,
   selectProcessControlData,
   calculateRemainingQty,
-
+  updateProcessForm,
+  processStart,
 };

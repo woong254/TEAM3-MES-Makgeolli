@@ -12,15 +12,10 @@ import axios from 'axios'
 import flatPickr from 'vue-flatpickr-component'
 import 'flatpickr/dist/flatpickr.css'
 import { Korean } from 'flatpickr/dist/l10n/ko.js'
-import ProcessControl from './ProcessControl.vue'
 
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
-
-const goToProcessControl = () => {
-  router.push({ name: 'processControl', query: { proc_code: '1' } }) // 라우트 이름을 사용
-}
 
 // 지시사항 검색 조건
 interface SearchMakeOrder {
@@ -220,6 +215,10 @@ const goToProcess = async () => {
         equipPayload: JSON.stringify(equipPayload),
         empPayload: JSON.stringify(empPayload),
       },
+    })
+    router.push({
+      path: '/processControl',
+      query: { emp_id: emp.emp_id },
     })
     console.log(res)
   } catch (err) {

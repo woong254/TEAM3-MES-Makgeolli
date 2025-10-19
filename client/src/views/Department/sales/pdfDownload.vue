@@ -273,7 +273,7 @@ const exportPDF = async () => {
                     style="
                       border: 0.5px solid #000;
                       padding: 4px 10px;
-                      text-align: center;
+                      text-align: left;
                       font-size: 0.7rem;
                       vertical-align: middle;
                       height: 25px;
@@ -299,7 +299,7 @@ const exportPDF = async () => {
                     style="
                       border: 0.5px solid #000;
                       padding: 4px 10px;
-                      text-align: center;
+                      text-align: left;
                       font-size: 0.7rem;
                       vertical-align: middle;
                       height: 25px;
@@ -329,7 +329,7 @@ const exportPDF = async () => {
                     style="
                       border: 0.5px solid #000;
                       padding: 4px 10px;
-                      text-align: center;
+                      text-align: left;
                       font-size: 0.7rem;
                       vertical-align: middle;
                       height: 25px;
@@ -355,7 +355,7 @@ const exportPDF = async () => {
                     style="
                       border: 0.5px solid #000;
                       padding: 4px 10px;
-                      text-align: center;
+                      text-align: left;
                       font-size: 0.7rem;
                       vertical-align: middle;
                       height: 25px;
@@ -437,7 +437,7 @@ const exportPDF = async () => {
                     style="
                       border: 0.5px solid #000;
                       padding: 4px 10px;
-                      text-align: center;
+                      text-align: left;
                       font-size: 0.7rem;
                       vertical-align: middle;
                       height: 25px;
@@ -548,7 +548,7 @@ const exportPDF = async () => {
                   <td
                     style="
                       border: 1px solid #000;
-                      text-align: right;
+                      text-align: left;
                       padding: 0px 10px;
                       font-size: 0.7rem;
                     "

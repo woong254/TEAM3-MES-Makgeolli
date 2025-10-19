@@ -235,7 +235,7 @@ const getOrderFormSearch = async () => {
       // 주문 제품 리스트 숫자 변환
       const convertedList = result.data.list1.map((item: OrderItem) => ({
         ...item,
-        op_qty: Number(item.op_qty), // 문자열 -> 숫자
+        op_qty: Number(item.op_qty).toFixed(2), // 문자열 -> 숫자
       }))
 
       dbOrderProducts.value = structuredClone(convertedList)
@@ -275,7 +275,7 @@ const selectOrderFromModal = async (selectedOrder: OrderInfoInterface) => {
 
     const convertedList = result.data.map((item: OrderItem) => ({
       ...item,
-      op_qty: Number(item.op_qty),
+      op_qty: Number(item.op_qty).toFixed(2),
     }))
 
     dbOrderProducts.value = structuredClone(convertedList)
@@ -859,7 +859,7 @@ const deleteOrder = async () => {
                   field="prod_spec"
                   header="규격"
                   :pt="{ columnHeaderContent: 'justify-center' }"
-                  style="text-align: right"
+                  style="text-align: left"
                   headerStyle="width: 5%"
                 ></Column>
                 <Column
@@ -873,7 +873,7 @@ const deleteOrder = async () => {
                   header="수량"
                   style="text-align: right"
                   :pt="{ columnHeaderContent: 'justify-center' }"
-                  headerStyle="width: 5%"
+                  headerStyle="width: 6%"
                 >
                   <template #body="{ data }">
                     <input
@@ -883,12 +883,7 @@ const deleteOrder = async () => {
                       :style="{ textAlign: 'right' }"
                       :class="baseInputClass"
                       style="height: 2rem"
-                      step="1"
-                      @blur="
-                        data.op_qty = Number(
-                          Number.isFinite(+data.op_qty) ? Math.max(1, +data.op_qty) : 1,
-                        ).toFixed(2)
-                      "
+                      step="0.01"
                     />
                   </template>
                 </Column>
