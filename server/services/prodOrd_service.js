@@ -6,6 +6,24 @@ const {
   selectWorkerAll,
 } = require("../database/sqls/prodOrdManage");
 
+// ----------------------------------------------------------------------
+// 서버 메모리에 실행 중인 공정 시뮬레이션을 관리하는 맵
+// 키: procs_no, 값: setInterval ID
+// *참고: 로드 밸런싱 환경에서는 Redis/Message Queue 등으로 대체해야 함*
+const activeProcesses = {};
+
+// 공정 번호에 해당하는 시뮬레이션 중지 함수
+const stopProcessSimulation = (procs_no) => {
+  if (activeProcesses[procs_no]) {
+    clearInterval(activeProcesses[procs_no]);
+    delete activeProcesses[procs_no];
+    console.log(`[Simulation] Process ${procs_no} stopped.`);
+    return true;
+  }
+  return false;
+};
+// ----------------------------------------------------------------------
+
 // 생산 지시 목록
 const findByEmpId = async (empId) => {
   let list = await mariadb
@@ -63,110 +81,306 @@ const chooseAboutEquip = async (procName) => {
   return equipRows;
 };
 
-// 공정제어 처음에 화면에 보여주기 위한 데이터 이름들 확인하는(코드만 보내줘서 select해서 찾아봐야함)
+/**
+ * selectProcessControlData: 공정제어 처음에 화면에 보여주기 위한 데이터를 조회합니다.
+ * **기투입량(prev_input_qty) 및 미투입량(remain_qty) 계산 로직 추가.**
+ */
 const selectProcessControlData = async (data) => {
   const { emp_id } = data;
 
-  const result = await mariadb.query(
-    `SELECT	pf.procs_no,
-	    	pm.prod_name,
-        now_procs,
-        em.equip_name,
-        empm.emp_name,
-        DATE_FORMAT(mf.writing_date, '%Y-%m-%d') AS writing_date,
-        md.mk_num,
-        pf.inpt_qty
-FROM	  processform pf
-		    JOIN prod_master pm 
-        ON pf.prod_code = pm.prod_code
-        JOIN makedetail md
-        ON pf.mk_list = md.mkd_no
-        JOIN makeform mf 
-        ON md.mk_ord_no = mf.mk_ord_no
-        JOIN equip_master em 
-        ON pf.equip_code = em.equip_code
-        JOIN emp_master empm
-        ON pf.emp_no = empm.emp_id
-WHERE	  empm.emp_id = ?
-AND     pf.procs_st = 't1'`,
-    [emp_id]
-  );
-  return result;
-};
-// 작업시작 버튼
-const processStart = async (params) => {
   try {
-    const insertResult = await mariadb.query(
-      `UPDATE	processform
-SET		procs_bgntm = Now(),
-        procs_st = 't2'
-WHERE	procs_no = ?`,
-      [params.procs_no]
+    const result = await mariadb.query(
+      `SELECT pf.procs_no,
+              pm.prod_name,
+              now_procs,
+              em.equip_name,
+              empm.emp_name,
+              DATE_FORMAT(mf.writing_date, '%Y-%m-%d') AS writing_date,
+              md.mk_num,    -- 총 지시량
+              pf.inpt_qty,  -- 현투입량 (현재 프로세스에 할당된 투입량)
+              
+              -- 1. 기투입량 (Previous Input Qty): 현재 프로세스 외에 할당된 투입량
+              (
+                  SELECT COALESCE(SUM(inpt_qty), 0)
+                  FROM processform pf_sub
+                  WHERE pf_sub.mk_list = pf.mk_list 
+                    AND pf_sub.procs_no != pf.procs_no -- 현재 't1' 프로세스 제외
+              ) AS prev_input_qty,
+              
+              -- 2. 미투입량 (Remaining Qty): 총 지시량 - (이 지시 품목에 할당된 모든 inpt_qty의 합)
+              (
+                  md.mk_num - 
+                  (
+                      SELECT COALESCE(SUM(inpt_qty), 0)
+                      FROM processform pf_sub
+                      WHERE pf_sub.mk_list = pf.mk_list
+                  )
+              ) AS remain_qty
+
+      FROM processform pf
+              JOIN prod_master pm 
+              ON pf.prod_code = pm.prod_code
+              JOIN makedetail md
+              ON pf.mk_list = md.mkd_no
+              JOIN makeform mf 
+              ON md.mk_ord_no = mf.mk_ord_no
+              JOIN equip_master em 
+              ON pf.equip_code = em.equip_code
+              JOIN emp_master empm
+              ON pf.emp_no = empm.emp_id
+      WHERE empm.emp_id = ?
+      AND pf.procs_st = 't1'`,
+      [emp_id]
     );
 
-    const [updatedRecord] = await mariadb.query(
-      `SELECT DATE_FORMAT(pf.procs_bgntm, '%Y-%m-%d %H:%i:%s') AS procs_bgntm,
-              sum(pf.inpt_qty) AS prev_input_qty,	
-              (md.mk_num - sum(pf.inpt_qty)) AS remain_qty	              
-       FROM processform pf
-            JOIN makedetail md
-            ON pf.mk_list = md.mkd_no
-       WHERE pf.procs_no = ?`,
-      [params.procs_no]
-    );
-    return { isSuccessed: true, result: updatedRecord };
+    // 대부분의 DB 라이브러리가 [rows, fields] 형태로 반환하는 경우를 대비해 rows만 추출
+    if (Array.isArray(result) && Array.isArray(result[0])) {
+      return result[0];
+    }
+
+    // 이미 rows만 반환되거나, 데이터가 없는 경우 (e.g. [] 또는 null)
+    return result;
   } catch (err) {
-    console.error(err);
-  }
-};
-
-// 공정제어 작업종료 버튼
-const updateProcessForm = async (params) => {
-  try {
-    // 작업종료 행 업데이트
-    const updateResult = await mariadb.query(
-      "UPDATE	processform SET	mk_qty = ?,	procs_endtm = Now(), procs_st = 't3' WHERE	procs_no = ?",
-      [params.mk_qty, params.procs_no]
+    console.error(
+      `[selectProcessControlData] Error fetching data for emp_id ${emp_id}:`,
+      err
     );
-    console.log("updateResult:", updateResult);
-
-    // 업데이트된 행 다시 조회
-    const [updatedRow] = await mariadb.query(
-      "SELECT DATE_FORMAT(procs_endtm, '%Y-%m-%d %H:%i:%s') AS procs_endtm, mk_qty, fail_qty, pass_qty FROM processform WHERE procs_no = ?",
-      [params.procs_no]
-    );
-    console.log("updatedRow:", updatedRow);
-
-    return { isSuccessed: true, result: updatedRow };
-  } catch (error) {
-    console.error(error);
+    throw err; // 에러를 상위로 전파
   }
 };
 
 /**
- * [수정] insertProcessForm: 공정실적관리 테이블에 작업 시작 정보를 입력합니다.
- * 두 개의 DB 쿼리가 연속적으로 실행되므로 트랜잭션을 적용하여 데이터 무결성을 보장합니다.
+ * processStart: 작업 시작 버튼을 누르면 DB 상태를 업데이트하고 생산 시뮬레이션을 시작합니다.
+ * **생산량이 문자열로 연결되어 1111처럼 보이는 문제 수정 (Number() 강제 형변환 적용).**
+ */
+const processStart = async (params) => {
+  try {
+    // 1. DB 상태를 't2' (진행 중)로 업데이트
+    await mariadb.query(
+      `UPDATE processform
+SET procs_bgntm = Now(),
+    procs_st = 't2'
+WHERE procs_no = ?`,
+      [params.procs_no]
+    );
+
+    // 2. 업데이트된 레코드와 최대 생산량을 가져옴
+    const updatedRecordResult = await mariadb.query(
+      `SELECT pf.procs_no,
+              pf.inpt_qty,
+              DATE_FORMAT(pf.procs_bgntm, '%Y-%m-%d %H:%i:%s') AS procs_bgntm
+        FROM processform pf
+        WHERE pf.procs_no = ?`,
+      [params.procs_no]
+    );
+
+    // 쿼리 결과에서 단일 행 데이터 추출
+    const updatedRecord =
+      Array.isArray(updatedRecordResult) &&
+      Array.isArray(updatedRecordResult[0]) &&
+      updatedRecordResult[0].length > 0
+        ? updatedRecordResult[0][0]
+        : Array.isArray(updatedRecordResult) && updatedRecordResult.length > 0
+        ? updatedRecordResult[0]
+        : null;
+
+    if (!updatedRecord) {
+      throw new Error("작업 시작 후 업데이트된 레코드를 찾을 수 없습니다.");
+    }
+
+    // ------------------------------------------------------------------
+    // 3. 서버 측에서 생산량(mk_qty) 자동 증가 시뮬레이션 시작
+    // ------------------------------------------------------------------
+    const procs_no = updatedRecord.procs_no;
+    const maxQty = updatedRecord.inpt_qty; // 현 투입량 = 최대 생산량
+
+    if (activeProcesses[procs_no]) {
+      stopProcessSimulation(procs_no); // 혹시 모를 중복 실행 방지
+    }
+
+    // 2초마다 1개씩 증가 시뮬레이션 (실제 환경에 맞게 시간 조정 필요)
+    activeProcesses[procs_no] = setInterval(async () => {
+      try {
+        // 현재 DB의 mk_qty 값을 가져옴
+        const result = await mariadb.query(
+          "SELECT mk_qty FROM processform WHERE procs_no = ?",
+          [procs_no]
+        );
+
+        // DB 결과에서 mk_qty가 있는 row 객체를 안전하게 추출
+        const current =
+          Array.isArray(result) &&
+          Array.isArray(result[0]) &&
+          result[0].length > 0
+            ? result[0][0] // [rows, fields] 형식 처리
+            : Array.isArray(result) && result.length > 0
+            ? result[0]
+            : null; // rows 형식 처리
+
+        if (!current) {
+          stopProcessSimulation(procs_no);
+          return;
+        }
+
+        // Number()를 사용하여 문자열 연결이 아닌 숫자 덧셈을 강제합니다.
+        let newQty = (Number(current.mk_qty) || 0) + 1;
+
+        if (newQty <= maxQty) {
+          // 생산량 증가
+          await mariadb.query(
+            "UPDATE processform SET mk_qty = ? WHERE procs_no = ?",
+            [newQty, procs_no]
+          );
+          // console.log(`[Simulation] Procs ${procs_no}: ${newQty}/${maxQty} updated.`);
+        } else {
+          // 최대 생산량 도달 시, 자동으로 작업 완료 처리 (DB에 최종 확정)
+          await mariadb.query(
+            `UPDATE processform 
+            SET mk_qty = ?, 
+                procs_endtm = Now(), 
+                procs_st = 't3', 
+                pass_qty = 0,  
+                fail_qty = 0 
+            WHERE procs_no = ?`,
+            [maxQty, procs_no]
+          );
+          stopProcessSimulation(procs_no);
+          console.log(
+            `[Simulation] Procs ${procs_no}: AUTO COMPLETED at ${maxQty}.`
+          );
+        }
+      } catch (simErr) {
+        console.error(`[Simulation] Error updating ${procs_no}:`, simErr);
+        stopProcessSimulation(procs_no);
+      }
+    }, 500); // 2초마다 1개씩 생산 (시뮬레이션 속도)
+
+    return {
+      isSuccessed: true,
+      message: `작업 시작 및 생산 시뮬레이션이 시작되었습니다. (Procs No: ${procs_no})`,
+      result: updatedRecord,
+    };
+  } catch (err) {
+    console.error(err);
+    return { isSuccessed: false, message: "작업 시작 중 DB 오류 발생." };
+  }
+};
+
+/**
+ * updateProcessForm: 공정제어 작업종료 버튼
+ */
+const updateProcessForm = async (params) => {
+  let conn = null;
+  const procs_no = params.procs_no; // 공정 번호
+  try {
+    // 1. 서버 측 생산 시뮬레이션 중지 (가장 중요)
+    stopProcessSimulation(procs_no);
+
+    conn = await mariadb.getConnection();
+    await conn.beginTransaction();
+
+    // 2. 현투입량(inpt_qty) 조회 (최대 생산 가능 수량)
+    const processRowResult = await conn.query(
+      "SELECT inpt_qty FROM processform WHERE procs_no = ?",
+      [procs_no]
+    );
+
+    // 단일 행 데이터 추출 (안정성 강화)
+    const processRow =
+      Array.isArray(processRowResult) &&
+      Array.isArray(processRowResult[0]) &&
+      processRowResult[0].length > 0
+        ? processRowResult[0][0]
+        : Array.isArray(processRowResult) && processRowResult.length > 0
+        ? processRowResult[0]
+        : null;
+
+    if (!processRow) {
+      await conn.rollback();
+      return {
+        isSuccessed: false,
+        message: "유효한 공정 번호를 찾을 수 없습니다.",
+      };
+    }
+
+    const maxInputQty = processRow.inpt_qty; // 현투입량 (최대값)
+
+    // 요구사항: 작업자가 종료를 누르면, 최종 생산량은 현투입량(maxInputQty)과 같아야 함.
+    const finalQty = maxInputQty;
+
+    // 3. 작업종료 행 업데이트 (최종 생산량 확정 및 상태 변경)
+    // 요청에 따라 pass_qty를 0으로 설정합니다.
+    await conn.query(
+      "UPDATE processform SET mk_qty = ?, procs_endtm = Now(), procs_st = 't3', pass_qty = 0, fail_qty = 0 WHERE procs_no = ?",
+      [finalQty, procs_no] // pass_qty를 쿼리에서 0으로 설정했으므로 매개변수 제거
+    );
+
+    // 4. 업데이트된 행 다시 조회
+    const updatedRowResult = await conn.query(
+      "SELECT DATE_FORMAT(procs_endtm, '%Y-%m-%d %H:%i:%s') AS procs_endtm, mk_qty, fail_qty, pass_qty, procs_no FROM processform WHERE procs_no = ?",
+      [procs_no]
+    );
+
+    const updatedRow =
+      Array.isArray(updatedRowResult) &&
+      Array.isArray(updatedRowResult[0]) &&
+      updatedRowResult[0].length > 0
+        ? updatedRowResult[0][0]
+        : Array.isArray(updatedRowResult) && updatedRowResult.length > 0
+        ? updatedRowResult[0]
+        : null;
+
+    await conn.commit(); // 최종 반영
+
+    return {
+      isSuccessed: true,
+      result: updatedRow,
+      message: "작업이 성공적으로 종료되고 최종 생산량이 저장되었습니다.",
+    };
+  } catch (error) {
+    console.error("updateProcessForm 트랜잭션 오류:", error);
+    if (conn) await conn.rollback(); // 시스템 오류 시 롤백
+    throw error; // 라우터에서 500 오류 처리
+  } finally {
+    if (conn) conn.release();
+  }
+};
+
+/**
+ * insertProcessForm: 공정실적관리 테이블에 작업 시작 정보를 입력합니다.
+ * **[보강] mk_qty를 0으로 명시적으로 초기화하도록 수정.**
  */
 const insertProcessForm = async (params) => {
   let conn = null; // 커넥션 객체 선언
   try {
     conn = await mariadb.getConnection();
-    await conn.beginTransaction(); // 트랜잭션 시작 // 1. 현재 공정명 가져오기 (conn 객체 사용)
+    await conn.beginTransaction(); // 트랜잭션 시작
 
-    const [procRow] = await conn.query(
+    // 1. 현재 공정명 가져오기 (conn 객체 사용)
+    const procRowResult = await conn.query(
       `SELECT pm.proc_name
 FROM proc_master pm
 JOIN equip_master em ON pm.equip_type = em.equip_type
 WHERE em.equip_code = ?`,
       [params.equip_code]
-    ); // 공정명이 없을 경우 null 처리 (DB에 "" 대신 NULL 저장 권장)
+    );
 
-    const now_procs = procRow ? procRow.proc_name : null; // 2. 공정실적관리 테이블에 삽입 (conn 객체 사용)
+    const procRow =
+      Array.isArray(procRowResult) &&
+      Array.isArray(procRowResult[0]) &&
+      procRowResult[0].length > 0
+        ? procRowResult[0][0]
+        : Array.isArray(procRowResult) && procRowResult.length > 0
+        ? procRowResult[0]
+        : null;
 
+    const now_procs = procRow ? procRow.proc_name : null;
+
+    // 2. 공정실적관리 테이블에 삽입 (conn 객체 사용)
     const insertResult = await conn.query(
       `INSERT INTO processform
-(mk_list, equip_code, emp_no, prod_code, inpt_qty, procs_st, now_procs)
-VALUES (?, ?, ?, ?, ?, ?, ?)`,
+(mk_list, equip_code, emp_no, prod_code, inpt_qty, procs_st, now_procs, mk_qty)
+VALUES (?, ?, ?, ?, ?, ?, ?, 0)`, // mk_qty를 0으로 명시적 초기화
       [
         params.mk_list,
         params.equip_code,
@@ -180,7 +394,6 @@ VALUES (?, ?, ?, ?, ?, ?, ?)`,
 
     await conn.commit(); // 모든 쿼리가 성공하면 최종 반영
 
-    console.log("insertResult:", insertResult);
     return { isSuccessed: true, result: insertResult };
   } catch (err) {
     console.error("insertProcessForm 오류 : ", err);
@@ -188,6 +401,37 @@ VALUES (?, ?, ?, ?, ?, ?, ?)`,
     throw err; // 에러를 상위(라우터)로 다시 던져서 500 응답 처리하도록 함
   } finally {
     if (conn) conn.release(); // 커넥션 반환
+  }
+};
+
+/**
+ * getCurrentProcessQty: 특정 공정 번호의 현재 생산량, 상태 및 완료 데이터를 조회합니다.
+ */
+const getCurrentProcessQty = async (procs_no) => {
+  try {
+    const result = await mariadb.query(
+      `SELECT mk_qty, procs_st, 
+                    DATE_FORMAT(procs_endtm, '%Y-%m-%d %H:%i:%s') AS procs_endtm,
+                    fail_qty,
+                    pass_qty,
+                    DATE_FORMAT(procs_bgntm, '%Y-%m-%d %H:%i:%s') AS procs_bgntm
+              FROM processform
+              WHERE procs_no = ?`,
+      [procs_no]
+    );
+
+    // 단일 행 데이터 추출 (안정성 강화)
+    const row =
+      Array.isArray(result) && Array.isArray(result[0]) && result[0].length > 0
+        ? result[0][0]
+        : Array.isArray(result) && result.length > 0
+        ? result[0]
+        : null;
+
+    return row;
+  } catch (err) {
+    console.error("[getCurrentProcessQty] Error:", err);
+    throw err;
   }
 };
 
@@ -202,17 +446,27 @@ const calculateRemainingQty = async (prod_code, target_qty) => {
       };
     }
 
-    // DB 조회
-    const [rows] = await db.query(
+    // DB 조회: DB 연결이 필요하므로 mariadb.query를 사용
+    const rowsResult = await mariadb.query(
       `SELECT COALESCE(SUM(inpt_qty), 0) AS total_inpt_qty
 FROM processform
 WHERE prod_code = ?`,
       [prod_code]
     );
 
-    console(rows);
+    // 단일 행 데이터 추출 (안정성 강화)
+    const rows =
+      Array.isArray(rowsResult) &&
+      Array.isArray(rowsResult[0]) &&
+      rowsResult[0].length > 0
+        ? rowsResult[0]
+        : Array.isArray(rowsResult)
+        ? rowsResult
+        : [];
 
-    const total_inpt_qty = rows[0].total_inpt_qty;
+    console.log(rows); // console.log로 수정
+
+    const total_inpt_qty = rows.length > 0 ? rows[0].total_inpt_qty : 0;
 
     // 남은 생산 가능 수량 계산
     const remaining_qty = target_qty - total_inpt_qty;
@@ -253,4 +507,5 @@ module.exports = {
   calculateRemainingQty,
   updateProcessForm,
   processStart,
+  getCurrentProcessQty, // 새 함수를 export 합니다.
 };
