@@ -7,6 +7,7 @@ import ComponentCard from '@/components/common/ComponentCardButton.vue'
 import flatPickr from 'vue-flatpickr-component'
 import 'flatpickr/dist/flatpickr.css'
 import { useRoute, useRouter } from 'vue-router'
+import equipSelectModal from './equipSelectModal.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -35,6 +36,20 @@ const form = reactive<Form>({
   downtimeEnd: null,
 })
 
+// 사원정보
+interface EmpInfoInterface {
+  emp_name: '' // 사원이름
+}
+
+const empinfo = ref<EmpInfoInterface>({
+  emp_name: '', // 사원이름
+})
+const SelectEmp = (value: EmpInfoInterface) => {
+  empinfo.value.emp_name = value.emp_name
+  createForm.value.manager = value.emp_name // ✅ 저장 소스 동기화
+  closeModal()
+}
+
 const currentPageTitle = ref('비가동 등록')
 const inputStyle =
   'dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-950 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
@@ -52,6 +67,17 @@ const dtConfig = {
 const starting = ref(false)
 const currentCode = ref<string | null>(null)
 const isRunning = () => !!currentCode.value
+
+/* (optional) 담당자 모달 & 이미지 프리뷰 */
+
+const isModalOpen = ref(false)
+const openModal = () => {
+  isModalOpen.value = true
+}
+
+const closeModal = () => {
+  isModalOpen.value = false
+}
 
 function resetForm() {
   form.equipCode = ''
@@ -237,6 +263,11 @@ onMounted(async () => {
               {{ starting ? '시작 중...' : isRunning() ? '진행중' : '비가동 시작' }}
             </button>
           </div>
+          <equipSelectModal
+            @selectedEmpValue="SelectEmp"
+            :visible="isModalOpen"
+            @close="closeModal"
+          />
         </template>
       </ComponentCard>
     </div>

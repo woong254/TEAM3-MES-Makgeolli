@@ -35,7 +35,7 @@ interface EquipItem {
 }
 type CreateEquipPayload = Omit<EquipItem, 'equipImage'> & { equipImage?: string }
 
-// 주문서관리-주문서상세정보 input 인터페이스
+// 사원정보
 interface EmpInfoInterface {
   emp_name: '' // 사원이름
 }

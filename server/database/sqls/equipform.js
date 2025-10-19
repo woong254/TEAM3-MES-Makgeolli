@@ -1,6 +1,5 @@
 // table : equip_master
 
-
 // ✅ 다건조회 (상태 한글명까지)
 const searchEquipList = `
 SELECT
@@ -128,21 +127,11 @@ const insertDowntime = `
     downtime_start,
     downtime_end,     -- 시작 시 보통 NULL
     description,
-   worker_id,
+    worker_id,
     progress_status,
     equip_code
   )
   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-`;
-
-// 비가동 종료(종료시간 + 상태 + 옵션으로 비고 갱신)
-const endDowntime = `
-  UPDATE equip_downtime
-     SET downtime_end   = COALESCE(?, NOW()),
-         description    = COALESCE(?, description),
-         progress_status= ?
-   WHERE downtime_code  = ?
-     AND downtime_end IS NULL   -- 이미 끝난 건 중복 종료 방지
 `;
 
 // // (선택) 진행중/완료 상태 조회 등에 자주 쓰는 쿼리 예시
@@ -163,5 +152,4 @@ module.exports = {
   selectEquipByCode,
   selectEquipType,
   insertDowntime,
-  endDowntime,
 };
