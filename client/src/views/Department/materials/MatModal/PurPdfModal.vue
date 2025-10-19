@@ -212,7 +212,7 @@ const exportPDF = async () => {
           </div>
         </div>
 
-        <!-- 하단 중앙: 페이지네이션 (닫기 버튼 제거) -->
+        <!-- 하단 중앙: 페이지네이션 -->
         <div class="flex justify-center mt-3 gap-3">
           <button class="btn-common" :disabled="!hasPrev" @click="goPrev">◀ 이전</button>
           <span class="text-sm text-gray-700 self-center">{{ page + 1 }} / {{ total }}</span>
@@ -229,7 +229,6 @@ const exportPDF = async () => {
   width: 100%;
   max-width: none;
 }
-
 .purchase-order-container {
   width: 210mm;
   margin: 0 auto;
@@ -323,7 +322,6 @@ const exportPDF = async () => {
 .item-table td.col-qty {
   text-align: right;
 } /* 데이터 오른쪽 */
-
 .item-table .col-remark {
   width: 32%;
 }

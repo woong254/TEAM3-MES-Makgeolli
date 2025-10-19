@@ -285,8 +285,7 @@ const menuGroups: MenuGroup[] = [
           { name: '입고관리', path: '/receiptManagement', pro: false },
           { name: '발주관리', path: '/purManagement', pro: false },
           { name: '발주서조회', path: '/purListPage', pro: false },
-          { name: '자재조회', path: '/signup', pro: false },
-          { name: 'MPR관리', path: '/signup', pro: false },
+          { name: '자재조회', path: '/matListPage', pro: false },
         ],
       },
       {

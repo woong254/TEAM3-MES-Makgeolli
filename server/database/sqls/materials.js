@@ -438,6 +438,23 @@ JOIN bcnc_master b ON b.bcnc_code = pf.bcnc_code
 JOIN mat_master m ON m.mat_code = pm.mat_code
 `;
 
+const matPageList = `
+  SELECT
+    m.mat_code,
+    m.mat_name,
+    COALESCE(SUM(l.receipt_qty - l.release_qty), 0) AS stock_qty,
+    m.safe_stock,
+    m.mat_spec,
+    m.mat_unit,
+    m.mat_info,
+    c.comncode_dtnm
+  FROM mat_master m
+  LEFT JOIN lot_mat l ON l.mat_code = m.mat_code
+  JOIN comncode_dt c ON c.comncode_detailid = m.mat_item_code
+  `;
+// GROUP BY m.mat_code, m.mat_name, m.safe_stock, m.mat_spec, m.mat_unit
+// ORDER BY m.mat_code;
+
 module.exports = {
   // 목록/검색
   selectPurList,
@@ -447,6 +464,7 @@ module.exports = {
   iisModalBcnc,
   iisModalMat,
   purPagePurList,
+  matPageList,
 
   // 단건 조회
   selectPurHeaderByCode,
