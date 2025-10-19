@@ -1,6 +1,6 @@
 <!-- 완제품검사 조회 -->
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import '@/assets/common.css'
 import ComponentCard from '@/components/common/ComponentCardButton.vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
@@ -93,6 +93,28 @@ const runSearch = async () => {
     alert('검색에 실패했습니다.')
   }
 }
+
+// 5. 날짜 선택
+// 5-1. 일자 시작일 설정 (종료일이 있다면 maxDate 설정)
+const startDateConfig = computed(() => ({
+  dateFormat: 'Y-m-d',
+  altInput: false,
+  wrap: true,
+  // 종료일이 설정되어 있으면 해당 날짜를 최대 날짜로 설정하여 범위를 제한
+  maxDate: cond.end_date || 'today',
+  locale: Korean,
+}))
+
+// 5-2. 일자 종료일 설정 (시작일이 있다면 minDate 설정)
+const endDateConfig = computed(() => ({
+  dateFormat: 'Y-m-d',
+  altInput: false,
+  wrap: true,
+  // 시작일이 설정되어 있으면 해당 날짜를 최소 날짜로 설정하여 범위를 제한
+  minDate: cond.start_date || undefined, // 시작일 없으면 minDate 설정 안함
+  maxDate: 'today',
+  locale: Korean,
+}))
 
 // 엑셀 (https://kongda.tistory.com/118)
 // xlsx 내보내기
@@ -216,8 +238,8 @@ const fileStyle =
               <div class="relative">
                 <flat-pickr
                   v-model="cond.start_date"
-                  :config="flatpickrConfig"
-                  class="dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pl-4 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:b≈order-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+                  :config="startDateConfig"
+                  class="dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pl-4 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
                   placeholder=" "
                 />
                 <span
@@ -244,8 +266,8 @@ const fileStyle =
               <div class="relative">
                 <flat-pickr
                   v-model="cond.end_date"
-                  :config="flatpickrConfig"
-                  class="dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pl-4 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:b≈order-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+                  :config="endDateConfig"
+                  class="dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pl-4 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
                   placeholder=" "
                 />
                 <span

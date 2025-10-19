@@ -521,8 +521,9 @@ const registerMatInsp = async (payload) => {
         UPDATE iis
         SET insp_status = '검사완료'
             ,pass_qty = ?
+            ,t_result = ?
         WHERE iis_id = ?`,
-      [pass_qty, iis_id]
+      [pass_qty, t_result, iis_id]
     );
 
     // 결과/NG 루프 전에 길이 확인
@@ -729,10 +730,11 @@ const updateMatInsp = async (payload) => {
     await conn.query(
       `
       UPDATE iis
-      SET pass_qty = ?
+      SET pass_qty = ?,
+          t_result = ?
       WHERE iis_id = ?
       `,
-      [pass_qty, current_iis_id]
+      [pass_qty, t_result, current_iis_id]
     );
 
     await conn.commit();
@@ -772,6 +774,7 @@ const deleteMatInsp = async (insp_id) => {
       `UPDATE iis 
           SET pass_qty = 0,
               insp_status = '검사대기'
+              t_result = ''
         WHERE iis_id = ?`,
       [hdr.iis_id]
     );
@@ -994,8 +997,9 @@ const registerProdInsp = async (payload) => {
         UPDATE processform
         SET insp_status = 'u2'
             ,pass_qty = ?
+            ,fail_qty = ?
         WHERE procs_no = ?`,
-      [pass_qty, procs_no]
+      [pass_qty, fail_qty, procs_no]
     );
 
     // 결과/NG 루프 전에 길이 확인
@@ -1184,9 +1188,10 @@ const updateProdInsp = async (payload) => {
     // 4) 공정실적 동기화
     await conn.query(
       `UPDATE processform 
-       SET pass_qty = ? 
+       SET pass_qty = ?,
+           fail_qty = ?
        WHERE procs_no = ?`,
-      [pass_qty, current_procs_no]
+      [pass_qty, fail_qty, current_procs_no]
     );
 
     await conn.commit();
@@ -1231,6 +1236,7 @@ const deleteProdInsp = async (insp_id) => {
     await conn.query(
       `UPDATE processform 
           SET pass_qty = 0,
+              fail_qty = 0,
               insp_status = NULL
         WHERE procs_no = ?`,
       [hdr.procs_no]

@@ -408,24 +408,24 @@ const closeScoreDescModal = () => {
 }
 
 // 15. 날짜 선택
-// 일자 시작일 설정 (종료일이 있다면 maxDate 설정)
+// 15-1. 일자 시작일 설정 (종료일이 있다면 maxDate 설정)
 const startDateConfig = computed(() => ({
   dateFormat: 'Y-m-d',
   altInput: false,
   wrap: true,
   // 종료일이 설정되어 있으면 해당 날짜를 최대 날짜로 설정하여 범위를 제한
-  // maxDate: search.value.ord_end_date || 'today',
+  maxDate: cond.end_date || 'today',
   locale: Korean,
 }))
 
-// 일자 종료일 설정 (시작일이 있다면 minDate 설정)
+// 15-2. 일자 종료일 설정 (시작일이 있다면 minDate 설정)
 const endDateConfig = computed(() => ({
   dateFormat: 'Y-m-d',
   altInput: false,
   wrap: true,
   // 시작일이 설정되어 있으면 해당 날짜를 최소 날짜로 설정하여 범위를 제한
-  // minDate: search.value.ord_start_date || undefined, // 시작일 없으면 minDate 설정 안함
-  // maxDate: 'today',
+  minDate: cond.start_date || undefined, // 시작일 없으면 minDate 설정 안함
+  maxDate: 'today',
   locale: Korean,
 }))
 
@@ -768,6 +768,9 @@ const resetForm = () => {
   mode.value = 'create'
 }
 
+// toFixed(2) 소수점 두번째자리 까지 나타내기
+const fmt2 = (v: any) => (Number.isFinite(Number(v)) ? Number(v).toFixed(2) : '0.00')
+
 // style
 const inputStyle =
   'dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-950 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
@@ -1068,7 +1071,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                   class="w-2/3 cursor-pointer hover:bg-gray-100 duration-300"
                   readonly
                   @click="openModal"
-                  v-model="matInspTargetData.pur_qty"
+                  :value="fmt2(matInspTargetData.pur_qty)"
                   style="text-align: right; padding-right: 20px"
                 />
                 <button
@@ -1118,7 +1121,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                     class="w-2/3 cursor-pointer hover:bg-gray-100 duration-300"
                     readonly
                     @click="openModal"
-                    v-model="matInspTargetData.receipt_qty"
+                    :value="fmt2(matInspTargetData.receipt_qty)"
                     style="text-align: right; padding-right: 20px"
                   />
                   <button
@@ -1139,7 +1142,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                     :class="inputStyleSM"
                     class="w-2/3"
                     placeholder="검사량을 입력하세요."
-                    v-model="matInspQty"
+                    :value="fmt2(matInspQty)"
                     style="text-align: right"
                     @input="onInspValue"
                   />
@@ -1155,7 +1158,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                     class="w-2/3"
                     disabled
                     style="text-align: right"
-                    v-model="matInspNG"
+                    :value="fmt2(matInspNG)"
                   />
                 </div>
                 <div class="text-sm w-[100px] ml-2">{{ matInspTargetData.mat_unit || '단위' }}</div>
@@ -1169,7 +1172,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                     class="w-2/3"
                     disabled
                     style="text-align: right"
-                    v-model="matInspPass"
+                    :value="fmt2(matInspPass)"
                   />
                 </div>
                 <div class="text-sm w-[100px] ml-2">{{ matInspTargetData.mat_unit || '단위' }}</div>
@@ -1318,15 +1321,16 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                 field="insp_result_value"
                 header="측정값 입력"
                 :pt="{ columnHeaderContent: 'justify-center' }"
-                style="width: 250px"
+                style="width: 250px; text-align: right"
               >
                 <template #body="slotProps">
                   <input
                     type="text"
                     :class="inputStyleSM"
                     placeholder="측정값 입력하세요."
-                    v-model.number="slotProps.data.insp_result_value"
+                    :value="fmt2(slotProps.data.insp_result_value)"
                     @input="judgeRange(slotProps.data)"
+                    style="text-align: right"
                   />
                 </template>
               </Column>
@@ -1382,7 +1386,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                 field="pass_score"
                 header="합격기준점수(평균)"
                 :pt="{ columnHeaderContent: 'justify-center' }"
-                style="width: 300px"
+                style="width: 300px; text-align: right"
               />
               <Column
                 field="pass_score_spec"
@@ -1398,7 +1402,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                 field="insp_result_value"
                 header="현재점수"
                 :pt="{ columnHeaderContent: 'justify-center' }"
-                style="width: 300px"
+                style="width: 300px; text-align: right"
               />
               <Column
                 field="score_desc"
