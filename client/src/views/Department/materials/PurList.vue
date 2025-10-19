@@ -10,19 +10,21 @@ import 'flatpickr/dist/flatpickr.css'
 import { Korean } from 'flatpickr/dist/l10n/ko.js'
 import axios from 'axios'
 import '@/assets/common.css'
-import userDateUtils from '@/utils/useDates.js' // 날짜 유틸
+import userDateUtils from '@/utils/useDates.js'
 
-// ✅ PDF 미리보기 모달
+// ✅ PDF 미리보기 모달 (페이지네이션 지원 버전)
 import PurPdfModal from './MatModal/PurPdfModal.vue'
 
 const currentPageTitle = ref('발주서조회')
+
 const selectStyle =
   'dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-950 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
+
 const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400'
+
 const inputStyle =
   'dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-950 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
 
-// ✅ 배열 → 단일 객체 + 같은 참조 유지
 const purSearch = reactive({
   pur_name: '',
   bcnc_name: '',
@@ -33,55 +35,50 @@ const purSearch = reactive({
   end_receipt: null,
 })
 
-const selectPur = ref([])
+const selectPur = ref([]) // ✅ 여러 건 선택
 const purList = ref([])
 const loading = ref(false)
 
-// ✅ PDF 모달 상태/데이터 (에러 원인 해결)
+// ✅ 모달/문서 배열 (페이지네이션 소스)
 const isPdfOpen = ref(false)
-const pdfHeader = ref({
-  pur_code: '',
-  pur_name: '',
-  bcnc_name: '',
-  emp_name: '',
-  pur_date: '',
-  receipt_date: '',
-  remark: '', // 발주서 비고(헤더)
-})
-const pdfItems = ref([]) // [{ mat_name, mat_spec, mat_unit, pur_qty, pur_remark }]
+const pdfDocs = ref([]) // [{ headerInfo:{...}, items:[...] }]
 
-// ✅ 선택한 발주서로 모달 열기 (헤더/라인 API 호출 후 세팅)
+// 선택한 발주서들로 모달 열기
 const openPdfPreview = async () => {
-  const row = selectPur.value?.[0]
-  if (!row?.pur_code) {
-    alert('발주서를 한 건 선택하세요.')
+  const rows = Array.isArray(selectPur.value) ? selectPur.value : []
+  if (!rows.length) {
+    alert('발주서를 한 건 이상 선택하세요.')
     return
   }
   try {
-    const [hRes, lRes] = await Promise.all([
-      axios.get('/api/pur/header', { params: { pur_code: row.pur_code } }),
-      axios.get('/api/pur/lines', { params: { pur_code: row.pur_code } }),
-    ])
-    const h = hRes.data || {}
+    // 여러 건 병렬 로딩
+    const tasks = rows.map(async (row) => {
+      const pur_code = row.pur_code
+      const [hRes, lRes] = await Promise.all([
+        axios.get('/api/pur/header', { params: { pur_code } }),
+        axios.get('/api/pur/lines', { params: { pur_code } }),
+      ])
+      const h = hRes.data || {}
+      const headerInfo = {
+        pur_code: h.pur_code || '',
+        pur_name: h.pur_name || '',
+        bcnc_name: h.bcnc_name || '',
+        emp_name: h.emp_name || '',
+        pur_date: h.pur_date ? toYmd(h.pur_date) : '',
+        receipt_date: h.receipt_date ? toYmd(h.receipt_date) : '',
+        remark: h.remark || '',
+      }
+      const items = (Array.isArray(lRes.data) ? lRes.data : []).map((r) => ({
+        mat_name: r.mat_name,
+        mat_spec: r.mat_spec,
+        mat_unit: r.mat_unit,
+        pur_qty: r.pur_qty,
+        pur_remark: r.remark || '',
+      }))
+      return { headerInfo, items }
+    })
 
-    pdfHeader.value = {
-      pur_code: h.pur_code || '',
-      pur_name: h.pur_name || '',
-      bcnc_name: h.bcnc_name || '',
-      emp_name: h.emp_name || '',
-      pur_date: h.pur_date ? toYmd(h.pur_date) : '',
-      receipt_date: h.receipt_date ? toYmd(h.receipt_date) : '',
-      remark: h.remark || '', // 발주서 비고(헤더)
-    }
-
-    pdfItems.value = (Array.isArray(lRes.data) ? lRes.data : []).map((r) => ({
-      mat_name: r.mat_name,
-      mat_spec: r.mat_spec,
-      mat_unit: r.mat_unit,
-      pur_qty: r.pur_qty,
-      pur_remark: r.remark || '', // 발주자재 비고(라인)
-    }))
-
+    pdfDocs.value = await Promise.all(tasks)
     isPdfOpen.value = true
   } catch (e) {
     console.error(e)
@@ -102,7 +99,6 @@ const toYmd = (v) => {
   }
 }
 
-// 헬퍼: YYYY-MM-DD 비교 (둘 중 더 이른/늦은 날짜 반환)
 const earlier = (a, b, c) => {
   const ab = a && b ? (a < b ? a : b) : a || b || null
   return ab && c ? (ab < c ? ab : c) : ab || c || null
@@ -149,10 +145,7 @@ const endReceipt = computed(() => ({
 const fetchPurList = async () => {
   loading.value = true
   try {
-    const { data } = await axios.get('/api/purchase/search', {
-      // ✅ 단일 객체 그대로 전달
-      params: purSearch,
-    })
+    const { data } = await axios.get('/api/purchase/search', { params: purSearch })
     purList.value = Array.isArray(data)
       ? data.map((r) => ({
           ...r,
@@ -168,7 +161,6 @@ const fetchPurList = async () => {
   }
 }
 
-// ✅ 참조 유지 초기화
 const resetBtn = () => {
   Object.assign(purSearch, {
     pur_name: '',
@@ -190,6 +182,7 @@ onMounted(() => {
 <template>
   <AdminLayout>
     <PageBreadcrumb :pageTitle="currentPageTitle" />
+
     <div class="space-y-5 sm:space-y-3">
       <ComponentCard title="발주서 검색">
         <template #header-right>
@@ -198,16 +191,19 @@ onMounted(() => {
             <button type="button" class="btn-color btn-common" @click="fetchPurList">조회</button>
           </div>
         </template>
+
         <template #body-content>
           <div class="flex flex-wrap gap-4">
             <div class="w-1/4">
               <label :class="labelStyle"> 발주서명 </label>
               <input type="text" :class="inputStyle" v-model="purSearch.pur_name" />
             </div>
+
             <div class="w-1/4">
               <label :class="labelStyle"> 매입처명 </label>
               <input type="text" :class="inputStyle" v-model="purSearch.bcnc_name" />
             </div>
+
             <div class="w-1/4">
               <label :class="labelStyle"> 입고상태 </label>
               <div class="relative z-20 bg-transparent">
@@ -226,7 +222,6 @@ onMounted(() => {
                     height="20"
                     viewBox="0 0 20 20"
                     fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
                   >
                     <path
                       d="M4.79175 7.396L10.0001 12.6043L15.2084 7.396"
@@ -258,7 +253,6 @@ onMounted(() => {
                       height="20"
                       viewBox="0 0 20 20"
                       fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
                     >
                       <path
                         fill-rule="evenodd"
@@ -284,7 +278,6 @@ onMounted(() => {
                       height="20"
                       viewBox="0 0 20 20"
                       fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
                     >
                       <path
                         fill-rule="evenodd"
@@ -317,7 +310,6 @@ onMounted(() => {
                       height="20"
                       viewBox="0 0 20 20"
                       fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
                     >
                       <path
                         fill-rule="evenodd"
@@ -343,7 +335,6 @@ onMounted(() => {
                       height="20"
                       viewBox="0 0 20 20"
                       fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
                     >
                       <path
                         fill-rule="evenodd"
@@ -372,6 +363,7 @@ onMounted(() => {
             </button>
           </div>
         </template>
+
         <template #body-content>
           <DataTable
             showGridlines
@@ -385,7 +377,9 @@ onMounted(() => {
             <template #empty>
               <div class="text-center">등록한 발주서가 없습니다.</div>
             </template>
+
             <DataCol selectionMode="multiple" headerStyle="width: 37px" bodyStyle="width: 37px" />
+
             <DataCol
               field="pur_code"
               header="발주코드"
@@ -471,12 +465,7 @@ onMounted(() => {
       </ComponentCard>
     </div>
 
-    <!-- ✅ PDF 미리보기 모달 -->
-    <PurPdfModal
-      :visible="isPdfOpen"
-      :headerInfo="pdfHeader"
-      :items="pdfItems"
-      @close="isPdfOpen = false"
-    />
+    <!-- ✅ PDF 모달: 여러 건 페이지네이션 -->
+    <PurPdfModal :visible="isPdfOpen" :docs="pdfDocs" @close="isPdfOpen = false" />
   </AdminLayout>
 </template>

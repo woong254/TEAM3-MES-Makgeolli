@@ -181,38 +181,39 @@ router.post("/prodInsp", async (req, res) => {
 // 4-4. 완제품 관리 검색
 router.post("/prodInspSearch", async (req, res) => {
   let result = await qualityService
-    .searchMatInsp(req.body)
+    .searchProdInsp(req.body)
     .catch((err) => console.error(err));
   res.send(result);
 });
 
 // 4-5. 완제품 관리 상세조회
-router.get("/prodInspDetail/:inspId", async (req, res) => {
-  const { inspId } = req.params;
+router.get("/prodInspDetail/:insp_id", async (req, res) => {
+  const { insp_id } = req.params;
   let result = await qualityService
-    .matInspDetail(inspId)
+    .prodInspDetail(req.params.insp_id)
     .catch((err) => ({ ok: false, message: err?.message || "서버 오류" }));
   res.send(result);
 });
 
 // 4-6. 완제품 관리 수정
-router.put("/prodInsp/:id", async (req, res) => {
-  const { id } = req.params;
-  const payload = { ...req.body, insp_id: id }; 
+router.put("/prodInsp/:insp_id", async (req, res) => {
+  const insp_id = req.params.insp_id;
+  const payload = { ...req.body, insp_id }; 
   let result = await qualityService
-    .updateMatInsp(payload)
+    .updateProdInsp(payload)
     .catch((err) => ({ ok: false, message: err?.message || "서버 오류" }));
   res.send(result);
 });
 
 // 4-7. 완제품 관리 삭제
-router.delete("/prodInsp/:id", async (req, res) => {
-  const { id } = req.params;
+router.delete("/prodInsp/:insp_id", async (req, res) => {
+  const { insp_id } = req.params;
   let result = await qualityService
-    .deleteMatInsp(id)
+    .deleteProdInsp(insp_id)
     .catch((err) => console.error(err));
   res.send(result);
 });
+
 
 
 module.exports = router;

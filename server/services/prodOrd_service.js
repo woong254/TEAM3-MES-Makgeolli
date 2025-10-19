@@ -210,6 +210,8 @@ WHERE prod_code = ?`,
       [prod_code]
     );
 
+    console(rows);
+
     const total_inpt_qty = rows[0].total_inpt_qty;
 
     // 남은 생산 가능 수량 계산
