@@ -232,6 +232,14 @@ const router = createRouter({
         title: '발주조회',
       },
     },
+    {
+      path: '/matListPage',
+      name: '자재조회',
+      component: () => import('../views/Department/materials/MatList.vue'),
+      meta: {
+        title: '자재조회',
+      },
+    },
     // 품질
     {
       path: '/quamaster',

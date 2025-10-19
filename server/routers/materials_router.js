@@ -206,4 +206,20 @@ router.get("/purchase/search", async (req, res) => {
     res.status(500).send({ ok: false, message: "SEARCH_FAILED" });
   }
 });
+
+// ----- 자재 페이지(코드/이름별 필터 + GROUP BY/ORDER BY) -----
+router.get("/mat/page", async (req, res) => {
+  const { mat_name, mat_item_code } = req.query || {};
+
+  try {
+    const rows = await materialsService.findMatPageList({
+      mat_name, // 값이 있으면 m.mat_name = ?
+      mat_item_code, // 값이 있으면 m.mat_item_code = ?
+    });
+    res.send(rows || []);
+  } catch (e) {
+    console.error(e);
+    res.status(500).send({ ok: false, message: "MAT_PAGE_LIST_FAILED" });
+  }
+});
 module.exports = router;

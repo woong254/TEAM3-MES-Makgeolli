@@ -6,6 +6,7 @@ const sqlList = require("../database/sqlList.js");
 const iisModalBcnc = sqlList.iisModalBcnc;
 const iisModalMat = sqlList.iisModalMat;
 const purPagePurList = sqlList.purPagePurList;
+const matPageBase = sqlList.matPageList;
 
 const toYYYYMMDD = (d) => {
   const dt = new Date(d);
@@ -441,9 +442,39 @@ const findPurPagePurList = async (purData) => {
   }
 };
 
+// 자재페이지 목록 (필터: mat_name, mat_item_code)
+const findMatPageList = async (filters = {}) => {
+  const { mat_name, mat_item_code } = filters || {};
+  let sql = matPageBase + ` WHERE 1=1`;
+  const params = [];
+
+  if (mat_name) {
+    sql += ` AND m.mat_name LIKE ?`;
+    params.push(`%${mat_name}%`);
+  }
+  if (mat_item_code) {
+    sql += ` AND m.mat_item_code = ?`;
+    params.push(mat_item_code);
+  }
+
+  sql += `
+    GROUP BY m.mat_code, m.mat_name, m.safe_stock, m.mat_spec, m.mat_unit
+    ORDER BY m.mat_code
+  `;
+
+  try {
+    const rows = await mariadb.query(sql, params);
+    return rows || [];
+  } catch (err) {
+    console.error("[findMatPageList] ERROR:", err?.code, err?.message);
+    return [];
+  }
+};
+
 module.exports = {
   // 목록/검색
   findPurList,
+  findMatPageList,
   findPurTarget,
   findIisList,
   purIisList,
