@@ -510,6 +510,9 @@ SELECT pi.insp_id        -- 검사ID
        ,pm.prod_spec     -- 제품규격
        ,c.comncode_dtnm  -- 제품단위 이름
        ,pi.insp_qty      -- 검사량
+       ,pi.emp_id        -- 검사자
+       ,pi.procs_no      -- 공정실적번호
+       ,pi.final_result  -- 최종합격여부
 FROM prod_insp pi
 LEFT JOIN processform pf
   ON pi.procs_no = pf.procs_no
