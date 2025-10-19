@@ -874,13 +874,13 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
       <template #header-right>
         <div class="flex justify-end">
           <button class="btn-common btn-white" @click="resetForm">초기화</button>
-          <button class="btn-common btn-color">PDF</button>
           <!-- 등록 모드 -->
           <template v-if="mode === 'create'">
             <button class="btn-common btn-color" @click="submitRegister">등록</button>
           </template>
           <!-- 수정 모드 -->
           <template v-else>
+            <button class="btn-common btn-color">PDF</button>
             <button class="btn-common btn-color" @click="submitUpdate">수정</button>
             <button class="btn-common btn-white" @click="confirmDelete">삭제</button>
           </template>
