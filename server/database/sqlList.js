@@ -10,6 +10,7 @@ const edcts = require("./sqls/edcts.js");
 // 생산
 const prodOrd = require("./sqls/prodOrd.js");
 const prodOrdManage = require("./sqls/prodOrdManage.js");
+const processForm = require("./sqls/processForm.js");
 
 // 자재
 const materials = require("./sqls/materials.js");
@@ -38,6 +39,7 @@ module.exports = {
   // 생산
   ...prodOrd,
   ...prodOrdManage,
+  ...processForm,
 
   // 자재
   ...materials,

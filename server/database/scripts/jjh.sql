@@ -725,11 +725,15 @@ select * from equip_master;
 select * from makedetail;
 select * from proc_flow_master;
 select * from proc_flow_detail;
+select * from processform;
 desc makedetail;
+desc processform;
+select * from comncode_dt;
 
 -- 제품명, 작업지시일
 SELECT	pm.prod_name,
-		DATE_FORMAT(mf.writing_date, '%Y-%m-%d') AS writing_date
+		DATE_FORMAT(mf.writing_date, '%Y-%m-%d') AS writing_date,
+        md.mk_num
 FROM	makedetail md
 		JOIN prod_master pm
         ON md.prod_code = pm.prod_code
@@ -748,3 +752,80 @@ WHERE	em.equip_code = "EQ-021";
 SELECT	emp_name
 FROM	emp_master
 WHERE	emp_id = 'EMP-20250616-0001';
+
+-- 공정제어 작업시작 버튼 눌렀을때 조회
+SELECT 	*
+FROM	processform;
+WHERE	procs_no = last_insert_id();
+
+SELECT	pf.procs_no,	-- 공정실적번호
+		pf.mk_qty,	-- 생산량
+		pf.fail_qty,	-- 불량량
+        pf.pass_qty, 	-- 합격량
+        DATE_FORMAT(pf.procs_bgntm, '%Y-%m-%d') AS procs_bgntm,	-- 작업시작시간
+        pf.inpt_qty,	-- 현투입량
+        sum(pf.inpt_qty) AS prev_input_qty,	-- 기투입량
+        (md.mk_num - sum(pf.inpt_qty)) AS remain_qty	-- 미투입량
+FROM	processform pf
+		JOIN makedetail md
+        ON pf.mk_list = md.mkd_no
+WHERE	procs_no = ? 
+GROUP BY pf.mk_list, md.mk_num, pf.inpt_qty, pf.mk_qty, pf.fail_qty, pf.pass_qty, pf.procs_bgntm;
+
+SELECT	*
+FROM	processform;
+select * from prod_insp;
+select * from equip_master;
+
+
+
+UPDATE	processform
+SET		mk_qty = ?,
+		procs_endtm = Now(),
+        procs_st = ?
+WHERE	procs_no = ?;
+        
+(SELECT pm.proc_name 
+FROM	proc_master pm 
+		JOIN equip_master em 
+		ON pm.equip_type = em.equip_type
+WHERE	em.equip_code = 'EQ-025') AS now_procs;
+
+SELECT	pf.procs_no,
+		pm.prod_name,
+        now_procs,
+        em.equip_name,
+        empm.emp_name,
+        DATE_FORMAT(mf.writing_date, '%Y-%m-%d') AS writing_date
+FROM	processform pf
+		JOIN prod_master pm 
+        ON pf.prod_code = pm.prod_code
+        JOIN makedetail md
+        ON pf.mk_list = md.mkd_no
+        JOIN makeform mf 
+        ON md.mk_ord_no = mf.mk_ord_no
+        JOIN equip_master em 
+        ON pf.equip_code = em.equip_code
+        JOIN emp_master empm
+        ON pf.emp_no = empm.emp_id
+WHERE	empm.emp_id = 'EMP-20250616-0006'
+AND		pf.procs_st = 't1';
+
+
+
+INSERT INTO processform
+      (procs_no, procs_bgntm, procs_st)
+      VALUES (?, NOW(), 't2');
+      
+UPDATE	processform
+SET		procs_endtm = Now(),
+        procs_st = 't2'
+WHERE	procs_no = ?;
+        
+        
+        UPDATE	processform
+SET		procs_endtm = Now(),
+        procs_st = 't2';
+        
+select * from prod_master;
+select * from bcnc_master;

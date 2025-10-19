@@ -24,7 +24,7 @@ FROM	prod_insp pi
        JOIN comncode_dt cdu
        ON pm.prod_unit = cdu.comncode_detailid
 WHERE	1=1
-       AND pf.prog = '100'
+       AND pf.procs_st = 't3'
        AND pf.now_procs = '포장'
        AND pi.final_result = 'p'
 `;

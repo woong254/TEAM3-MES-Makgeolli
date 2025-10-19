@@ -5,8 +5,6 @@ const router = express.Router();
 
 const prodOrdService = require("../services/prodOrd_service.js");
 
-const { saveProcessData, getProcessData } = require("../utils/processStorage");
-
 // 본인이 작성한 지시서 조회
 router.get("/makeList", async (req, res) => {
   // 나중에 로그인 기능 구현 후 변경예정
@@ -50,52 +48,102 @@ router.get("/prodOrdManage/equipments", async (req, res) => {
 });
 
 // 공정제어 작업시작 버튼 누르면 공정실적관리 테이블에 등록
-router.post("/addProcessForm", async (req, res) => {
+router.post("/processStart", async (req, res) => {
   try {
-    const processform = req.body;
-    const data = await prodOrdService.insertProcessForm(processform);
+    const processformData = req.body;
+    const data = await prodOrdService.processStart(processformData);
     res.json(data);
   } catch (err) {
     console.error(err);
   }
 });
 
-// 공정제어 페이지가 켜질때 데이터를 가져오는 라우터
-router.get("/getSavedProcessData", async (req, res) => {
-  let data = getProcessData();
-  let dumnyData = {};
-
-  // 가져온 데이터 각각의 코드가 어떤건지 실체 확인
-  const param = {
-    mkd_no: data.make.mkd_no,
-    prod_code: data.make.prod_code,
-    equip_code: data.equip.equip_code,
-    emp_id: data.emp.emp_id,
-  };
-
-  const result = await prodOrdService.selectProcessControlData(param);
-  // 저장된 실제 데이터가 있는 경우
-  return res.status(200).json({
-    processData: data,
-    dbResult: result,
-  });
-});
-
-// 공정실적관리에서 서버로 보낸 데이터
-router.get("/goToProcess", async (req, res) => {
+// 공정제어 - 작업종료 버튼 누르면 공정실적관리 테이블 업데이트
+router.post("/modifyProcessForm", async (req, res) => {
   try {
-    const { makePayload, equipPayload, empPayload } = req.query;
+    const processformData = req.body;
+    const data = await prodOrdService.updateProcessForm(processformData);
+    console.log(data);
 
-    const make = makePayload ? JSON.parse(makePayload) : null;
-    const equip = equipPayload ? JSON.parse(equipPayload) : null;
-    const emp = empPayload ? JSON.parse(empPayload) : null;
-
-    calculateRemainingQty(make.prod_code, make.inpt_qty);
-    saveProcessData(make, equip, emp);
-  } catch (err) { 
-    console.error(err);
+    res.json(data);
+  } catch (error) {
+    console.error(error);
   }
 });
 
+// 공정제어 페이지가 켜질때 데이터를 가져오는 라우터
+router.get("/getProcessData", async (req, res) => {
+  // 가져온 데이터 각각의 코드가 어떤건지 실체 확인
+  const emp_id = req.query.emp_id;
+  const param = { emp_id };
+  try {
+    const result = await prodOrdService.selectProcessControlData(param);
+    // 저장된 실제 데이터가 있는 경우
+    return res.json({ result });
+  } catch (err) {
+    return console.error(
+      "prodOrd_router.js - selectProcessControlData 오류:",
+      err
+    );
+  }
+});
+
+// 공정실적관리에서 서버로 보낸 데이터
+router.post("/startProcess", async (req, res) => {
+  // 1. 요청 본문(req.body)에서 필요한 '평면적인' 데이터를 직접 구조 분해 할당으로 가져옵니다.
+  // 클라이언트가 보낸 실제 필드 이름: mkd_no, prod_code, inpt_qty, equip_code, emp_id
+  const { mkd_no, prod_code, inpt_qty, equip_code, emp_id } = req.body;
+
+  try {
+    // 2. 필수 데이터 누락 체크 (주요 필드만 검사)
+    // 이전의 make, equip, emp 객체 대신, 핵심 ID 필드들을 직접 확인합니다.
+    if (!mkd_no || !prod_code || !equip_code || !emp_id) {
+      console.error("필수 요청 데이터 누락:", req.body);
+      return res.status(400).json({
+        error: "Bad Request",
+        message:
+          "제조 지시 번호(mkd_no), 제품 코드, 설비 코드, 작업자 ID(emp_id)는 필수입니다.",
+      });
+    }
+
+    // 3. DB에 저장할 객체 구성 (클라이언트 필드를 DB 필드로 매핑)
+    const processObj = {
+      // 클라이언트의 mkd_no (제조 상세 번호)를 DB의 mk_list 필드에 매핑
+      mk_list: mkd_no,
+      equip_code: equip_code,
+      // 클라이언트의 emp_id (작업자 ID)를 DB의 emp_no 필드에 매핑
+      emp_no: emp_id,
+      prod_code: prod_code,
+      inpt_qty: inpt_qty,
+      mk_qty: 0, // 초기 생산량 0
+      procs_st: "t1", // 실적상태: 생산대기
+    };
+
+    // 4. DB에 작업시작 행 등록
+    const result = await prodOrdService.insertProcessForm(processObj);
+
+    // 5. 성공 응답 (HTTP 201 Created 권장)
+    return res.status(201).json({
+      message: "작업이 성공적으로 시작 및 등록되었습니다.",
+      data: result, // DB Insert 결과 (예: 삽입된 ID)를 포함할 수 있음
+    });
+  } catch (err) {
+    // 6. 에러 처리 및 응답
+    console.error("작업 시작 처리 중 오류 발생:", err);
+    // 클라이언트에게 500 상태 코드와 함께 오류 메시지를 전달
+    return res.status(500).json({
+      error: "Internal Server Error",
+      message: "작업 등록 중 서버 내부 오류가 발생했습니다.",
+      detail: err.message,
+    });
+  }
+});
+
+// 실제 투입수량 비교 후 공정제어로 데이터 넘김
+router.post("/goToProcess/remaining", async (req, res) => {
+  const { prod_code, target_qty } = req.body;
+  const result = await calculateRemainingQty(item_code, target_qty);
+  res.json(result);
+});
 
 module.exports = router;
