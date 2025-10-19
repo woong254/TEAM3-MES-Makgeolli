@@ -2,7 +2,7 @@
 /* ========================
  * Imports
  * ======================== */
-import { ref, shallowRef, computed, onBeforeMount, onMounted } from 'vue'
+import { ref, shallowRef, onMounted, watch } from 'vue'
 import axios from 'axios'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
@@ -10,14 +10,13 @@ import ComponentCard from '@/components/common/ComponentCardOrder.vue'
 import ComponentCardWoong from '@/components/common/ComponentCardButtonWoong.vue'
 import DataTable from 'primevue/datatable'
 import DataCol from 'primevue/column'
-import flatPickr from 'vue-flatpickr-component'
-import 'flatpickr/dist/flatpickr.css'
-import equipSelectModal from './equipSelectModal.vue'
+
 import TabView from 'primevue/tabview'
 import TabPanel from 'primevue/tabpanel'
 import '@/assets/common.css'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 const router = useRouter()
+const route = useRoute()
 
 /* ========================
  * Types
@@ -41,15 +40,15 @@ type CreateEquipPayload = Omit<EquipItem, 'equipImage'> & { equipImage?: string 
 
 /** 비가동 데이터(예시 스키마) */
 interface DowntimeItem {
-  downtimeId: string // 고유키
-  equipCode: string
+  downtimeCode: string // 고유키
   equipName: string
-  equipType: string
-  manager: string | null
-  startAt: string // 시작 일시
-  endAt?: string | null // 종료 일시(이력일 때만 존재)
-  progress?: string | null // 진행 상태(진행중 탭 용)
-  reason?: string | null
+  equipCode: string
+  downtimeType: string
+  workerId: string | null
+  downtimeStart: string // 시작 일시
+  downtimeEnd: string | null // 종료 일시(이력일 때만 존재)
+  progressStatus: string | null // 진행 상태(진행중 탭 용)
+  description: string | null
   durationMin?: number | null // 이력 탭 용
 }
 
@@ -60,9 +59,6 @@ const currentPageTitle = ref('설비 기준정보 관리')
 const inputStyle =
   'dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-950 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
 const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400'
-const flatpickrConfig = { dateFormat: 'Y-m-d', altInput: true, altFormat: 'Y-m-d', wrap: true }
-const fileStyle =
-  'focus:border-ring-brand-300 h-11 w-full overflow-hidden rounded-lg border border-gray-300 bg-transparent text-sm text-gray-500 shadow-theme-xs transition-colors file:mr-5 file:border-collapse file:cursor-pointer file:rounded-l-lg file:border-0 file:border-r file:border-solid file:border-gray-200 file:bg-gray-50 file:py-3 file:pl-3.5 file:pr-3 file:text-sm file:text-gray-700 placeholder:text-gray-400 hover:file:bg-gray-100 focus:outline-hidden focus:file:ring-brand-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400 dark:text-white/90 dark:file:border-gray-800 dark:file:bg-white/[0.03] dark:file:text-gray-400'
 
 /* ========================
  * Utils (mappers & inits)
@@ -109,46 +105,30 @@ const goDowntimeRegister = () => {
     query: { equipCode: selectedRow.value.equipCode },
   })
 }
+
+// ✅ 진행중/이력 목록 행 클릭 → 상세 페이지
+const onClickDowntimeRow = (row: any) => {
+  if (!row) return
+  // 진행중 상세 라우트: 예) name: 'DowntimeDetailRunning'
+  // 이력 상세 라우트가 따로 있으면 분기하세요.
+  router.push({ name: 'DowntimeDetail', params: { code: row.downtimeId || row.downtimeCode } })
+}
+
 /* ========================
  * State
  * ======================== */
+//조회 폼
 const searchForm = ref(initSearch())
+//설비 목록(테이블 데이터)
 const equipList = shallowRef<EquipItem[]>([])
+//설비 테이블에서 선택한 1행
 const selectedRow = ref<EquipItem | null>(null)
 
 /** 비가동 탭 상태 */
 const activeTab = ref(0) // 0=진행중, 1=비가동 이력
+//비가동 목록 데이터(각 탭 데이터).
 const downInProgress = ref<DowntimeItem[]>([])
 const downHistory = ref<DowntimeItem[]>([])
-
-/* (optional) 담당자 모달 & 이미지 프리뷰 */
-const isModalOpen = ref(false)
-const openModal = () => (isModalOpen.value = true)
-const closeModal = () => (isModalOpen.value = false)
-const fileInputEl = ref<HTMLInputElement | null>(null)
-const eqpImageName = ref('선택된 파일 없음')
-const eqpImagePreview = ref('')
-const onFileChange = (e: Event) => {
-  const f = (e.target as HTMLInputElement).files?.[0]
-  if (!f) {
-    eqpImageName.value = '선택된 파일 없음'
-    eqpImagePreview.value = ''
-    return
-  }
-  eqpImageName.value = f.name
-  if (f.type?.startsWith('image/')) {
-    const r = new FileReader()
-    r.onload = () => (eqpImagePreview.value = (r.result as string) || '')
-    r.readAsDataURL(f)
-  } else {
-    eqpImagePreview.value = ''
-  }
-}
-const clearImage = () => {
-  if (fileInputEl.value) fileInputEl.value.value = ''
-  eqpImageName.value = '선택된 파일 없음'
-  eqpImagePreview.value = ''
-}
 
 /* ========================
  * API
@@ -214,9 +194,15 @@ const refreshComplete = async () => {
   }
 }
 
+//  한 번에 새로고침
+const refreshAll = async () => {
+  await Promise.all([refreshPending(), refreshComplete(), getEquipList()])
+}
+
 /* ========================
  * Handlers
  * ======================== */
+//조회 폼 초기화.
 const resetSearchForm = () => Object.assign(searchForm.value, initSearch())
 
 const fillFormFromRow = (row: EquipItem) => {
@@ -247,26 +233,21 @@ const onTabChange = async (e: { index: number }) => {
 
 onMounted(async () => {
   // 초기 탭(진행중)과 이력 둘 다 한 번 로드해도 좋음
-  await refreshPending()
-  await refreshComplete()
+  await refreshAll()
   await viewType()
   await getEquipList()
+  await refreshPending() // 진행중 비가동 탭
+  await refreshComplete() // 이력 탭
 })
 
-/* (등록/수정에서 쓰면) 폼 상태 — 필요하면 그대로 추가 */
-const createForm = ref<CreateEquipPayload>({
-  equipCode: '',
-  equipName: '',
-  equipType: '',
-  manager: '',
-  equipStatus: 'j2',
-  inspCycle: 0,
-  installDate: '',
-  modelName: '',
-  equipImage: '',
-  mfgDt: '',
-  maker: '',
-})
+//  등록 페이지에서 돌아올 때 ?refresh=1 로 오면 자동 새로고침
+watch(
+  () => route.query.refresh,
+  async (v) => {
+    if (v) await refreshAll()
+  },
+  { immediate: false },
+)
 </script>
 
 <template>
@@ -383,6 +364,7 @@ const createForm = ref<CreateEquipPayload>({
                   class="text-sm"
                   :rows="20"
                   size="small"
+                  @row-click="({ data }) => onClickDowntimeRow(data)"
                 >
                   <DataCol field="equipCode" header="설비코드" />
                   <DataCol field="equipName" header="설비명" />
@@ -405,6 +387,7 @@ const createForm = ref<CreateEquipPayload>({
                   class="text-sm"
                   :rows="20"
                   size="small"
+                  @row-click="({ data }) => onClickDowntimeRow(data)"
                 >
                   <DataCol field="equipCode" header="설비코드" />
                   <DataCol field="equipName" header="설비명" />

@@ -2,6 +2,7 @@
 
 // DB 호출 유틸(당신 프로젝트 기준)
 const mariadb = require("../database/mapper.js");
+const { EQUIP_STATUS } = require("../constants/equipment");
 
 // SQL 템플릿 모음 (당신 파일 경로 기준)
 const {
@@ -12,7 +13,6 @@ const {
   selectEquipByCode, // SELECT * FROM equipment WHERE equip_code=?
   selectEquipType,
   insertDowntime,
-  updateDowntimeEnd,
 } = require("../database/sqls/equipform.js");
 
 /* =========================
@@ -279,22 +279,73 @@ async function remove(equip_code) {
   return { affectedRows: result.affectedRows };
 }
 
-// 시작 = CREATE
+// 비가동 목록 조회: status = 'running' | 'history' | (생략=전체)
+async function listDowntimes(status) {
+  let sql = `
+    SELECT
+      d.downtime_code   AS downtimeCode,
+      d.equip_code      AS equipCode,
+      e.equip_name      AS equipName,
+      d.downtime_type   AS downtimeType,
+      e.manager         AS manager,
+      d.worker_id       AS workerId, 
+      d.downtime_start  AS downtimeStart,
+      d.downtime_end    AS downtimeEnd,
+      d.progress_status AS progressStatus
+    FROM equip_downtime d
+    LEFT JOIN equip_master e ON d.equip_code = e.equip_code
+  `;
+
+  const where = [];
+  if (status === "running") where.push(`d.downtime_end IS NULL`);
+  else if (status === "history") where.push(`d.downtime_end IS NOT NULL`);
+  if (where.length) sql += ` WHERE ${where.join(" AND ")}`;
+
+  sql += ` ORDER BY d.downtime_start DESC`;
+
+  // 단순 조회는 트랜잭션 불필요
+  const rows = await mariadb.query(sql);
+  return rows; // 프런트에서 바로 사용 가능 (camelCase)
+}
+
+// 비가동 단건 상세
+async function getDowntimeByCode(code) {
+  const sql = `
+    SELECT
+      d.downtime_code   AS downtimeCode,
+      d.equip_code      AS equipCode,
+      e.equip_name      AS equipName,
+      d.downtime_type   AS downtimeType,
+      e.manager         AS manager,
+      d.worker_id       AS workerId, 
+      d.description     AS description,
+      d.downtime_start  AS downtimeStart,
+      d.downtime_end    AS downtimeEnd,
+      d.progress_status AS progressStatus
+    FROM equip_downtime d
+    LEFT JOIN equip_master e ON d.equip_code = e.equip_code
+    WHERE d.downtime_code = ?
+    LIMIT 1
+  `;
+  const rows = await mariadb.query(sql, [code]);
+  return rows[0] || null;
+}
+
+// 시작 = CREATE (트랜잭션 적용)
 async function startDowntime(payload = {}) {
   const equipCode = toNullTrim(pick(payload, "equip_code", "equipCode"));
-  const equipName = toNullTrim(pick(payload, "equip_name", "equipName"));
   const downtimeType =
     toNullTrim(pick(payload, "downtime_type", "downtimeType")) || "비계획정지";
   const description = toNullTrim(pick(payload, "description", "description"));
   const workerId = toNullTrim(pick(payload, "worker_id", "workerId"));
-  const startAt =
+  const downtimeStart =
     toYmdHmsOrNull(pick(payload, "downtime_start", "downtimeStart")) ||
     toYmdHmsOrNull(new Date());
 
   // 필수값 체크
   const missing = [];
   if (!equipCode) missing.push("equip_code");
-  if (!startAt) missing.push("downtime_start");
+  if (!downtimeStart) missing.push("downtime_start");
   if (missing.length) {
     const e = new Error(`필수값: ${missing.join(", ")}`);
     e.status = 400;
@@ -306,25 +357,77 @@ async function startDowntime(payload = {}) {
     toNullTrim(pick(payload, "downtime_code", "downtimeCode")) ||
     makeDowntimeCode();
 
-  // 스키마 순서에 맞춰 9개 파라미터 준비
-  // downtime_end: 시작 시 보통 null
-  // progress_status: 시작 시 "진행중"
-  const params = [
-    code, // downtime_code
-    equipName, // equip_name
-    downtimeType, // downtime_type
-    startAt, // downtime_start
-    null, // downtime_end
-    description, // description
-    workerId, // emp_id
-    "진행중", // progress_status
-    equipCode, // equip_code
-  ];
+  let conn;
+  try {
+    conn = await mariadb.getConnection();
+    await conn.beginTransaction(); // START TRANSACTION
 
-  // 분리해둔 SQL 변수 사용 (예: import { insertDowntime } from "../sql/..." )
-  const r = await mariadb.query(insertDowntime, params);
-  return { downtime_code: code, affectedRows: r.affectedRows };
+    // 1) 설비 행 잠금 + '가동중'만 허용
+    const equipRows = await conn.query(
+      `SELECT equip_code, equip_name, equip_status,manager
+         FROM equip_master
+        WHERE equip_code = ? AND equip_status = ?
+        FOR UPDATE`,
+      [equipCode, EQUIP_STATUS.RUN]
+    );
+    const equip = Array.isArray(equipRows) ? equipRows[0] : equipRows; // mariadb 드라이버 반환 형태 보정
+    if (!equip) {
+      const e = new Error("가동 중인 설비가 아니거나 존재하지 않습니다.");
+      e.status = 409;
+      throw e;
+    }
+
+    // 2) 요청에 worker_id가 없으면 equip.manager를 사용
+    const worker = workerId || equip.manager || null;
+
+    // 2) 동일 설비의 진행중 비가동 중복 방지 (잠금)
+    const dupRows = await conn.query(
+      `SELECT downtime_code
+         FROM equip_downtime
+        WHERE equip_code = ?
+          AND progress_status = '진행중'
+          AND downtime_end IS NULL
+        FOR UPDATE`,
+      [equipCode]
+    );
+    if ((dupRows?.length ?? 0) > 0) {
+      const e = new Error("이미 진행중 비가동이 존재합니다.");
+      e.status = 409;
+      throw e;
+    }
+
+    // 3) 비가동 INSERT (equip_name은 DB 값 사용)
+    const params = [
+      code, // downtime_code
+      equip.equip_name, // equip_name (DB 신뢰)
+      downtimeType, // downtime_type
+      downtimeStart, // downtime_start
+      null, // downtime_end (시작 시 NULL)
+      description, // description
+      worker, // worker_id
+      "진행중", // progress_status
+      equipCode, // equip_code
+    ];
+    await conn.query(insertDowntime, params);
+
+    // 4) 설비 상태 DOWN 전환
+    await conn.query(
+      `UPDATE equip_master
+          SET equip_status = ?
+        WHERE equip_code = ?`,
+      [EQUIP_STATUS.DOWN, equipCode]
+    );
+
+    await conn.commit();
+    return { ok: true, downtime_code: code };
+  } catch (err) {
+    if (conn) await conn.rollback();
+    throw err;
+  } finally {
+    if (conn) conn.release();
+  }
 }
+
 // 종료 = UPDATE
 async function endDowntime(code, payload = {}) {
   if (!code) {
@@ -340,13 +443,73 @@ async function endDowntime(code, payload = {}) {
   const status =
     toNullTrim(pick(payload, "progress_status", "progressStatus")) || "완료";
 
-  const r = await mariadb.query(updateDowntimeEnd, [
-    endAt,
-    remark,
-    status,
-    code,
-  ]);
-  return { affectedRows: r.affectedRows };
+  let conn;
+  try {
+    conn = await mariadb.getConnection();
+    await conn.beginTransaction();
+
+    // 1) 종료 대상 잠금 + 설비코드 확보 (이미 끝난 건 중복 종료 방지)
+    const rows = await conn.query(
+      `SELECT downtime_code, equip_code
+         FROM equip_downtime
+        WHERE downtime_code = ?
+          AND downtime_end IS NULL
+        FOR UPDATE`,
+      [code]
+    );
+    const row = Array.isArray(rows) ? rows[0] : rows;
+    if (!row) {
+      const e = new Error("진행중 다운타임이 없거나 이미 종료되었습니다.");
+      e.status = 409;
+      throw e;
+    }
+    const equipCode = row.equip_code;
+
+    // 2) 종료 처리
+    await conn.query(
+      `
+      UPDATE equip_downtime
+         SET downtime_end    = COALESCE(?, NOW()),
+             description     = COALESCE(?, description),
+             progress_status = ?
+       WHERE downtime_code   = ?
+         AND downtime_end IS NULL
+      `,
+      [endAt, remark, status, code]
+    );
+
+    // (선택) 총 소요시간 컬럼이 있다면 여기서 계산/업데이트 가능
+    // 예: total_minutes = TIMESTAMPDIFF(MINUTE, downtime_start, downtime_end)
+
+    // 3) 해당 설비에 '진행중'이 더 남아있는지 확인
+    const remain = await conn.query(
+      `SELECT 1
+         FROM equip_downtime
+        WHERE equip_code = ?
+          AND progress_status = '진행중'
+          AND downtime_end IS NULL
+        LIMIT 1`,
+      [equipCode]
+    );
+
+    // 4) 남은 진행중이 없다면 설비 상태를 RUN으로 복귀
+    if ((remain?.length ?? 0) === 0) {
+      await conn.query(
+        `UPDATE equip_master
+            SET equip_status = ?
+          WHERE equip_code = ?`,
+        [EQUIP_STATUS.RUN, equipCode]
+      );
+    }
+
+    await conn.commit();
+    return { ok: true, downtime_code: code };
+  } catch (err) {
+    if (conn) await conn.rollback();
+    throw err;
+  } finally {
+    if (conn) conn.release();
+  }
 }
 
 module.exports = {
@@ -356,6 +519,8 @@ module.exports = {
   remove,
   getOne,
   viewList,
+  listDowntimes,
+  getDowntimeByCode,
   startDowntime,
   endDowntime,
 };
