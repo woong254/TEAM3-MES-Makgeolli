@@ -214,6 +214,21 @@ router.delete("/prodInsp/:insp_id", async (req, res) => {
   res.send(result);
 });
 
+// 5. 완제품검사 조회
+// 5-1. 완제품검사 조회 리스트
+router.get("/prodInspList", async (req, res) => {
+  let result = await qualityService
+    .prodInspectSelect()
+    .catch((err) => console.error(err));
+  res.send(result);
+});
 
+// 5-2. 완제품검사 조회 검색 
+router.post("/prodInspListSearch", async (req, res) => {
+  let result = await qualityService
+    .searchProdInspList(req.body)
+    .catch((err) => console.error(err));
+  res.send(result);
+});
 
 module.exports = router;
