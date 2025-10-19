@@ -77,8 +77,7 @@ router.get("/getProcessData", async (req, res) => {
   const emp_id = req.query.emp_id;
   const param = { emp_id };
   try {
-    const result = await prodOrdService.selectProcessControlData(param);
-    // 저장된 실제 데이터가 있는 경우
+    const result = await prodOrdService.selectProcessControlData(param); // 저장된 실제 데이터가 있는 경우
     return res.json({ result });
   } catch (err) {
     return console.error(
@@ -87,6 +86,36 @@ router.get("/getProcessData", async (req, res) => {
     );
   }
 });
+
+// ====================================================================
+// [추가] 공정제어 - 실시간 생산량 폴링을 위한 라우터
+// ====================================================================
+router.get("/getCurrentProcessQty", async (req, res) => {
+  const procs_no = req.query.procs_no;
+  if (!procs_no) {
+    // 공정 번호가 없으면 400 Bad Request 응답
+    return res.status(400).json({
+      isSuccessed: false,
+      message: "공정 번호(procs_no)가 필요합니다.",
+    });
+  }
+
+  try {
+    // prodOrdService의 새로운 함수 호출 (실시간 데이터 조회 및 업데이트 역할)
+    const result = await prodOrdService.getCurrentProcessQty(procs_no);
+
+    // Vue 컴포넌트가 기대하는 형식에 맞게 isSuccessed: true와 result를 반환
+    return res.json({ isSuccessed: true, result: result });
+  } catch (err) {
+    console.error("getCurrentProcessQty 라우터 오류:", err);
+    return res.status(500).json({
+      isSuccessed: false,
+      message: "서버 내부 오류",
+      detail: err.message,
+    });
+  }
+});
+// ====================================================================
 
 // 공정실적관리에서 서버로 보낸 데이터
 router.post("/startProcess", async (req, res) => {
@@ -104,33 +133,28 @@ router.post("/startProcess", async (req, res) => {
         message:
           "제조 지시 번호(mkd_no), 제품 코드, 설비 코드, 작업자 ID(emp_id)는 필수입니다.",
       });
-    }
+    } // 3. DB에 저장할 객체 구성 (클라이언트 필드를 DB 필드로 매핑)
 
-    // 3. DB에 저장할 객체 구성 (클라이언트 필드를 DB 필드로 매핑)
     const processObj = {
       // 클라이언트의 mkd_no (제조 상세 번호)를 DB의 mk_list 필드에 매핑
       mk_list: mkd_no,
-      equip_code: equip_code,
-      // 클라이언트의 emp_id (작업자 ID)를 DB의 emp_no 필드에 매핑
+      equip_code: equip_code, // 클라이언트의 emp_id (작업자 ID)를 DB의 emp_no 필드에 매핑
       emp_no: emp_id,
       prod_code: prod_code,
       inpt_qty: inpt_qty,
       mk_qty: 0, // 초기 생산량 0
       procs_st: "t1", // 실적상태: 생산대기
-    };
+    }; // 4. DB에 작업시작 행 등록
 
-    // 4. DB에 작업시작 행 등록
-    const result = await prodOrdService.insertProcessForm(processObj);
+    const result = await prodOrdService.insertProcessForm(processObj); // 5. 성공 응답 (HTTP 201 Created 권장)
 
-    // 5. 성공 응답 (HTTP 201 Created 권장)
     return res.status(201).json({
       message: "작업이 성공적으로 시작 및 등록되었습니다.",
       data: result, // DB Insert 결과 (예: 삽입된 ID)를 포함할 수 있음
     });
   } catch (err) {
     // 6. 에러 처리 및 응답
-    console.error("작업 시작 처리 중 오류 발생:", err);
-    // 클라이언트에게 500 상태 코드와 함께 오류 메시지를 전달
+    console.error("작업 시작 처리 중 오류 발생:", err); // 클라이언트에게 500 상태 코드와 함께 오류 메시지를 전달
     return res.status(500).json({
       error: "Internal Server Error",
       message: "작업 등록 중 서버 내부 오류가 발생했습니다.",
