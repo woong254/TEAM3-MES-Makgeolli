@@ -133,6 +133,8 @@ const calculateRemainingQty = async (prod_code, target_qty) => {
       [prod_code]
     );
 
+    console(rows);
+
     const total_inpt_qty = rows[0].total_inpt_qty;
 
     // 남은 생산 가능 수량 계산
@@ -157,10 +159,6 @@ const calculateRemainingQty = async (prod_code, target_qty) => {
     };
   } catch (err) {
     console.error(err);
-    return { 
-      success: false, 
-      error: err.message 
-    };
   }
 };
 

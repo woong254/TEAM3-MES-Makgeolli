@@ -90,23 +90,11 @@ router.get("/goToProcess", async (req, res) => {
     const equip = equipPayload ? JSON.parse(equipPayload) : null;
     const emp = empPayload ? JSON.parse(empPayload) : null;
 
-    console.log('make', make);
-    console.log(make.mkd_no);
-    console.log(make.prod_code);
-    console.log(make.inpt_qty);
-    console.log('equip', equip);
-    console.log('emp', emp);
+    calculateRemainingQty(make.prod_code, make.inpt_qty);
     saveProcessData(make, equip, emp);
   } catch (err) { 
     console.error(err);
   }
-});
-
-// 실제 투입수량 비교 후 공정제어로 데이터 넘김
-router.post('/goToProcess/remaining', async (req, res) => {
-  const { prod_code, target_qty } = req.body;
-  const result = await calculateRemainingQty(item_code, target_qty);
-  res.json(result);
 });
 
 
