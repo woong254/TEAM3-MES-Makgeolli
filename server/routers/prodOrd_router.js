@@ -89,35 +89,53 @@ router.get("/getProcessData", async (req, res) => {
 });
 
 // 공정실적관리에서 서버로 보낸 데이터
-router.get("/goToProcess", async (req, res) => {
+router.post("/startProcess", async (req, res) => {
+  // 1. 요청 본문(req.body)에서 필요한 '평면적인' 데이터를 직접 구조 분해 할당으로 가져옵니다.
+  // 클라이언트가 보낸 실제 필드 이름: mkd_no, prod_code, inpt_qty, equip_code, emp_id
+  const { mkd_no, prod_code, inpt_qty, equip_code, emp_id } = req.body;
+
   try {
-    const { makePayload, equipPayload, empPayload } = req.query;
+    // 2. 필수 데이터 누락 체크 (주요 필드만 검사)
+    // 이전의 make, equip, emp 객체 대신, 핵심 ID 필드들을 직접 확인합니다.
+    if (!mkd_no || !prod_code || !equip_code || !emp_id) {
+      console.error("필수 요청 데이터 누락:", req.body);
+      return res.status(400).json({
+        error: "Bad Request",
+        message:
+          "제조 지시 번호(mkd_no), 제품 코드, 설비 코드, 작업자 ID(emp_id)는 필수입니다.",
+      });
+    }
 
-    const make = makePayload ? JSON.parse(makePayload) : null;
-    const equip = equipPayload ? JSON.parse(equipPayload) : null;
-    const emp = empPayload ? JSON.parse(empPayload) : null;
-
-    console.log("make", make);
-    console.log(make.mkd_no);
-    console.log(make.prod_code);
-    console.log(make.inpt_qty);
-    console.log("equip", equip);
-    console.log("emp", emp);
-
-    // DB에 작업시작 행 등록
+    // 3. DB에 저장할 객체 구성 (클라이언트 필드를 DB 필드로 매핑)
     const processObj = {
-      mk_list: make.mkd_no,
-      equip_code: equip.equip_code,
-      emp_no: emp.emp_id,
-      prod_code: make.prod_code,
-      inpt_qty: make.inpt_qty,
+      // 클라이언트의 mkd_no (제조 상세 번호)를 DB의 mk_list 필드에 매핑
+      mk_list: mkd_no,
+      equip_code: equip_code,
+      // 클라이언트의 emp_id (작업자 ID)를 DB의 emp_no 필드에 매핑
+      emp_no: emp_id,
+      prod_code: prod_code,
+      inpt_qty: inpt_qty,
       mk_qty: 0, // 초기 생산량 0
       procs_st: "t1", // 실적상태: 생산대기
     };
 
+    // 4. DB에 작업시작 행 등록
     const result = await prodOrdService.insertProcessForm(processObj);
+
+    // 5. 성공 응답 (HTTP 201 Created 권장)
+    return res.status(201).json({
+      message: "작업이 성공적으로 시작 및 등록되었습니다.",
+      data: result, // DB Insert 결과 (예: 삽입된 ID)를 포함할 수 있음
+    });
   } catch (err) {
-    console.error(err);
+    // 6. 에러 처리 및 응답
+    console.error("작업 시작 처리 중 오류 발생:", err);
+    // 클라이언트에게 500 상태 코드와 함께 오류 메시지를 전달
+    return res.status(500).json({
+      error: "Internal Server Error",
+      message: "작업 등록 중 서버 내부 오류가 발생했습니다.",
+      detail: err.message,
+    });
   }
 });
 

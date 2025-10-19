@@ -143,25 +143,30 @@ const updateProcessForm = async (params) => {
   }
 };
 
-// 공정실적관리테이블에 입력
+/**
+ * [수정] insertProcessForm: 공정실적관리 테이블에 작업 시작 정보를 입력합니다.
+ * 두 개의 DB 쿼리가 연속적으로 실행되므로 트랜잭션을 적용하여 데이터 무결성을 보장합니다.
+ */
 const insertProcessForm = async (params) => {
+  let conn = null; // 커넥션 객체 선언
   try {
-    // 1. 현재 공정명 가져오기
-    const [procRow] = await mariadb.query(
-      `SELECT pm.proc_name 
-       FROM proc_master pm 
-       JOIN equip_master em ON pm.equip_type = em.equip_type 
-       WHERE em.equip_code = ?`,
+    conn = await mariadb.getConnection();
+    await conn.beginTransaction(); // 트랜잭션 시작 // 1. 현재 공정명 가져오기 (conn 객체 사용)
+
+    const [procRow] = await conn.query(
+      `SELECT pm.proc_name
+FROM proc_master pm
+JOIN equip_master em ON pm.equip_type = em.equip_type
+WHERE em.equip_code = ?`,
       [params.equip_code]
-    );
+    ); // 공정명이 없을 경우 null 처리 (DB에 "" 대신 NULL 저장 권장)
 
-    const now_procs = procRow ? procRow.proc_name : "";
+    const now_procs = procRow ? procRow.proc_name : null; // 2. 공정실적관리 테이블에 삽입 (conn 객체 사용)
 
-    // 2. 공정실적관리 테이블에 삽입
-    const insertResult = await mariadb.query(
+    const insertResult = await conn.query(
       `INSERT INTO processform
-      (mk_list, equip_code, emp_no, prod_code, inpt_qty, procs_st, now_procs)
-      VALUES (?, ?, ?, ?, ?, ?, ?)`,
+(mk_list, equip_code, emp_no, prod_code, inpt_qty, procs_st, now_procs)
+VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [
         params.mk_list,
         params.equip_code,
@@ -173,11 +178,16 @@ const insertProcessForm = async (params) => {
       ]
     );
 
+    await conn.commit(); // 모든 쿼리가 성공하면 최종 반영
+
     console.log("insertResult:", insertResult);
     return { isSuccessed: true, result: insertResult };
   } catch (err) {
     console.error("insertProcessForm 오류 : ", err);
-    return { isSuccessed: false };
+    if (conn) await conn.rollback(); // 에러 발생 시 롤백 (데이터 원상 복구)
+    throw err; // 에러를 상위(라우터)로 다시 던져서 500 응답 처리하도록 함
+  } finally {
+    if (conn) conn.release(); // 커넥션 반환
   }
 };
 
@@ -195,8 +205,8 @@ const calculateRemainingQty = async (prod_code, target_qty) => {
     // DB 조회
     const [rows] = await db.query(
       `SELECT COALESCE(SUM(inpt_qty), 0) AS total_inpt_qty
-       FROM processform
-       WHERE prod_code = ?`,
+FROM processform
+WHERE prod_code = ?`,
       [prod_code]
     );
 

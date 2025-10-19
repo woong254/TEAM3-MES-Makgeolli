@@ -95,7 +95,7 @@ const state = ref({
   selected: null as MakeOrderDetail | null,
 })
 
-const prevSelectedNo = ref<number | null>(null)
+// const prevSelectedNo = ref<number | null>(null)
 
 // 선택한 지시건이 가진 공정명
 const selectProcName = (e: { data: MakeOrderDetail }) => {
@@ -114,11 +114,15 @@ const selectProcName = (e: { data: MakeOrderDetail }) => {
 
 const resetInputsAndSelections = () => {
   // 투입수량 초기화
-  makeRows.value = makeRows.value.map((row) => ({
-    ...row,
-  }))
+  // makeRows.value = makeRows.value.map((row) => ({
+  //   ...row,
+  // }))
+  // makeRows 배열 자체를 초기화하는 것은 데이터 유실을 가져올 수 있으므로
+  // 투입수량 초기화가 필요하다면 forEach를 통해 inpt_qty를 0으로 설정하거나,
+  // 현재 로직에서는 reset을 막는게 더 합리적입니다. (기존 코드 주석 처리)
+
   // 선택 상태 초기화
-  selectMake.value = null
+  // selectMake.value = null // 이 부분은 PrimeVue가 처리함
   selectEquip.value = null
   equipRows.value = []
 }
@@ -159,11 +163,19 @@ const validateBeforeGoToProcess = () => {
     return false
   }
 
-  const selectedRow = makeRows.value.find((row) => row.mk_ord_no === selectMake.value!.mk_ord_no)
-  if (!selectedRow || !selectedRow.inpt_qty) {
-    alert('선택한 지시의 투입수량을 작성하세요')
+  // --------------------------------------------------------------------------------------
+  // [수정 위치 1] 투입 수량 유효성 검사 로직 수정
+  // selectMake.value는 이미 makeRows.value의 해당 객체를 참조하며,
+  // inpt_qty 입력 시 onInputInptQty 함수에 의해 실시간으로 업데이트됩니다.
+  // 따라서 별도로 makeRows.value에서 다시 찾을 필요 없이 selectMake.value의 inpt_qty를 확인합니다.
+  // --------------------------------------------------------------------------------------
+  const currentInptQty = selectMake.value.inpt_qty
+  if (!currentInptQty || currentInptQty <= 0) {
+    // 투입 수량이 0보다 커야 함을 명시
+    alert('투입수량을 0보다 크게 작성하세요.')
     return false
   }
+  // --------------------------------------------------------------------------------------
 
   if (!selectEquip.value) {
     alert('설비를 선택하세요.')
@@ -173,69 +185,74 @@ const validateBeforeGoToProcess = () => {
   if (!selectEmp.value) {
     alert('작업자를 선택하세요.')
     return false
-  }
-
-  // 최종 selectMake에도 반영
-  selectMake.value.inpt_qty = selectedRow.inpt_qty
+  } // inpt_qty는 이미 최신 값이므로 이 코드는 제거 또는 주석 처리
+  // selectMake.value.inpt_qty = currentInptQty
 
   return true
 }
 
 const goToProcess = async () => {
-  if (isSubmitting.value) return
+  // 1. 중복 클릭 방지 및 상태 확인
+  if (isSubmitting.value) return // 2. 유효성 검사
   if (!validateBeforeGoToProcess()) return
 
   const make = selectMake.value as MakeOrderDetail
   const equip = selectEquip.value as ChooseEquip
-  const emp = selectEmp.value as ChooseEmp
+  const emp = selectEmp.value as ChooseEmp // 공정 제어를 시작하기 위해 서버로 전송할 데이터 페이로드
 
-  const makePayload = {
-    mkd_no: make.mkd_no, // 1. 지시서 상세 목록
-    prod_code: make.prod_code, // 4. 제품코드
-    inpt_qty: make.inpt_qty, // 5. 현투입량
+  const payload = {
+    mkd_no: make.mkd_no,
+    prod_code: make.prod_code,
+    inpt_qty: make.inpt_qty, // 현 투입량 (최신값)
+    equip_code: equip.equip_code, // 설비코드
+    emp_id: emp.emp_id, // 사원번호
+    // 기타 필요한 데이터 (예: proc_id, mk_ord_no 등)
+    proc_id: make.proc_id,
+    mk_ord_no: make.mk_ord_no,
   }
 
-  const equipPayload = {
-    equip_code: equip.equip_code, // 2. 설비코드
-  }
-
-  const empPayload = {
-    emp_id: emp.emp_id, // 3. 사원번호
-  }
-
-  console.log(makePayload)
-  console.log(equipPayload)
-  console.log(empPayload)
+  console.log('Process Start Payload:', payload)
 
   try {
-    isSubmitting.value = true
-    const res = await axios.get('/api/goToProcess', {
-      params: {
-        makePayload: JSON.stringify(makePayload),
-        equipPayload: JSON.stringify(equipPayload),
-        empPayload: JSON.stringify(empPayload),
-      },
-    })
+    isSubmitting.value = true // 버튼 텍스트 '이동 중'으로 변경
+    // 3. 서버 호출: 공정 시작 상태를 서버에 등록하므로 POST 요청이 적절합니다.
+    // (서버 API는 이 요청을 처리하고, 성공 시 200/201 응답을 주어야 합니다)
+
+    const res = await axios.post('/api/startProcess', payload)
+    console.log('API Response (Process Started):', res) // API 호출 성공 시에만 페이지 이동
     router.push({
       path: '/processControl',
-      query: { emp_id: emp.emp_id },
-    })
-    console.log(res)
+      query: {
+        emp_id: emp.emp_id,
+        equip_code: equip.equip_code,
+        mkd_no: make.mkd_no, // 다음 페이지에서 데이터를 조회하는 데 필요한 최소한의 정보를 쿼리로 전달
+      },
+    }) // 페이지 이동에 성공하면 이 컴포넌트는 언마운트되므로 isSubmitting을 false로 되돌릴 필요가 없습니다.
   } catch (err) {
-    console.error(err)
-    alert('등록 실패')
-  } finally {
-    isSubmitting.value = false
-  }
+    // 4. 에러 처리: API 실패 시 isSubmitting을 false로 되돌려 버튼을 활성화하고 사용자에게 오류 알림
+    console.error('공정 시작 API 오류:', err)
+    alert('공정 제어 시작 요청 실패. 서버 응답을 확인하세요.')
+    isSubmitting.value = false // 에러 발생 시 버튼 상태 복구
+  } // finally 블록은 성공 시에는 불필요하지만, 만약 API가 응답 후 router.push가 실패할 경우를 대비하여
+  // isSubmitting.value = false 를 남겨둘 수도 있지만, 여기서는 catch에서 명시적으로 처리했습니다.
 }
 
 //preitteir 오류 input 빼내기
 const onInputInptQty = (data: MakeOrderDetail) => {
   const max = Number(data.mk_num || 0)
+  // ----------------------------------------------------
+  // [수정 위치 2] 입력값 안정성 확보
+  // ----------------------------------------------------
+  // v-model.number를 사용하지만, 혹시 모를 상황을 대비해 Number()로 다시 감싸줍니다.
   const cur = Number(data.inpt_qty || 0)
+  // ----------------------------------------------------
 
   // 1) 입력값을 0~max 범위로 보정
+  // ----------------------------------------------------
+  // [수정 위치 3] inpt_qty는 number 타입이므로 string 대신 number로 할당
+  // ----------------------------------------------------
   data.inpt_qty = Math.min(max, Math.max(0, cur))
+  // ----------------------------------------------------
 
   // 2) 현재 선택행(selectMake)도 함께 동기화
   // 주의: <script setup>함수 내부에서는 ref는 .value로 접근
