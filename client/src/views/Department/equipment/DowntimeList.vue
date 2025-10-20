@@ -36,7 +36,6 @@ interface EquipItem {
   mfgDt: string | null
   maker: string | null
 }
-type CreateEquipPayload = Omit<EquipItem, 'equipImage'> & { equipImage?: string }
 
 /** 비가동 데이터(예시 스키마) */
 interface DowntimeItem {
@@ -78,19 +77,7 @@ const toCamel = (r: any): EquipItem => ({
   mfgDt: r.mfgDt ?? r.mfg_dt ?? null,
   maker: r.maker ?? null,
 })
-const toSnake = (p: CreateEquipPayload) => ({
-  equip_code: p.equipCode?.trim(),
-  equip_name: p.equipName?.trim(),
-  equip_type: p.equipType?.trim(),
-  manager: p.manager ?? null,
-  equip_status: p.equipStatus || 'j2',
-  insp_cycle: p.inspCycle ?? null,
-  install_date: p.installDate || null,
-  model_name: p.modelName || null,
-  equip_image: p.equipImage || null,
-  mfg_dt: p.mfgDt || null,
-  maker: p.maker || null,
-})
+
 const initSearch = () => ({ equipCode: '', equipName: '', equipType: '', equipStatus: 'j1' })
 
 //등록페이지로 이동하는 라우터
