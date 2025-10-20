@@ -29,6 +29,8 @@ interface processFormItem {
   proc_name: string
   emp_name: string
   inpt_qty: number
+  prev_input_qty: number
+  remain_qty: number
 }
 
 // 공정제어 화면 출력 데이터 초기값
@@ -41,12 +43,12 @@ const processForm = ref<processFormItem>({
   proc_name: '',
   emp_name: '',
   inpt_qty: 0,
+  prev_input_qty: 0, // 기투입량
+  remain_qty: 0, // 미투입량
 })
 
 // 작업시작 버튼 누르고 나온 결과값 받는 함수
 const sf = ref({
-  prev_input_qty: 0, // 기투입량
-  remain_qty: 0, // 미투입량
   procs_bgntm: '작업시작을 해주세요', // 작업시작시간
 })
 
@@ -119,7 +121,7 @@ const startPolling = () => {
   // 즉시 한번 업데이트
   fetchCurrentQty()
 
-  // 1초마다 반복 (서버 시뮬레이션은 2초마다 증가하지만, 1초마다 확인하여 빠르게 반응)
+  // 1초마다 반복 (서버 시뮬레이션은 0.5초마다 증가하지만, 1초마다 확인하여 반응)
   pollingInterval = setInterval(fetchCurrentQty, 1000) as unknown as number
   console.log('Polling started.')
 }
@@ -136,13 +138,14 @@ const stopPolling = () => {
 }
 
 /**
- * 컴포넌트 로드 후, 기존 작업 상태를 확인하고 폴링을 시작합니다.
+ * [수정된 함수] 컴포넌트 로드 후, 기존 작업 상태를 확인하고 화면에 반영합니다.
+ * (주의: 이 함수는 실시간 폴링을 시작하지 않습니다.)
  */
-const checkAndStartPolling = (procsNo: number) => {
+const checkInitialProcessStatus = async (procsNo: number) => {
   if (procsNo !== 0) {
-    // procs_no를 얻은 후, 현재 상태를 조회하고 t2면 폴링 시작
-    fetchCurrentQty()
-    startPolling() // 일단 시작하고, fetchCurrentQty에서 t3면 중지
+    // procs_no를 얻은 후, 현재 상태를 조회하여 기존 작업 상태를 화면에 반영합니다.
+    // 실시간 폴링은 '작업시작' 버튼 클릭 시에만 시작됩니다.
+    await fetchCurrentQty()
   }
 }
 
@@ -159,7 +162,7 @@ const fetchProcessData = async () => {
       },
     })
     const dbResult = response.data.result[0]
-    console.log(dbResult)
+    console.log('dbResult:', dbResult)
 
     // 기본 정보 업데이트
     processForm.value.procs_no = dbResult.procs_no
@@ -170,9 +173,11 @@ const fetchProcessData = async () => {
     processForm.value.emp_name = dbResult.emp_name
     processForm.value.mk_num = dbResult.mk_num
     processForm.value.inpt_qty = dbResult.inpt_qty
+    processForm.value.prev_input_qty = dbResult.prev_input_qty
+    processForm.value.remain_qty = dbResult.remain_qty
 
-    // 기존 작업이 진행 중이거나 완료 상태인지 확인하고 폴링 시작
-    checkAndStartPolling(dbResult.procs_no)
+    // [수정] 기존 작업 상태를 확인하고 화면에 반영 (폴링은 시작하지 않음)
+    await checkInitialProcessStatus(dbResult.procs_no)
   } catch (err) {
     console.error('fetchProcessData에서 오류가 생겼습니다. 오류내용 : ', err)
   }
@@ -340,7 +345,7 @@ onUnmounted(() => {
                   :class="inputStyle"
                   required
                   readonly
-                  v-model="sf.prev_input_qty"
+                  v-model="processForm.prev_input_qty"
                   style="text-align: right"
                 />
               </div>
@@ -366,7 +371,7 @@ onUnmounted(() => {
                   :class="inputStyle"
                   required
                   readonly
-                  v-model="sf.remain_qty"
+                  v-model="processForm.remain_qty"
                   style="text-align: right"
                 />
               </div>
