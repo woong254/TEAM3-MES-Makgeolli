@@ -151,6 +151,7 @@ onMounted(() => {
             <DataCol
               field="mat_name"
               header="자재명"
+              style="width: 260px"
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
             <DataCol
@@ -166,6 +167,7 @@ onMounted(() => {
             <DataCol
               field="comncode_dtnm"
               header="자재유형"
+              sortable
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
             <DataCol
@@ -176,13 +178,17 @@ onMounted(() => {
             <DataCol
               field="stock_qty"
               header="재고"
+              sortable
               :pt="{ columnHeaderContent: 'justify-center' }"
+              style="text-align: right"
             >
               <template #body="{ data }">{{ n(data.stock_qty) }}</template>
             </DataCol>
             <DataCol
               field="safe_stock"
               header="안전재고"
+              sortable
+              style="text-align: right"
               :pt="{ columnHeaderContent: 'justify-center' }"
             >
               <template #body="{ data }">{{ n(data.safe_stock) }}</template>
