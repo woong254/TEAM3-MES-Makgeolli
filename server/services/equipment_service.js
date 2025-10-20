@@ -287,7 +287,6 @@ async function listDowntimes(status) {
       d.equip_code      AS equipCode,
       e.equip_name      AS equipName,
       d.downtime_type   AS downtimeType,
-      e.manager         AS manager,
       d.worker_id       AS workerId, 
       d.downtime_start  AS downtimeStart,
       d.downtime_end    AS downtimeEnd,
@@ -316,7 +315,6 @@ async function getDowntimeByCode(code) {
       d.equip_code      AS equipCode,
       e.equip_name      AS equipName,
       d.downtime_type   AS downtimeType,
-      e.manager         AS manager,
       d.worker_id       AS workerId, 
       d.description     AS description,
       d.downtime_start  AS downtimeStart,
@@ -346,6 +344,7 @@ async function startDowntime(payload = {}) {
   const missing = [];
   if (!equipCode) missing.push("equip_code");
   if (!downtimeStart) missing.push("downtime_start");
+  if (!workerId) missing.push("worker_id(비가동 담당자)");
   if (missing.length) {
     const e = new Error(`필수값: ${missing.join(", ")}`);
     e.status = 400;
@@ -364,7 +363,7 @@ async function startDowntime(payload = {}) {
 
     // 1) 설비 행 잠금 + '가동중'만 허용
     const equipRows = await conn.query(
-      `SELECT equip_code, equip_name, equip_status,manager
+      `SELECT equip_code, equip_name, equip_status
          FROM equip_master
         WHERE equip_code = ? AND equip_status = ?
         FOR UPDATE`,
@@ -376,9 +375,6 @@ async function startDowntime(payload = {}) {
       e.status = 409;
       throw e;
     }
-
-    // 2) 요청에 worker_id가 없으면 equip.manager를 사용
-    const worker = workerId || equip.manager || null;
 
     // 2) 동일 설비의 진행중 비가동 중복 방지 (잠금)
     const dupRows = await conn.query(
