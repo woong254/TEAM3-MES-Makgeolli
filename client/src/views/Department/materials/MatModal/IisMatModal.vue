@@ -123,11 +123,11 @@ const selectMat = () => {
     title="발주자재 조회"
     title-align="left"
     header-align="right"
+    footer-align="center"
     width="1200px"
   >
     <template #modal-header>
-      <button type="button" class="btn-white btn-common" @click="searchIis">조회</button>
-      <button type="button" class="btn-color btn-common" @click="selectMat">등록</button>
+      <button type="button" class="btn-color btn-common" @click="searchIis">조회</button>
     </template>
 
     <template #modal-body>
@@ -200,6 +200,9 @@ const selectMat = () => {
           />
         </DataTable>
       </div>
+    </template>
+    <template #modal-footer>
+      <button type="button" class="btn-white btn-common" @click="selectMat">확인</button>
     </template>
   </Modal>
 </template>

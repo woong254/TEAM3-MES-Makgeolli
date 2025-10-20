@@ -108,11 +108,11 @@ const selectMat = () => {
     title="자재 조회"
     title-align="left"
     header-align="right"
+    footer-align="center"
     width="800px"
   >
     <template #modal-header>
-      <button type="button" class="btn-white btn-common" @click="searchMatList">조회</button>
-      <button type="button" class="btn-color btn-common" @click="selectMat">등록</button>
+      <button type="button" class="btn-color btn-common" @click="searchMatList">조회</button>
     </template>
 
     <template #modal-body>
@@ -170,6 +170,9 @@ const selectMat = () => {
           <DataCol field="mat_unit" header="단위" :pt="{ columnHeaderContent: 'justify-center' }" />
         </DataTable>
       </div>
+    </template>
+    <template #modal-footer>
+      <button type="button" class="btn-white btn-common" @click="selectMat">확인</button>
     </template>
   </Modal>
 </template>

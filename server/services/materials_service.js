@@ -471,6 +471,16 @@ const findMatPageList = async (filters = {}) => {
   }
 };
 
+const findLotMatList = async (mat_code) => {
+  try {
+    const rows = await mariadb.query("lotMatList", [mat_code]);
+    return rows || [];
+  } catch (err) {
+    console.error(err);
+    return [];
+  }
+};
+
 module.exports = {
   // 목록/검색
   findPurList,
@@ -481,6 +491,7 @@ module.exports = {
   findIisBcncList,
   findIisMatList,
   findPurPagePurList,
+  findLotMatList,
   // 단건 조회
   findPurHeaderByCode,
   findPurLinesByCode,

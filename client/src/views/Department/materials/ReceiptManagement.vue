@@ -273,11 +273,11 @@ const registerIis = async () => {
       <ComponentCard title="가입고">
         <template #header-right>
           <div class="flex justify-end space-x-2 mb-1">
-            <button type="button" class="btn-white btn-common" @click="isPurMatModalOpen = true">
+            <button type="button" class="btn-white btn-common" @click="resetBtn">초기화</button>
+            <button type="button" class="btn-color btn-common" @click="isPurMatModalOpen = true">
               조회
             </button>
-            <button type="button" class="btn-white btn-common" @click="resetBtn">초기화</button>
-            <button type="button" class="btn-color btn-common" @click="submitIis">등록</button>
+            <button type="button" class="btn-white btn-common" @click="submitIis">등록</button>
           </div>
         </template>
 
