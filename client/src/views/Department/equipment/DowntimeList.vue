@@ -202,6 +202,26 @@ const refreshAll = async () => {
 /* ========================
  * Handlers
  * ======================== */
+
+// utils/date.ts (혹은 현재 파일 상단)
+function formatDt(iso?: string | null, tz = 'Asia/Seoul') {
+  if (!iso) return ''
+  const d = new Date(iso) // 서버가 Z(UTC)로 보내면 로컬/타임존 변환됨
+  // 한국식 "YYYY. M. D. HH:MM" 형태
+  return new Intl.DateTimeFormat('ko-KR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: tz,
+  })
+    .format(d)
+    .replace(/\.\s/g, '-')
+    .replace(/\.$/, '') // 2025-10-20 17:15 처럼
+}
+
 //조회 폼 초기화.
 const resetSearchForm = () => Object.assign(searchForm.value, initSearch())
 
@@ -369,7 +389,7 @@ watch(
                   <DataCol field="equipCode" header="설비코드" />
                   <DataCol field="equipName" header="설비명" />
                   <DataCol field="downtimeType" header="비가동유형" />
-                  <DataCol field="manager" header="담당자" />
+                  <DataCol field="workerId" header="담당자" />
                   <DataCol field="downtimeStart" header="비가동시작일시" />
                   <DataCol field="downtimeEnd" header="비가동종료일시" />
                   <DataCol field="progressStatus" header="진행상태" />
@@ -392,9 +412,20 @@ watch(
                   <DataCol field="equipCode" header="설비코드" />
                   <DataCol field="equipName" header="설비명" />
                   <DataCol field="downtimeType" header="비가동유형" />
-                  <DataCol field="manager" header="담당자" />
-                  <DataCol field="downtimeStart" header="비가동시작일시" />
-                  <DataCol field="downtimeEnd" header="비가동종료일시" />
+                  <DataCol field="workerId" header="담당자" />
+                  <!-- 시작일시 포맷 -->
+                  <DataCol field="downtimeStart" header="비가동시작일시">
+                    <template #body="{ data }">
+                      {{ formatDt(data.downtimeStart) }}
+                    </template>
+                  </DataCol>
+
+                  <!-- 종료일시 포맷 -->
+                  <DataCol field="downtimeEnd" header="비가동종료일시">
+                    <template #body="{ data }">
+                      {{ formatDt(data.downtimeEnd) }}
+                    </template>
+                  </DataCol>
                   <DataCol field="progressStatus" header="진행상태" />
                 </DataTable>
               </TabPanel>
