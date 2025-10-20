@@ -468,18 +468,18 @@ onUnmounted(() => {
   height: 100px;
 }
 .btn-white {
-  background-color: #228b22;
-  border: 1px solid #ddd;
+  background-color: #213555;
   color: #fff;
 }
 .btn-white:hover {
-  background-color: #3fdb3f;
+  background-color: #3e5879;
 }
 .btn-color {
-  background-color: #d22323;
-  color: #fff;
+  background-color: #fff;
+  border: 1px solid #ddd;
+  color: black;
 }
 .btn-color:hover {
-  background-color: #f14242;
+  background-color: #eee;
 }
 </style>
