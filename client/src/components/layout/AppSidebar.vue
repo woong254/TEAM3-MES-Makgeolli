@@ -226,30 +226,6 @@ const {
 } = useSidebar()
 
 const menuGroups: MenuGroup[] = [
-  // 템플릿 기본 메뉴 (다 만들고 삭제할 것)
-  {
-    title: '템플릿 기본 메뉴',
-    items: [
-      {
-        icon: PageIcon,
-        name: 'Ui Elements',
-        subItems: [
-          { name: 'Ecommerce', path: '/', pro: false },
-          { name: '404 Page', path: '/error-404', pro: false },
-          { name: 'Alerts', path: '/alerts', pro: false },
-          { name: 'Avatars', path: '/avatars', pro: false },
-          { name: 'Badge', path: '/badge', pro: false },
-          { name: 'Buttons', path: '/buttons', pro: false },
-          { name: 'Images', path: '/images', pro: false },
-          { name: 'Videos', path: '/videos', pro: false },
-          { name: 'Basic Tables', path: '/basic-tables', pro: false },
-          { name: 'Form Elements', path: '/form-elements', pro: false },
-          { name: 'Signin', path: '/signin', pro: false },
-          { name: 'Signup', path: '/signup', pro: false },
-        ],
-      },
-    ],
-  },
   {
     title: 'Menu',
     items: [
