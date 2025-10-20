@@ -43,7 +43,7 @@ const loading = ref(false)
 const isPdfOpen = ref(false)
 const pdfDocs = ref([]) // [{ headerInfo:{...}, items:[...] }]
 
-// 선택한 발주서들로 모달 열기
+// ✅ 선택된 행에서 pur_code 중복 제거 → 발주서당 1건만 생성
 const openPdfPreview = async () => {
   const rows = Array.isArray(selectPur.value) ? selectPur.value : []
   if (!rows.length) {
@@ -51,9 +51,8 @@ const openPdfPreview = async () => {
     return
   }
   try {
-    // 여러 건 병렬 로딩
-    const tasks = rows.map(async (row) => {
-      const pur_code = row.pur_code
+    const uniquePurCodes = [...new Set(rows.map((r) => r.pur_code))]
+    const tasks = uniquePurCodes.map(async (pur_code) => {
       const [hRes, lRes] = await Promise.all([
         axios.get('/api/pur/header', { params: { pur_code } }),
         axios.get('/api/pur/lines', { params: { pur_code } }),
@@ -77,7 +76,6 @@ const openPdfPreview = async () => {
       }))
       return { headerInfo, items }
     })
-
     pdfDocs.value = await Promise.all(tasks)
     isPdfOpen.value = true
   } catch (e) {
@@ -147,10 +145,11 @@ const fetchPurList = async () => {
   try {
     const { data } = await axios.get('/api/purchase/search', { params: purSearch })
     purList.value = Array.isArray(data)
-      ? data.map((r) => ({
+      ? data.map((r, idx) => ({
           ...r,
           pur_date: toYmd(r.pur_date),
           receipt_date: toYmd(r.receipt_date),
+          rowKey: `${r.pur_code}__${r.mat_code ?? ''}__${idx}`,
         }))
       : []
   } catch (e) {
@@ -159,6 +158,29 @@ const fetchPurList = async () => {
   } finally {
     loading.value = false
   }
+}
+
+// ✅ 유틸: rowKey로 중복 제거
+const dedupByRowKey = (rows) => {
+  const m = new Map()
+  rows.forEach((r) => r && m.set(r.rowKey, r))
+  return Array.from(m.values())
+}
+
+// ✅ 체크 시: 같은 pur_code 모두 선택
+const onRowSelect = (e) => {
+  const code = e?.data?.pur_code
+  if (!code) return
+  const sameRows = purList.value.filter((r) => r.pur_code === code)
+  selectPur.value = dedupByRowKey([...(selectPur.value || []), ...sameRows])
+}
+
+// ✅ 해제 시: 같은 pur_code 모두 해제
+const onRowUnselect = (e) => {
+  const code = e?.data?.pur_code
+  if (!code) return
+  const toRemove = new Set(purList.value.filter((r) => r.pur_code === code).map((r) => r.rowKey))
+  selectPur.value = (selectPur.value || []).filter((r) => !toRemove.has(r.rowKey))
 }
 
 const resetBtn = () => {
@@ -184,6 +206,7 @@ onMounted(() => {
     <PageBreadcrumb :pageTitle="currentPageTitle" />
 
     <div class="space-y-5 sm:space-y-3">
+      <!-- ✅ 검색 카드 (원본 그대로) -->
       <ComponentCard title="발주서 검색">
         <template #header-right>
           <div class="flex justify-end space-x-2 mb-1">
@@ -196,12 +219,22 @@ onMounted(() => {
           <div class="flex flex-wrap gap-4">
             <div class="w-1/4">
               <label :class="labelStyle"> 발주서명 </label>
-              <input type="text" :class="inputStyle" v-model="purSearch.pur_name" />
+              <input
+                type="text"
+                :class="inputStyle"
+                v-model="purSearch.pur_name"
+                @keyup.enter="fetchPurList"
+              />
             </div>
 
             <div class="w-1/4">
               <label :class="labelStyle"> 매입처명 </label>
-              <input type="text" :class="inputStyle" v-model="purSearch.bcnc_name" />
+              <input
+                type="text"
+                :class="inputStyle"
+                v-model="purSearch.bcnc_name"
+                @keyup.enter="fetchPurList"
+              />
             </div>
 
             <div class="w-1/4">
@@ -350,6 +383,7 @@ onMounted(() => {
         </template>
       </ComponentCard>
 
+      <!-- ✅ 발주서 목록 -->
       <ComponentCard title="발주서 목록" style="height: 475px">
         <template #header-right>
           <div class="flex justify-end space-x-2 mb-1">
@@ -369,10 +403,14 @@ onMounted(() => {
             showGridlines
             v-model:selection="selectPur"
             :value="purList"
-            dataKey="pur_code"
+            dataKey="rowKey"
             scrollable
             scrollHeight="345px"
             size="small"
+            sortMode="single"
+            :tableStyle="{ minWidth: '1700px' }"
+            @row-select="onRowSelect"
+            @row-unselect="onRowUnselect"
           >
             <template #empty>
               <div class="text-center">등록한 발주서가 없습니다.</div>
@@ -383,81 +421,116 @@ onMounted(() => {
             <DataCol
               field="pur_code"
               header="발주코드"
+              headerClass="no-wrap"
+              style="min-width: 90px"
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
             <DataCol
               field="pur_name"
               header="발주서명"
+              headerClass="no-wrap"
+              bodyClass="ellipsis"
+              style="min-width: 200px"
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
             <DataCol
               field="pur_date"
               header="발주일자"
               sortable
-              style="text-align: center"
+              headerClass="no-wrap"
+              style="text-align: center; min-width: 120px"
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
             <DataCol
               field="receipt_date"
               header="입고요청일자"
-              style="text-align: center"
               sortable
+              headerClass="no-wrap"
+              style="text-align: center; min-width: 130px"
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
             <DataCol
               field="emp_name"
               header="담당자"
+              headerClass="no-wrap"
+              style="min-width: 100px"
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
             <DataCol
               field="bcnc_code"
               header="매입처코드"
+              headerClass="no-wrap"
+              style="min-width: 110px"
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
             <DataCol
               field="bcnc_name"
               header="매입처명"
+              headerClass="no-wrap"
+              bodyClass="ellipsis"
+              style="min-width: 160px"
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
             <DataCol
               field="mat_code"
               header="자재코드"
+              headerClass="no-wrap"
+              style="min-width: 150px"
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
             <DataCol
               field="mat_name"
               header="자재명"
+              headerClass="no-wrap"
+              bodyClass="ellipsis"
+              style="min-width: 160px"
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
             <DataCol
               field="mat_spec"
               header="규격"
+              headerClass="no-wrap"
+              bodyClass="ellipsis"
+              style="min-width: 160px"
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
             <DataCol
               field="mat_unit"
               header="단위"
+              headerClass="no-wrap"
+              style="min-width: 80px"
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
             <DataCol
               field="pur_qty"
               header="발주수량"
-              style="text-align: right"
+              sortable
+              headerClass="no-wrap"
+              style="min-width: 110px; text-align: right"
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
             <DataCol
               field="pur_status"
               header="입고상태"
+              sortable
+              headerClass="no-wrap"
+              style="min-width: 110px"
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
             <DataCol
               field="remark"
               header="발주서 비고"
+              headerClass="no-wrap"
+              bodyClass="ellipsis"
+              style="min-width: 200px"
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
             <DataCol
               field="pur_remark"
               header="발주자재 비고"
+              headerClass="no-wrap"
+              bodyClass="ellipsis"
+              style="min-width: 200px"
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
           </DataTable>
@@ -465,7 +538,22 @@ onMounted(() => {
       </ComponentCard>
     </div>
 
-    <!-- ✅ PDF 모달: 여러 건 페이지네이션 -->
+    <!-- ✅ PDF 모달 -->
     <PurPdfModal :visible="isPdfOpen" :docs="pdfDocs" @close="isPdfOpen = false" />
   </AdminLayout>
 </template>
+
+<style scoped>
+.no-wrap {
+  white-space: nowrap;
+}
+.ellipsis {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* (옵션) PrimeVue 내부에서도 ellipsis 확실히 적용되도록 */
+:deep(.p-datatable .p-datatable-tbody > tr > td.ellipsis) {
+  max-width: 100%;
+}
+</style>

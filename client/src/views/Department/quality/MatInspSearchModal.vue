@@ -102,7 +102,6 @@ watch(
               field="insp_name"
               header="검사명"
               :pt="{ columnHeaderContent: 'justify-center' }"
-              style="text-align: center"
             />
             <Column
               field="insp_date"

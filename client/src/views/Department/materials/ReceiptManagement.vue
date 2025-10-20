@@ -16,7 +16,7 @@ import RadioMatModal from './MatModal/RadioMatModal.vue'
 import PurMatModal from './MatModal/PurMatModal.vue'
 import TabView from 'primevue/tabview'
 import TabPanel from 'primevue/tabpanel'
-import userDateUtils from '@/utils/useDates.js' // 날짜 유틸
+import userDateUtils from '@/utils/useDates.js'
 const baseInputClass =
   'dark:bg-dark-900 h-8 w-full rounded-lg border border-gray-300 bg-transparent pl-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
 const currentPageTitle = ref('입고관리')
@@ -136,7 +136,7 @@ const submitIis = async () => {
   const qtyNum = Number(r.receipt_qty)
   if (!Number.isFinite(qtyNum) || qtyNum <= 0) return alert('입고량을 입력해주세요')
 
-  // 수량 정수화(서버에는 정수로) — 화면 표시 포맷은 그대로 유지
+  // 수량 정수화(서버에는 정수로)
   const receipt_qty = Math.max(1, Math.floor(qtyNum))
 
   isSavingIis.value = true
@@ -147,7 +147,7 @@ const submitIis = async () => {
       pre_receipt_date: r.pre_receipt_date,
       bcnc_code: r.bcnc_code,
       mat_code: r.mat_code,
-      receipt_qty, // 정수
+      receipt_qty,
     }
 
     const { data } = await axios.post('/api/iis/insert', payload)
@@ -162,7 +162,6 @@ const submitIis = async () => {
     console.error(e)
     alert('가입고 등록 중 오류가 발생했습니다.')
   } finally {
-    // 성공/실패 관계없이 reset 1회
     isSavingIis.value = false
   }
 }
@@ -194,11 +193,10 @@ const refreshBoth = async () => {
   await Promise.all([refreshPending(), refreshComplete()])
 }
 onMounted(async () => {
-  await refreshBoth() // 진입 시 두 탭 모두 채우기
+  await refreshBoth()
 })
 
 const deleteIis = async () => {
-  // 1) 선택행 백업(알림에 쓸 정보 보존)
   const selected = (selectPending.value || []).map((r) => ({ ...r }))
   const ids = selected.map((r) => r.iis_id)
 
@@ -206,36 +204,31 @@ const deleteIis = async () => {
   if (!confirm(`${ids.length}건을 삭제하시겠습니까?`)) return
 
   try {
-    // 2) 삭제 시도
     const { data } = await axios.post('/api/iis/delete', { ids })
 
     if (!data?.ok) {
       return alert(data?.msg || '삭제 실패')
     }
 
-    // 3) 항상 서버 기준으로 동기화(정확도 ↑)
-    await refreshBoth() // 검사대기/검사완료 모두 재조회
+    await refreshBoth()
 
-    // 4) 재조회 결과로 "삭제 안 된 것" 판별 + 이유 만들기
     const pendingSet = new Set((pending.value || []).map((r) => r.iis_id))
     const completeSet = new Set((complete.value || []).map((r) => r.iis_id))
 
     const notDeleted = selected.filter((s) => pendingSet.has(s.iis_id) || completeSet.has(s.iis_id))
     const deletedCnt = data.deleted ?? ids.length - notDeleted.length
 
-    // 5) 알림 메시지 구성(요청한 포맷)
     let msg = `삭제 처리 완료: ${deletedCnt}건`
     if (notDeleted.length) {
       const lines = notDeleted.map((s) => {
         const reason = completeSet.has(s.iis_id)
           ? '검사완료 상태로 변경되어 삭제되지 않았습니다.'
-          : '삭제 조건을 충족하지 않아 삭제되지 않았습니다.' // (예: 동시 수정/서버 거부)
+          : '삭제 조건을 충족하지 않아 삭제되지 않았습니다.'
         return `• ${s.pur_name ?? '-'} ${s.pre_receipt_date ?? '-'} ${s.bcnc_name ?? '-'} ${s.mat_name ?? '-'} ${s.mat_spec ?? '-'} ${s.mat_unit ?? '-'} ${s.receipt_qty ?? '-'} → ${reason}`
       })
       msg += `\n\n아래 ${notDeleted.length}건은 삭제되지 않았습니다:\n` + lines.join('\n')
     }
 
-    // 6) 선택 해제
     selectPending.value = []
 
     alert(msg)
@@ -247,20 +240,15 @@ const deleteIis = async () => {
 
 const registerIis = async () => {
   if (isRegistering.value) return
-
-  // 검사완료 탭에서 체크된 행들
   const ids = (selectComplete.value || []).map((r) => r.iis_id)
   if (!ids.length) return alert('입고등록할 행을 선택하세요.')
-
   if (!confirm(`${ids.length}건을 입고등록 하시겠습니까?`)) return
 
   isRegistering.value = true
   try {
-    // 백엔드 트랜잭션 호출(검사완료 → 입고)
     const { data } = await axios.post('/api/iis/register', { ids })
 
     if (data?.ok) {
-      // 성공하면 목록 갱신 + 선택 해제
       await refreshBoth()
       selectComplete.value = []
       alert(`입고등록 완료! (${data.done ?? ids.length}건)`)
@@ -275,10 +263,13 @@ const registerIis = async () => {
   }
 }
 </script>
+
 <template>
   <AdminLayout>
     <PageBreadcrumb :pageTitle="currentPageTitle" />
+
     <div class="space-y-5 sm:space-y-3">
+      <!-- 상단: 가입고 카드 -->
       <ComponentCard title="가입고">
         <template #header-right>
           <div class="flex justify-end space-x-2 mb-1">
@@ -289,15 +280,17 @@ const registerIis = async () => {
             <button type="button" class="btn-color btn-common" @click="submitIis">등록</button>
           </div>
         </template>
+
         <template #body-content>
+          <!-- (원본) 가입고 입력 테이블 -->
           <DataTable :value="iis" show-gridlines>
+            <!-- ... 당신이 쓰던 DataCol 들 그대로 ... -->
             <DataCol
               field="pre_receipt_date"
               header="가입고일자"
               :pt="{ columnHeaderContent: 'justify-center' }"
               style="width: 150px; text-align: center"
-            >
-            </DataCol>
+            />
             <DataCol
               field="bcnc_code"
               header="매입처코드"
@@ -323,6 +316,7 @@ const registerIis = async () => {
                     class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
                     aria-hidden="true"
                   >
+                    <!-- icon -->
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       class="w-4 h-4"
@@ -426,25 +420,6 @@ const registerIis = async () => {
               <template #body="{ data, field }">
                 <div class="relative">
                   <flat-pickr v-model="data[field]" :config="prodFlatpickrConfig" />
-                  <span
-                    class="absolute text-gray-500 -translate-y-1/2 pointer-events-none right-3 top-1/2 dark:text-gray-400"
-                    aria-hidden="true"
-                  >
-                    <svg
-                      class="fill-current"
-                      width="20"
-                      height="20"
-                      viewBox="0 0 20 20"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        fill-rule="evenodd"
-                        clip-rule="evenodd"
-                        d="M6.66659 1.5415C7.0808 1.5415 7.41658 1.87729 7.41658 2.2915V2.99984H12.5833V2.2915C12.5833 1.87729 12.919 1.5415 13.3333 1.5415C13.7475 1.5415 14.0833 1.87729 14.0833 2.2915V2.99984L15.4166 2.99984C16.5212 2.99984 17.4166 3.89527 17.4166 4.99984V7.49984V15.8332C17.4166 16.9377 16.5212 17.8332 15.4166 17.8332H4.58325C3.47868 17.8332 2.58325 16.9377 2.58325 15.8332V7.49984V4.99984C2.58325 3.89527 3.47868 2.99984 4.58325 2.99984L5.91659 2.99984V2.2915C5.91659 1.87729 6.25237 1.5415 6.66659 1.5415ZM6.66659 4.49984H4.58325C4.30711 4.49984 4.08325 4.7237 4.08325 4.99984V6.74984H15.9166V4.99984C15.9166 4.7237 15.6927 4.49984 15.4166 4.49984H13.3333H6.66659ZM15.9166 8.24984H4.08325V15.8332C4.08325 16.1093 4.30711 16.3332 4.58325 16.3332H15.4166C15.6927 16.3332 15.9166 16.1093 15.9166 15.8332V8.24984Z"
-                      />
-                    </svg>
-                  </span>
                 </div>
               </template>
             </DataCol>
@@ -457,35 +432,20 @@ const registerIis = async () => {
               <template #body="{ data, field }">
                 <div class="relative">
                   <flat-pickr v-model="data[field]" :config="expFlatpickrConfig" />
-                  <span
-                    class="absolute text-gray-500 -translate-y-1/2 pointer-events-none right-3 top-1/2 dark:text-gray-400"
-                    aria-hidden="true"
-                  >
-                    <svg
-                      class="fill-current"
-                      width="20"
-                      height="20"
-                      viewBox="0 0 20 20"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        fill-rule="evenodd"
-                        clip-rule="evenodd"
-                        d="M6.66659 1.5415C7.0808 1.5415 7.41658 1.87729 7.41658 2.2915V2.99984H12.5833V2.2915C12.5833 1.87729 12.919 1.5415 13.3333 1.5415C13.7475 1.5415 14.0833 1.87729 14.0833 2.2915V2.99984L15.4166 2.99984C16.5212 2.99984 17.4166 3.89527 17.4166 4.99984V7.49984V15.8332C17.4166 16.9377 16.5212 17.8332 15.4166 17.8332H4.58325C3.47868 17.8332 2.58325 16.9377 2.58325 15.8332V7.49984V4.99984C2.58325 3.89527 3.47868 2.99984 4.58325 2.99984L5.91659 2.99984V2.2915C5.91659 1.87729 6.25237 1.5415 6.66659 1.5415ZM6.66659 4.49984H4.58325C4.30711 4.49984 4.08325 4.7237 4.08325 4.99984V6.74984H15.9166V4.99984C15.9166 4.7237 15.6927 4.49984 15.4166 4.49984H13.3333H6.66659ZM15.9166 8.24984H4.08325V15.8332C4.08325 16.1093 4.30711 16.3332 4.58325 16.3332H15.4166C15.6927 16.3332 15.9166 16.1093 15.9166 15.8332V8.24984Z"
-                      />
-                    </svg>
-                  </span>
                 </div>
               </template>
             </DataCol>
           </DataTable>
         </template>
       </ComponentCard>
+
+      <!-- 하단: 검사대기/검사완료 카드 -->
       <ComponentWoong style="height: 530px">
         <template #body-content>
+          <!-- 카드 바디 패딩(초록) 안에서만 작업 -->
           <div class="relative">
-            <div class="flex justify-end space-x-2 mb-1 absolute right-0 top-0 z-10">
+            <!-- 버튼: 패딩 안쪽 우상단. absolute라 레이아웃을 밀지 않음 -->
+            <div class="absolute right-0 top-0 z-10 flex space-x-2">
               <button
                 v-if="activeTab != 0"
                 type="button"
@@ -503,181 +463,185 @@ const registerIis = async () => {
                 삭제
               </button>
             </div>
+
+            <!-- 탭: 상단 여백 없이 바로 시작(패딩 안쪽의 맨 위) -->
+            <TabView
+              @tab-change="onTabChange"
+              :pt="{ navContainer: { class: 'pr-40' } }"
+              class="mt-0"
+            >
+              <TabPanel header="검사대기">
+                <DataTable
+                  :value="pending"
+                  v-model:selection="selectPending"
+                  data-key="iis_id"
+                  show-gridlines
+                  size="small"
+                  scrollable
+                  scroll-height="350px"
+                >
+                  <template #empty>
+                    <div class="text-center">검사대기중인 자재가 없습니다.</div>
+                  </template>
+                  <DataCol
+                    selection-mode="multiple"
+                    headerStyle="width:37px"
+                    bodyStyle="width:37px"
+                  />
+                  <DataCol
+                    field="pur_code"
+                    header="발주코드"
+                    :pt="{ columnHeaderContent: 'justify-center' }"
+                  />
+                  <DataCol
+                    field="pur_name"
+                    header="발주서명"
+                    :pt="{ columnHeaderContent: 'justify-center' }"
+                  />
+                  <DataCol
+                    field="pre_receipt_date"
+                    header="가입고일자"
+                    :pt="{ columnHeaderContent: 'justify-center' }"
+                    style="text-align: center"
+                  />
+                  <DataCol
+                    field="exp_date"
+                    header="유통기한"
+                    :pt="{ columnHeaderContent: 'justify-center' }"
+                    style="text-align: center"
+                  />
+                  <DataCol
+                    field="prod_date"
+                    header="제조일자"
+                    :pt="{ columnHeaderContent: 'justify-center' }"
+                    style="text-align: center"
+                  />
+                  <DataCol
+                    field="bcnc_name"
+                    header="매입처명"
+                    :pt="{ columnHeaderContent: 'justify-center' }"
+                  />
+                  <DataCol
+                    field="mat_code"
+                    header="자재코드"
+                    :pt="{ columnHeaderContent: 'justify-center' }"
+                  />
+                  <DataCol
+                    field="mat_name"
+                    header="자재명"
+                    :pt="{ columnHeaderContent: 'justify-center' }"
+                  />
+                  <DataCol
+                    field="mat_spec"
+                    header="규격"
+                    :pt="{ columnHeaderContent: 'justify-center' }"
+                  />
+                  <DataCol
+                    field="mat_unit"
+                    header="단위"
+                    :pt="{ columnHeaderContent: 'justify-center' }"
+                  />
+                  <DataCol
+                    field="receipt_qty"
+                    header="입고량"
+                    :pt="{ columnHeaderContent: 'justify-center' }"
+                    style="text-align: right"
+                  />
+                </DataTable>
+              </TabPanel>
+
+              <TabPanel header="검사완료">
+                <DataTable
+                  :value="complete"
+                  show-gridlines
+                  v-model:selection="selectComplete"
+                  data-key="iis_id"
+                  size="small"
+                  scrollable
+                  scroll-height="380px"
+                >
+                  <template #empty>
+                    <div class="text-center">검사완료된 자재가 없습니다.</div>
+                  </template>
+                  <DataCol
+                    selection-mode="multiple"
+                    headerStyle="width:37px"
+                    bodyStyle="width:37px"
+                  />
+                  <DataCol
+                    field="pur_code"
+                    header="발주코드"
+                    :pt="{ columnHeaderContent: 'justify-center' }"
+                  />
+                  <DataCol
+                    field="pur_name"
+                    header="발주서명"
+                    :pt="{ columnHeaderContent: 'justify-center' }"
+                  />
+                  <DataCol
+                    field="pre_receipt_date"
+                    header="가입고일자"
+                    :pt="{ columnHeaderContent: 'justify-center' }"
+                    style="text-align: center"
+                  />
+                  <DataCol
+                    field="bcnc_name"
+                    header="매입처명"
+                    :pt="{ columnHeaderContent: 'justify-center' }"
+                  />
+                  <DataCol
+                    field="mat_code"
+                    header="자재코드"
+                    :pt="{ columnHeaderContent: 'justify-center' }"
+                  />
+                  <DataCol
+                    field="mat_name"
+                    header="자재명"
+                    :pt="{ columnHeaderContent: 'justify-center' }"
+                  />
+                  <DataCol
+                    field="mat_spec"
+                    header="규격"
+                    :pt="{ columnHeaderContent: 'justify-center' }"
+                  />
+                  <DataCol
+                    field="mat_unit"
+                    header="단위"
+                    :pt="{ columnHeaderContent: 'justify-center' }"
+                  />
+                  <DataCol
+                    field="receipt_qty"
+                    header="입고량"
+                    :pt="{ columnHeaderContent: 'justify-center' }"
+                    style="text-align: right"
+                  />
+                  <DataCol
+                    field="pass_qty"
+                    header="합격량"
+                    :pt="{ columnHeaderContent: 'justify-center' }"
+                    style="text-align: right"
+                  />
+                  <DataCol
+                    field="prod_date"
+                    header="제조일자"
+                    :pt="{ columnHeaderContent: 'justify-center' }"
+                    style="text-align: center"
+                  />
+                  <DataCol
+                    field="exp_date"
+                    header="유통기한"
+                    :pt="{ columnHeaderContent: 'justify-center' }"
+                    style="text-align: center"
+                  />
+                </DataTable>
+              </TabPanel>
+            </TabView>
           </div>
-          <TabView
-            @tab-change="onTabChange"
-            :pt="{
-              navContainer: { class: 'pr-40' },
-            }"
-          >
-            <TabPanel header="검사대기">
-              <DataTable
-                :value="pending"
-                v-model:selection="selectPending"
-                data-key="iis_id"
-                show-gridlines
-                size="small"
-                scrollable
-                scroll-height="350px"
-              >
-                <template #empty>
-                  <div class="text-center">검사대기중인 자재가 없습니다.</div>
-                </template>
-                <DataCol
-                  selection-mode="multiple"
-                  headerStyle="width: 37px"
-                  bodyStyle="width: 37px"
-                />
-                <DataCol
-                  field="pur_code"
-                  header="발주코드"
-                  :pt="{ columnHeaderContent: 'justify-center' }"
-                />
-                <DataCol
-                  field="pur_name"
-                  header="발주서명"
-                  :pt="{ columnHeaderContent: 'justify-center' }"
-                />
-                <DataCol
-                  field="pre_receipt_date"
-                  header="가입고일자"
-                  :pt="{ columnHeaderContent: 'justify-center' }"
-                  style="text-align: center"
-                />
-                <DataCol
-                  field="exp_date"
-                  header="유통기한"
-                  :pt="{ columnHeaderContent: 'justify-center' }"
-                  style="text-align: center"
-                />
-                <DataCol
-                  field="prod_date"
-                  header="제조일자"
-                  :pt="{ columnHeaderContent: 'justify-center' }"
-                  style="text-align: center"
-                />
-                <DataCol
-                  field="bcnc_name"
-                  header="매입처명"
-                  :pt="{ columnHeaderContent: 'justify-center' }"
-                />
-                <DataCol
-                  field="mat_code"
-                  header="자재코드"
-                  :pt="{ columnHeaderContent: 'justify-center' }"
-                />
-                <DataCol
-                  field="mat_name"
-                  header="자재명"
-                  :pt="{ columnHeaderContent: 'justify-center' }"
-                />
-                <DataCol
-                  field="mat_spec"
-                  header="규격"
-                  :pt="{ columnHeaderContent: 'justify-center' }"
-                />
-                <DataCol
-                  field="mat_unit"
-                  header="단위"
-                  :pt="{ columnHeaderContent: 'justify-center' }"
-                />
-                <DataCol
-                  field="receipt_qty"
-                  header="입고량"
-                  :pt="{ columnHeaderContent: 'justify-center' }"
-                  style="text-align: right"
-                />
-              </DataTable>
-            </TabPanel>
-            <TabPanel header="검사완료">
-              <DataTable
-                :value="complete"
-                show-gridlines
-                v-model:selection="selectComplete"
-                data-key="iis_id"
-                size="small"
-                scrollable
-                scroll-height="380px"
-              >
-                <template #empty>
-                  <div class="text-center">검사완료된 자재가 없습니다.</div>
-                </template>
-                <DataCol
-                  selection-mode="multiple"
-                  headerStyle="width: 37px"
-                  bodyStyle="width: 37px"
-                />
-                <DataCol
-                  field="pur_code"
-                  header="발주코드"
-                  :pt="{ columnHeaderContent: 'justify-center' }"
-                />
-                <DataCol
-                  field="pur_name"
-                  header="발주서명"
-                  :pt="{ columnHeaderContent: 'justify-center' }"
-                />
-                <DataCol
-                  field="pre_receipt_date"
-                  header="가입고일자"
-                  :pt="{ columnHeaderContent: 'justify-center' }"
-                  style="text-align: center"
-                />
-                <DataCol
-                  field="bcnc_name"
-                  header="매입처명"
-                  :pt="{ columnHeaderContent: 'justify-center' }"
-                />
-                <DataCol
-                  field="mat_code"
-                  header="자재코드"
-                  :pt="{ columnHeaderContent: 'justify-center' }"
-                />
-                <DataCol
-                  field="mat_name"
-                  header="자재명"
-                  :pt="{ columnHeaderContent: 'justify-center' }"
-                />
-                <DataCol
-                  field="mat_spec"
-                  header="규격"
-                  :pt="{ columnHeaderContent: 'justify-center' }"
-                />
-                <DataCol
-                  field="mat_unit"
-                  header="단위"
-                  :pt="{ columnHeaderContent: 'justify-center' }"
-                />
-                <DataCol
-                  field="receipt_qty"
-                  header="입고량"
-                  :pt="{ columnHeaderContent: 'justify-center' }"
-                  style="text-align: right"
-                />
-                <DataCol
-                  field="pass_qty"
-                  header="합격량"
-                  :pt="{ columnHeaderContent: 'justify-center' }"
-                  style="text-align: right"
-                />
-                <DataCol
-                  field="prod_date"
-                  header="제조일자"
-                  :pt="{ columnHeaderContent: 'justify-center' }"
-                  style="text-align: center"
-                />
-                <DataCol
-                  field="exp_date"
-                  header="유통기한"
-                  :pt="{ columnHeaderContent: 'justify-center' }"
-                  style="text-align: center"
-                />
-              </DataTable>
-            </TabPanel>
-          </TabView>
         </template>
       </ComponentWoong>
     </div>
+
+    <!-- 모달 -->
     <IisBcncModal
       v-model="isBcncModalOpen"
       :blocked-codes="iis[0]?.bcnc_code ? [iis[0].bcnc_code] : []"
@@ -697,8 +661,20 @@ const registerIis = async () => {
     <PurMatModal v-model="isPurMatModalOpen" @close="handleCloseModal" />
   </AdminLayout>
 </template>
+
 <style>
+/* 기존 유지 */
 .p-tabview-panels {
   padding: 0 !important;
+}
+
+/* 탭 컨테이너가 상단에 여분의 마진을 주는 경우 제거 */
+.no-top-gap {
+  margin-top: 0 !important;
+}
+
+/* 혹시 PrimeVue 테마에서 p-tabview 자체에 마진이 있으면 강제로 0 */
+:deep(.p-tabview) {
+  margin-top: 0 !important;
 }
 </style>

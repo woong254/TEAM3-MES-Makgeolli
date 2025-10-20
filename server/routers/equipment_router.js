@@ -78,6 +78,19 @@ router.delete("/equipment/:equip_code", async (req, res) => {
   }
 });
 
+/** 비가동 목록 조회
+ * GET /downtime?status=running|history (생략=전체)
+ */
+router.get("/downtime", async (req, res) => {
+  try {
+    const rows = await equipmentService.listDowntimes(req.query.status);
+    res.json(rows);
+  } catch (err) {
+    console.error("GET /downtime error:", err);
+    res.status(500).json({ message: err.message || "목록 조회 오류" });
+  }
+});
+
 // 비가동 시작(등록)
 router.post("/downtime", async (req, res) => {
   try {
@@ -85,6 +98,20 @@ router.post("/downtime", async (req, res) => {
     res.status(201).json(result); // { downtime_code, ... }
   } catch (err) {
     res.status(err.status || 500).json({ message: err.message || "등록 오류" });
+  }
+});
+
+/** 단건 상세
+ * GET /downtime/:code
+ */
+router.get("/downtime/:code", async (req, res) => {
+  try {
+    const row = await equipmentService.getDowntimeByCode(req.params.code);
+    if (!row) return res.status(404).json({ message: "대상 없음" });
+    res.json(row);
+  } catch (err) {
+    console.error("GET /downtime/:code error:", err);
+    res.status(500).json({ message: err.message || "상세 조회 오류" });
   }
 });
 
