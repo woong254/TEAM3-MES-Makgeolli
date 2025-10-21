@@ -185,6 +185,10 @@ const fetchProcessData = async () => {
 
 // 작업시작 버튼 누르면 시작하는 함수
 const processStart = async () => {
+  if (ed.value.mk_qty === processForm.value.inpt_qty) {
+    alert('이미 작업이 종료되었습니다.')
+    return
+  }
   const obj: processRequest = {
     procs_no: processForm.value.procs_no,
   }
@@ -210,6 +214,14 @@ const processStart = async () => {
 
 // 작업종료버튼 눌렀을때 실행
 const processEnd = async () => {
+  if (ed.value.mk_qty === 0) {
+    alert('작업이 시작되지 않았습니다.')
+    return
+  }
+  if (ed.value.mk_qty === processForm.value.inpt_qty) {
+    alert('이미 작업이 종료되었습니다.')
+    return
+  }
   const endObj = {
     procs_no: processForm.value.procs_no,
     // mk_qty는 서버에서 최종적으로 inpt_qty로 확정하므로, 클라이언트에서 보낼 필요 없음
