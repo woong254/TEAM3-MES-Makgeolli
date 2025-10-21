@@ -222,4 +222,12 @@ router.get("/mat/page", async (req, res) => {
     res.status(500).send({ ok: false, message: "MAT_PAGE_LIST_FAILED" });
   }
 });
+
+router.get("/lot/matList", async (req, res) => {
+  let mat_code = req.query.mat_code;
+  let lotMatList = await materialsService
+    .findLotMatList(mat_code)
+    .catch((err) => console.error(err));
+  res.send(lotMatList);
+});
 module.exports = router;

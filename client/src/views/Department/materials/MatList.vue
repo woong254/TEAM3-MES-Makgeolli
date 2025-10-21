@@ -5,31 +5,33 @@ import ComponentCard from '@/components/common/ComponentCardButton.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import DataTable from 'primevue/datatable'
 import DataCol from 'primevue/column'
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import axios from 'axios'
 import '@/assets/common.css'
 
 /* ===== Page Title ===== */
 const currentPageTitle = ref('자재 조회')
 
-/* ===== Styles from your UI ===== */
+/* ===== Styles ===== */
 const selectStyle =
   'dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-950 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
-
 const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400'
-
 const inputStyle =
-  'dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-950 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
+  'dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-950 focus:outline-hidden focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
 
 /* ===== Search form ===== */
 const form = reactive({
-  name: '', // -> mat_name = ?
-  type: '', // -> mat_item_code = ?  (a1: 원자재, a2: 부자재)
+  name: '', // mat_name
+  type: '', // mat_item_code (a1=원자재, a2=부자재)
 })
 
-/* ===== Table data (SQL 컬럼과 동일 키 사용) ===== */
+/* ===== Table Data ===== */
 const rows = ref([])
 const expanded = ref({})
+const alive = ref(true)
+onUnmounted(() => {
+  alive.value = false
+}) // 컴포넌트 해제시 가드
 
 /* ===== API ===== */
 const fetchRows = async () => {
@@ -38,30 +40,62 @@ const fetchRows = async () => {
     if (form.name?.trim()) params.mat_name = form.name.trim()
     if (form.type) params.mat_item_code = form.type
 
-    // 서버 라우터: GET /api/mat/page
     const { data } = await axios.get('/api/mat/page', { params })
     rows.value = (data || []).map((r) => ({
       ...r,
-      lots: r.lots ?? [],
+      lots: [],
+      _lotsLoaded: false,
     }))
+    expanded.value = {}
   } catch (e) {
     console.error('[mat/page] fetch error:', e)
     rows.value = []
+    expanded.value = {}
   }
 }
 
-/* ===== Handlers ===== */
+const loadLots = async (mat_code) => {
+  const { data } = await axios.get('/api/lot/matList', { params: { mat_code } })
+  return (data || []).map((l) => ({
+    mat_lot: l.mat_lot,
+    prod_date: l.prod_date,
+    exp_date: l.exp_date,
+    stock_qty: Number(l.stock_qty || 0),
+    receipt_qty: Number(l.receipt_qty || 0),
+    release_qty: Number(l.release_qty || 0),
+  }))
+}
+
+/** ✅ 확장 시 LOT 한번만 로드 */
+const onRowExpand = async ({ data }) => {
+  if (!data || data._lotsLoaded) return
+  try {
+    const lots = await loadLots(data.mat_code)
+
+    // ✅ 아직 살아있고, 해당 행이 실제로 존재하며, 펼쳐진 상태인지 확인
+    if (!alive.value) return
+    const row = rows.value.find((r) => r.mat_code === data.mat_code)
+    if (!row) return
+    if (!expanded.value || !expanded.value[data.mat_code]) return
+
+    row.lots = lots
+    row._lotsLoaded = true
+  } catch (err) {
+    console.error('[lot/matList] fetch error:', err)
+    data.lots = []
+    data._lotsLoaded = true
+  }
+}
+
+/* ===== Utils ===== */
 const resetBtn = () => {
   form.name = ''
   form.type = ''
   fetchRows()
 }
-const onRowToggle = (e) => (expanded.value = e.value)
 const n = (v) => (v == null ? '' : Number(v).toLocaleString())
 
-onMounted(() => {
-  fetchRows()
-})
+onMounted(fetchRows)
 </script>
 
 <template>
@@ -73,11 +107,10 @@ onMounted(() => {
       <ComponentCard title="자재 검색">
         <template #header-right>
           <div class="flex justify-end space-x-2 mb-1">
-            <button type="button" class="btn-color btn-common" @click="resetBtn">초기화</button>
+            <button type="button" class="btn-white btn-common" @click="resetBtn">초기화</button>
             <button type="button" class="btn-color btn-common" @click="fetchRows">조회</button>
           </div>
         </template>
-
         <template #body-content>
           <div class="flex items-end gap-5 flex-wrap">
             <div class="w-72">
@@ -90,7 +123,6 @@ onMounted(() => {
                 @keyup.enter="fetchRows"
               />
             </div>
-
             <div class="w-72">
               <label :class="labelStyle">자재유형</label>
               <div class="relative z-20 bg-transparent">
@@ -99,32 +131,13 @@ onMounted(() => {
                   <option value="a1">원자재</option>
                   <option value="a2">부자재</option>
                 </select>
-                <span
-                  class="absolute z-30 text-gray-500 -translate-y-1/2 pointer-events-none right-4 top-1/2 dark:text-gray-400"
-                >
-                  <svg
-                    class="stroke-current"
-                    width="20"
-                    height="20"
-                    viewBox="0 0 20 20"
-                    fill="none"
-                  >
-                    <path
-                      d="M4.79175 7.396L10.0001 12.6043L15.2084 7.396"
-                      stroke=""
-                      stroke-width="1.5"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    />
-                  </svg>
-                </span>
               </div>
             </div>
           </div>
         </template>
       </ComponentCard>
 
-      <!-- 자재 목록 카드 -->
+      <!-- 자재 목록 -->
       <ComponentCard title="자재 목록" style="height: 561px">
         <template #body-content>
           <DataTable
@@ -136,13 +149,13 @@ onMounted(() => {
             showGridlines
             :tableStyle="{ minWidth: '1200px' }"
             v-model:expandedRows="expanded"
-            @rowToggle="onRowToggle"
+            @rowExpand="onRowExpand"
           >
             <template #empty>
               <div class="text-center">등록한 자재가 없습니다.</div>
             </template>
-            <DataCol expander style="width: 50px" />
 
+            <DataCol expander style="width: 50px" />
             <DataCol
               field="mat_code"
               header="자재코드"
@@ -151,6 +164,7 @@ onMounted(() => {
             <DataCol
               field="mat_name"
               header="자재명"
+              style="width: 260px"
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
             <DataCol
@@ -166,6 +180,7 @@ onMounted(() => {
             <DataCol
               field="comncode_dtnm"
               header="자재유형"
+              sortable
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
             <DataCol
@@ -176,6 +191,8 @@ onMounted(() => {
             <DataCol
               field="stock_qty"
               header="재고"
+              sortable
+              style="text-align: right"
               :pt="{ columnHeaderContent: 'justify-center' }"
             >
               <template #body="{ data }">{{ n(data.stock_qty) }}</template>
@@ -183,43 +200,42 @@ onMounted(() => {
             <DataCol
               field="safe_stock"
               header="안전재고"
+              sortable
+              style="text-align: right"
               :pt="{ columnHeaderContent: 'justify-center' }"
             >
               <template #body="{ data }">{{ n(data.safe_stock) }}</template>
             </DataCol>
 
-            <!-- 하위 LOT 테이블 -->
-            <template #expansion="slotProps">
-              <div v-if="(slotProps.data.lots || []).length" class="lot-wrap">
+            <!-- LOT 확장 -->
+            <template #expansion="{ data }">
+              <div class="lot-wrap">
                 <div class="lot-grid lot-head">
-                  <div>LOT</div>
+                  <div>자재LOT</div>
+                  <div class="text-center">제조일자</div>
                   <div class="text-center">유통기한</div>
-                  <div class="text-center">생산일자</div>
-                  <div class="text-right">재고</div>
-                  <div class="text-center">입/출고</div>
+                  <div class="text-right">LOT재고</div>
+                  <div class="text-right">입고수량</div>
+                  <div class="text-right">출고수량</div>
                 </div>
-
-                <div v-for="lot in slotProps.data.lots" :key="lot.lot" class="lot-grid lot-row">
-                  <div>{{ lot.lot }}</div>
-                  <div class="text-center">{{ lot.exp }}</div>
-                  <div class="text-center">{{ lot.mfg }}</div>
-                  <div class="text-right">{{ n(lot.stock) }}</div>
-                  <div class="text-center">
-                    <button class="lot-icon-btn" title="입/출고 조회">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                        <path
-                          d="M10 6h10M10 12h10M10 18h10M4 6h.01M4 12h.01M4 18h.01"
-                          stroke="#374151"
-                          stroke-width="2"
-                          stroke-linecap="round"
-                        />
-                      </svg>
-                    </button>
+                <template v-if="(data.lots || []).length">
+                  <div v-for="lot in data.lots" :key="lot.mat_lot" class="lot-grid lot-row">
+                    <div>{{ lot.mat_lot }}</div>
+                    <div class="text-center">{{ lot.prod_date }}</div>
+                    <div class="text-center">{{ lot.exp_date }}</div>
+                    <div class="text-right">{{ n(lot.stock_qty) }}</div>
+                    <div class="text-right">{{ n(lot.receipt_qty) }}</div>
+                    <div class="text-right">{{ n(lot.release_qty) }}</div>
                   </div>
+                </template>
+                <div v-else class="lot-grid lot-row text-gray-500">
+                  <div>데이터 없음</div>
+                  <div class="text-center">-</div>
+                  <div class="text-center">-</div>
+                  <div class="text-right">-</div>
+                  <div class="text-right">-</div>
+                  <div class="text-right">-</div>
                 </div>
-              </div>
-              <div v-else class="px-3 py-2 text-xs text-gray-500">
-                LOT 정보가 없습니다. (별도 API 연동 시 노출)
               </div>
             </template>
           </DataTable>
@@ -237,7 +253,7 @@ onMounted(() => {
 }
 .lot-grid {
   display: grid;
-  grid-template-columns: 2fr 1.6fr 1.6fr 1fr 0.8fr;
+  grid-template-columns: 2fr 1.3fr 1.3fr 1fr 1fr 1fr;
   align-items: center;
   padding: 6px 8px;
   font-size: 12px;
@@ -249,21 +265,7 @@ onMounted(() => {
   border-bottom: 1px solid #d1d5db;
 }
 .lot-row {
-  background: #ffffff;
+  background: #fff;
   border-bottom: 1px solid #e5e7eb;
-}
-.lot-icon-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 26px;
-  width: 28px;
-  border: 1px solid #d1d5db;
-  background: #f8fafc;
-  border-radius: 6px;
-  cursor: pointer;
-}
-.lot-icon-btn:hover {
-  background: #eef2f7;
 }
 </style>

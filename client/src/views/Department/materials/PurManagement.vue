@@ -277,7 +277,7 @@ onMounted(async () => {
         <template #header-right>
           <div class="flex justify-end space-x-2 mb-1">
             <button type="button" class="btn-white btn-common" @click="resetBtn">초기화</button>
-            <button type="button" class="btn-white btn-common" @click="isPurModalOpen = true">
+            <button type="button" class="btn-color btn-common" @click="isPurModalOpen = true">
               조회
             </button>
             <button type="button" class="btn-color btn-common" @click="saveBtn">등록/수정</button>
@@ -424,10 +424,10 @@ onMounted(async () => {
       <ComponentCard title="발주자재" style="height: 530px">
         <template #header-right>
           <div class="flex justify-end space-x-2">
-            <button type="button" class="btn-white btn-common" @click="isMatModalOpen = true">
+            <button type="button" class="btn-color btn-common" @click="isMatModalOpen = true">
               행추가
             </button>
-            <button type="button" class="btn-color btn-common" @click="deleteSelectedRows">
+            <button type="button" class="btn-white btn-common" @click="deleteSelectedRows">
               행삭제
             </button>
           </div>

@@ -113,11 +113,11 @@ const selectProcessControlData = async (data) => {
 const processStart = async (params) => {
   try {
     // 1. DB 상태를 't2' (진행 중)로 업데이트
-    await mariadb.query(
-      `UPDATE processform
-SET procs_bgntm = Now(),
-    procs_st = 't2'
-WHERE procs_no = ?`,
+    await mariadb.query(`
+      UPDATE processform
+      SET procs_bgntm = Now(),
+          procs_st = 't2'
+      WHERE procs_no = ?`,
       [params.procs_no]
     );
 
@@ -308,32 +308,121 @@ const insertProcessForm = async (params) => {
   try {
     conn = await mariadb.getConnection();
     await conn.beginTransaction(); // 트랜잭션 시작
-
+    
     // 1. 현재 공정명 가져오기 (conn 객체 사용)
     const procRowResult = await conn.query(
       `SELECT pm.proc_name
-FROM proc_master pm
-JOIN equip_master em ON pm.equip_type = em.equip_type
-WHERE em.equip_code = ?`,
+      FROM proc_master pm JOIN equip_master em 
+      ON pm.equip_type = em.equip_type
+      WHERE em.equip_code = ?`,
       [params.equip_code]
     );
-
+    
     const procRow =
-      Array.isArray(procRowResult) &&
-      Array.isArray(procRowResult[0]) &&
-      procRowResult[0].length > 0
-        ? procRowResult[0][0]
-        : Array.isArray(procRowResult) && procRowResult.length > 0
-        ? procRowResult[0]
+    Array.isArray(procRowResult) &&
+    Array.isArray(procRowResult[0]) &&
+    procRowResult[0].length > 0
+    ? procRowResult[0][0]
+    : Array.isArray(procRowResult) && procRowResult.length > 0
+    ? procRowResult[0]
+    : null;
+    
+    const now_procs = procRow ? procRow.proc_name : null;
+    
+    // 2-0. 잔여 투입량 계산
+    console.log(`[로그] ${params.mk_list}에 ${params.inpt_qty}개 투입 시도`);
+    console.log(params.mk_list);
+
+    const requestedInput = Number(params.inpt_qty) || 0;
+    
+    // 지시서에 있는 상품별 상세 주문량 (총 지시량)
+    const orderResult = await conn.query(
+      `SELECT mk_num
+      FROM makedetail
+      WHERE mkd_no = ?`,
+      [params.mk_list]
+    );
+    
+    console.log(orderResult); // [ { mk_num: '50' } ]
+    
+    // 공정 실적에 이미 들어간 (누적) 투입 수량
+    const alreadyResult = await conn.query(`
+      SELECT SUM(inpt_qty) AS total_input
+      FROM processform
+      WHERE mk_list = ?
+         AND now_procs = ?`,
+      [params.mk_list, now_procs]
+    );
+
+    console.log('total_input : ', alreadyResult); // [ { total_input: '230' } ]
+
+    // DB 결과를 숫자로 변환
+    const orderRow =
+      Array.isArray(orderResult) &&
+      Array.isArray(orderResult[0]) &&
+      orderResult[0].length > 0
+        ? orderResult[0][0]
+        : Array.isArray(orderResult) && orderResult.length > 0
+        ? orderResult[0]
+        : null;
+    
+    console.log(orderRow); // { mk_num: '50' }
+
+    const alreadyRow =
+      Array.isArray(alreadyResult) &&
+      Array.isArray(alreadyResult[0]) &&
+      alreadyResult[0].length > 0
+        ? alreadyResult[0][0]
+        : Array.isArray(alreadyResult) && alreadyResult.length > 0
+        ? alreadyResult[0]
         : null;
 
-    const now_procs = procRow ? procRow.proc_name : null;
+    console.log(alreadyRow); // { total_input: '230' }
 
+    // 총 지시량 (orderTotal)
+    const orderTotal = Number(orderRow?.mk_num) ?? 0;
+
+    // 이미 투입된 누적량
+    const alreadyTotal = Number(alreadyRow?.total_input) ?? 0;
+
+    console.log(`[로그] 총 지시량: ${orderTotal}, 기투입량: ${alreadyTotal}`);
+
+    // 로직 계산 (예상 총 투입량)
+    const sumQty = alreadyTotal + requestedInput;
+
+    // 3. 지시량 초과 여부 확인 및 최종 inpt_qty 결정 (핵심 수정)
+    let finalInputQty;
+
+    if (orderTotal < sumQty) {
+      // **[Case 1: 초과]** 요청한 수량이 남은 양을 초과함
+      // 남은 양만 계산하여 할당해야 함
+      let remainingQty = orderTotal - alreadyTotal;
+      finalInputQty = Math.max(0, remainingQty); 
+      
+      console.log(
+        `[로그] 지시량 초과! 투입량을 남은 수량인 ${finalInputQty}(으)로 조정합니다.`
+      );
+    } else {
+      // **[Case 2: 정상]** 요청한 수량이 남은 양보다 적거나 같음
+      // 요청한 수량 그대로 할당
+      finalInputQty = requestedInput; // <<< 요청하신 수량(40)이 여기에 들어감
+      console.log("[로그] 정상 투입.");
+    }
+
+    // 최종적으로 params.inpt_qty에 확정된 값을 할당
+    params.inpt_qty = finalInputQty;
+    
     // 2. 공정실적관리 테이블에 삽입 (conn 객체 사용)
     const insertResult = await conn.query(
-      `INSERT INTO processform
-(mk_list, equip_code, emp_no, prod_code, inpt_qty, procs_st, now_procs, mk_qty)
-VALUES (?, ?, ?, ?, ?, ?, ?, 0)`, // mk_qty를 0으로 명시적 초기화
+      `INSERT INTO processform (mk_list, 
+                                equip_code, 
+                                emp_no, 
+                                prod_code, 
+                                inpt_qty, 
+                                procs_st, 
+                                now_procs, 
+                                mk_qty)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 0)`, // mk_qty를 0으로 명시적 초기화
       [
         params.mk_list,
         params.equip_code,

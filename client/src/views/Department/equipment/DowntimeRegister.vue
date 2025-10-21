@@ -16,7 +16,7 @@ const router = useRouter()
 type Form = {
   equipCode: string
   equipName: string
-  manager: string
+  workerId: string
   downtimeType: string
   description: string
   progressStatus: string
@@ -25,10 +25,10 @@ type Form = {
 }
 
 // 반응형 form
-const form = reactive<Form>({
+const createForm = reactive<Form>({
   equipCode: '',
   equipName: '',
-  manager: '',
+  workerId: '',
   downtimeType: '비계획정지',
   description: '',
   progressStatus: '진행중',
@@ -38,15 +38,11 @@ const form = reactive<Form>({
 
 // 사원정보
 interface EmpInfoInterface {
-  emp_name: '' // 사원이름
+  emp_name: string // 사원이름
 }
 
-const empinfo = ref<EmpInfoInterface>({
-  emp_name: '', // 사원이름
-})
 const SelectEmp = (value: EmpInfoInterface) => {
-  empinfo.value.emp_name = value.emp_name
-  createForm.value.manager = value.emp_name // ✅ 저장 소스 동기화
+  createForm.workerId = value.emp_name // ✅ 저장 소스 동기화, value는 ref속성일때만 쓰고 reactive는 바로접근가능 value x
   closeModal()
 }
 
@@ -79,18 +75,8 @@ const closeModal = () => {
   isModalOpen.value = false
 }
 
-function resetForm() {
-  form.equipCode = ''
-  form.equipName = ''
-  form.downtimeType = '비계획정지'
-  form.description = ''
-  form.downtimeStart = ''
-  form.downtimeEnd = null
-  currentCode.value = null
-}
-
 async function startDowntime() {
-  if (!form.equipCode.trim()) {
+  if (!createForm.equipCode.trim()) {
     alert('설비코드를 입력하세요.')
     return
   }
@@ -99,12 +85,12 @@ async function startDowntime() {
   try {
     starting.value = true
     const body = {
-      equip_code: form.equipCode.trim(),
-      equip_name: form.equipName.trim() || null,
-      downtime_type: form.downtimeType || '비계획정지',
-      description: form.description.trim() || null,
+      equip_code: createForm.equipCode.trim(),
+      equip_name: createForm.equipName.trim() || null,
+      downtime_type: createForm.downtimeType || '비계획정지',
+      description: createForm.description.trim() || null,
       progress_status: '진행중',
-      downtime_start: form.downtimeStart.trim() || undefined,
+      downtime_start: createForm.downtimeStart.trim() || undefined,
     }
 
     const { data } = await axios.post('/api/downtime', body)
@@ -129,9 +115,9 @@ onMounted(async () => {
 
   try {
     const { data } = await axios.get(`/api/equipment/${encodeURIComponent(code)}`)
-    form.equipCode = data.equip_code
-    form.equipName = data.equip_name
-    form.manager = data.manager
+    createForm.equipCode = data.equip_code
+    createForm.equipName = data.equip_name
+    createForm.workerId = data.manager
   } catch (err) {
     console.error(err)
     alert('설비 정보를 불러오는 중 오류가 발생했습니다.')
@@ -161,7 +147,7 @@ onMounted(async () => {
                   </th>
                   <td class="border border-gray-200 p-2">
                     <input
-                      v-model="form.equipCode"
+                      v-model="createForm.equipCode"
                       readonly
                       :disabled="isRunning() || starting"
                       type="text"
@@ -172,7 +158,7 @@ onMounted(async () => {
                   <th class="border border-gray-200 bg-gray-50 text-sm text-center p-2">설비명</th>
                   <td class="border border-gray-200 p-2">
                     <input
-                      v-model="form.equipName"
+                      v-model="createForm.equipName"
                       readonly
                       :disabled="isRunning() || starting"
                       type="text"
@@ -188,7 +174,7 @@ onMounted(async () => {
                   </th>
                   <td class="border border-gray-200 p-2">
                     <select
-                      v-model="form.downtimeType"
+                      v-model="createForm.downtimeType"
                       :class="inputStyle"
                       :disabled="isRunning() || starting"
                     >
@@ -199,13 +185,22 @@ onMounted(async () => {
                   </td>
                   <th class="border border-gray-200 bg-gray-50 text-sm text-center p-2">담당자</th>
                   <td class="border border-gray-200 p-2">
-                    <input
-                      v-model="form.manager"
-                      readonly
-                      :disabled="isRunning() || starting"
-                      type="text"
-                      :class="inputStyle"
-                    />
+                    <div class="relative">
+                      <input
+                        v-model="createForm.workerId"
+                        :disabled="isRunning() || starting"
+                        type="text"
+                        :class="inputStyle"
+                      />
+                      <button
+                        type="button"
+                        class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500"
+                        @click="openModal"
+                        title="담당자 찾기"
+                      >
+                        <span class="pi pi-search"></span>
+                      </button>
+                    </div>
                   </td>
                 </tr>
 
@@ -213,7 +208,7 @@ onMounted(async () => {
                   <th class="border border-gray-200 bg-gray-50 text-sm text-center p-2">비고</th>
                   <td colspan="3" class="border border-gray-200 p-2">
                     <textarea
-                      v-model="form.description"
+                      v-model="createForm.description"
                       :class="inputStyle"
                       rows="4"
                       placeholder="비고를 입력하세요"
@@ -230,7 +225,7 @@ onMounted(async () => {
                   </th>
                   <td class="border border-gray-200 p-2">
                     <flat-pickr
-                      v-model="form.downtimeStart"
+                      v-model="createForm.downtimeStart"
                       :config="dtConfig"
                       :class="inputStyle"
                       :disabled="isRunning() || starting"
@@ -242,7 +237,7 @@ onMounted(async () => {
                   </th>
                   <td class="border border-gray-200 p-2">
                     <flat-pickr
-                      v-model="form.downtimeEnd"
+                      v-model="createForm.downtimeEnd"
                       :config="dtConfig"
                       :class="inputStyle"
                       :disabled="true"
@@ -258,7 +253,7 @@ onMounted(async () => {
             <button
               @click="startDowntime"
               class="btn-common btn-color disabled:opacity-50 w-48 h-12 text-base font-semibold whitespace-nowrap"
-              :disabled="starting || !form.equipCode || isRunning()"
+              :disabled="starting || !createForm.equipCode || isRunning()"
             >
               {{ starting ? '시작 중...' : isRunning() ? '진행중' : '비가동 시작' }}
             </button>

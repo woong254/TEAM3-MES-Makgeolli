@@ -210,7 +210,7 @@ onMounted(() => {
       <ComponentCard title="발주서 검색">
         <template #header-right>
           <div class="flex justify-end space-x-2 mb-1">
-            <button type="button" class="btn-color btn-common" @click="resetBtn">초기화</button>
+            <button type="button" class="btn-white btn-common" @click="resetBtn">초기화</button>
             <button type="button" class="btn-color btn-common" @click="fetchPurList">조회</button>
           </div>
         </template>
@@ -491,7 +491,7 @@ onMounted(() => {
               header="규격"
               headerClass="no-wrap"
               bodyClass="ellipsis"
-              style="min-width: 160px"
+              style="min-width: 80px"
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
             <DataCol
