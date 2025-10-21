@@ -89,49 +89,7 @@ const selectProcessControlData = async (data) => {
   const { emp_id } = data;
 
   try {
-    const result = await mariadb.query(
-      `SELECT pf.procs_no,
-              pm.prod_name,
-              now_procs,
-              em.equip_name,
-              empm.emp_name,
-              DATE_FORMAT(mf.writing_date, '%Y-%m-%d') AS writing_date,
-              md.mk_num,    -- 총 지시량
-              pf.inpt_qty,  -- 현투입량 (현재 프로세스에 할당된 투입량)
-              
-              -- 1. 기투입량 (Previous Input Qty): 현재 프로세스 외에 할당된 투입량
-              (
-                  SELECT COALESCE(SUM(inpt_qty), 0)
-                  FROM processform pf_sub
-                  WHERE pf_sub.mk_list = pf.mk_list 
-                    AND pf_sub.procs_no != pf.procs_no -- 현재 't1' 프로세스 제외
-              ) AS prev_input_qty,
-              
-              -- 2. 미투입량 (Remaining Qty): 총 지시량 - (이 지시 품목에 할당된 모든 inpt_qty의 합)
-              (
-                  md.mk_num - 
-                  (
-                      SELECT COALESCE(SUM(inpt_qty), 0)
-                      FROM processform pf_sub
-                      WHERE pf_sub.mk_list = pf.mk_list
-                  )
-              ) AS remain_qty
-
-      FROM processform pf
-              JOIN prod_master pm 
-              ON pf.prod_code = pm.prod_code
-              JOIN makedetail md
-              ON pf.mk_list = md.mkd_no
-              JOIN makeform mf 
-              ON md.mk_ord_no = mf.mk_ord_no
-              JOIN equip_master em 
-              ON pf.equip_code = em.equip_code
-              JOIN emp_master empm
-              ON pf.emp_no = empm.emp_id
-      WHERE empm.emp_id = ?
-      AND pf.procs_st = 't1'`,
-      [emp_id]
-    );
+    const result = await mariadb.query("selectProcessControlData", [emp_id]);
 
     // 대부분의 DB 라이브러리가 [rows, fields] 형태로 반환하는 경우를 대비해 rows만 추출
     if (Array.isArray(result) && Array.isArray(result[0])) {
@@ -151,7 +109,6 @@ const selectProcessControlData = async (data) => {
 
 /**
  * processStart: 작업 시작 버튼을 누르면 DB 상태를 업데이트하고 생산 시뮬레이션을 시작합니다.
- * **생산량이 문자열로 연결되어 1111처럼 보이는 문제 수정 (Number() 강제 형변환 적용).**
  */
 const processStart = async (params) => {
   try {
@@ -198,7 +155,7 @@ const processStart = async (params) => {
       stopProcessSimulation(procs_no); // 혹시 모를 중복 실행 방지
     }
 
-    // 2초마다 1개씩 증가 시뮬레이션 (실제 환경에 맞게 시간 조정 필요)
+    // 0.5초마다 1개씩 증가 시뮬레이션 (실제 환경에 맞게 시간 조정 필요)
     activeProcesses[procs_no] = setInterval(async () => {
       try {
         // 현재 DB의 mk_qty 값을 가져옴
@@ -222,10 +179,19 @@ const processStart = async (params) => {
           return;
         }
 
-        // Number()를 사용하여 문자열 연결이 아닌 숫자 덧셈을 강제합니다.
-        let newQty = (Number(current.mk_qty) || 0) + 1;
+        const oldQty = Number(current.mk_qty) || 0;
 
-        if (newQty <= maxQty) {
+        if (oldQty < maxQty) {
+          let newQty = oldQty + 1;
+
+          // 최대 생산량을 초과하지 않도록 제한
+          if (newQty > maxQty) {
+            newQty = maxQty;
+
+            // 생산 완료 시 서버 시뮬레이션 중지
+            stopProcessSimulation(procs_no);
+          }
+
           // 생산량 증가
           await mariadb.query(
             "UPDATE processform SET mk_qty = ? WHERE procs_no = ?",
@@ -233,27 +199,14 @@ const processStart = async (params) => {
           );
           // console.log(`[Simulation] Procs ${procs_no}: ${newQty}/${maxQty} updated.`);
         } else {
-          // 최대 생산량 도달 시, 자동으로 작업 완료 처리 (DB에 최종 확정)
-          await mariadb.query(
-            `UPDATE processform 
-            SET mk_qty = ?, 
-                procs_endtm = Now(), 
-                procs_st = 't3', 
-                pass_qty = 0,  
-                fail_qty = 0 
-            WHERE procs_no = ?`,
-            [maxQty, procs_no]
-          );
+          // 이미 maxQty에 도달했으면 시뮬레이션 중지
           stopProcessSimulation(procs_no);
-          console.log(
-            `[Simulation] Procs ${procs_no}: AUTO COMPLETED at ${maxQty}.`
-          );
         }
       } catch (simErr) {
         console.error(`[Simulation] Error updating ${procs_no}:`, simErr);
         stopProcessSimulation(procs_no);
       }
-    }, 500); // 2초마다 1개씩 생산 (시뮬레이션 속도)
+    }, 500); // 0.5초로 바꿈
 
     return {
       isSuccessed: true,
@@ -596,5 +549,5 @@ module.exports = {
   calculateRemainingQty,
   updateProcessForm,
   processStart,
-  getCurrentProcessQty, // 새 함수를 export 합니다.
+  getCurrentProcessQty,
 };
