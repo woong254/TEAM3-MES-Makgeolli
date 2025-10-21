@@ -21,12 +21,6 @@ SELECT
              FROM processform 
              WHERE mk_list = mkd.mkd_no 
              AND now_procs = pm.proc_name), 0)
-        -- 공정 순서 2: 1번 공정에서 생산 완료된 수량 (p_prev.mk_qty)
-        WHEN pfd.seq_no = 2 THEN (
-            SELECT COALESCE(SUM(mk_qty), 0) -- 👈 1번 공정의 완료 수량
-            FROM processform
-        )
-        -- 공정 순서 3 이상: 0
         ELSE 0 
     END AS mk_num, -- 지시수량
     pfd.seq_no, 
@@ -89,8 +83,16 @@ const selectEmpAll = `
                 WHERE comncode_dtnm = '작업자')
 `;
 
+const nextProcessQty = `
+  SELECT sum(pass_qty)
+  FROM processform
+  WHERE mk_list = ?
+  AND now_procs = ?
+`;
+
 module.exports = {
   selectMakeAll,
   selectEquipAll,
   selectEmpAll,
+  nextProcessQty,
 }

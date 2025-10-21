@@ -191,14 +191,42 @@ const validateBeforeGoToProcess = () => {
   return true
 }
 
+// 다음 공정 가능 수량 체크
+const getPrevProcName = (make: MakeOrderDetail) => {
+  const sorted = makeRows.value
+    .filter(row => row.mk_ord_no === make.mk_ord_no)
+    .sort((a, b) => a.seq_no - b.seq_no);
+  const idx = sorted.findIndex(row => row.proc_id === make.proc_id);
+  if (idx > 0) return sorted[idx - 1].proc_name;
+  return null;
+};
+
 const goToProcess = async () => {
   // 1. 중복 클릭 방지 및 상태 확인
   if (isSubmitting.value) return // 2. 유효성 검사
   if (!validateBeforeGoToProcess()) return
-
+  
   const make = selectMake.value as MakeOrderDetail
   const equip = selectEquip.value as ChooseEquip
   const emp = selectEmp.value as ChooseEmp // 공정 제어를 시작하기 위해 서버로 전송할 데이터 페이로드
+  
+  const prevProc = getPrevProcName(make);
+
+  let remainingQty = 0;
+  if (prevProc) {
+    // 이전 공정 합격량 조회
+    const previousQtyRes = await axios.post('/api/getPreviousQty', {
+      mkd_no: make.mkd_no,
+      prev_proc: prevProc
+    });
+    const prevQty = Number(previousQtyRes.data.previousQty || 0);
+    remainingQty = Math.max(0, prevQty - make.inpt_qty);
+  } else {
+    remainingQty = Math.max(0, make.mk_num - make.inpt_qty);
+  }
+
+  // 화면에 즉시 반영
+  make.remaining_qty = remainingQty;
 
   const payload = {
     mkd_no: make.mkd_no,
@@ -209,9 +237,12 @@ const goToProcess = async () => {
     // 기타 필요한 데이터 (예: proc_id, mk_ord_no 등)
     proc_id: make.proc_id,
     mk_ord_no: make.mk_ord_no,
+    seq_no: make.seq_no,        // 우선순위
+    now_procs: make.proc_name,  // 공정명
+    remaining_qty: remainingQty,
   }
 
-  console.log('Process Start Payload:', payload)
+  console.log('Process Start Payload:', payload);
 
   try {
     isSubmitting.value = true // 버튼 텍스트 '이동 중'으로 변경
@@ -260,6 +291,7 @@ const onInputInptQty = (data: MakeOrderDetail) => {
     selectMake.value.inpt_qty = data.inpt_qty
   }
 }
+
 
 const currentPageTitle = ref('공정 실적 관리')
 
@@ -479,7 +511,7 @@ const baseInputClass =
                   >
                     <template #body="{ data }">
                       <div style="text-align: right">
-                        {{ Math.max(0, Number(data.mk_num || 0) - Number(data.inpt_qty || 0)) }}
+                        {{ data.remaining_qty ?? Math.max(0, Number(data.mk_num || 0) - Number(data.inpt_qty || 0)) }}
                       </div>
                     </template>
                   </Column>
