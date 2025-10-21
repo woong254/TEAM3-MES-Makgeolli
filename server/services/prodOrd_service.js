@@ -450,7 +450,8 @@ const insertProcessForm = async (params) => {
                                 emp_no, 
                                 prod_code, 
                                 inpt_qty, 
-                                procs_st, 
+                                procs_st,
+                                seq_no,
                                 now_procs, 
                                 mk_qty)
        VALUES (?, ?, ?, ?, ?, ?, ?, 0)`, // mk_qty를 0으로 명시적 초기화
@@ -461,6 +462,7 @@ const insertProcessForm = async (params) => {
           params.prod_code,
           params.inpt_qty,
           params.procs_st,
+          params.seq_no,
           now_procs,
         ]
       );
@@ -569,15 +571,24 @@ WHERE prod_code = ?`,
   }
 };
 
-const getNextProcessQty = async (mkd_no, prev_proc) => {
-  const sql = `
-    SELECT SUM(pass_qty) as total_pass
-    FROM processform
-    WHERE mk_list = ?
-    AND now_procs = ?
-  `;
-  const [rows] = await db.execute(sql, [mkd_no, prev_proc]);
-  return rows[0].total_pass || 0; // 값이 없으면 0
+const getNextProcessQty = async (mk_list, seq_no) => {
+  try {
+    const sql = `
+      SELECT SUM(pass_qty) AS total_pass
+      FROM processform
+      WHERE mk_list = ?
+      AND seq_no = ?
+    `;
+
+    const [rows] = await db.execute(sql, [mk_list, seq_no]);
+    const totalPass = rows[0]?.total_pass || 0;
+
+    const maxNextQty = totalPass;
+
+    return maxNextQty;
+  } catch (err) {
+    console.error(err);
+  }
 }
 
 

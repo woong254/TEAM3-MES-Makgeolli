@@ -178,15 +178,19 @@ router.get("/findProcess", async (req, res) => {
 
 // 다음 공정 가능 수량 체크
 // routes/prodOrd_router.js
-router.post("/getPreviousQty", async (req, res) => {
+router.post('/nextProcessMaxQty', async (req, res) => {
   try {
-    const { mkd_no, now_procs } = req.body;
-    const qty = await prodOrdService.getNextProcessQty(mkd_no, now_procs);
-    res.json({ previousQty: qty });
+    const { mk_list, seq_no } = req.body;
+
+    if (!mk_list || seq_no === undefined) {
+      console.error(err);
+    }
+
+    const maxQty = await getNextProcessMaxQty(mk_list, seq_no - 1);
+
+    res.json({ success: true, maxQty });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "합격량 조회 실패" });
   }
 });
-
 module.exports = router;
