@@ -40,14 +40,7 @@ const router = createRouter({
     },
 
     // 영업
-    {
-      path: '/of',
-      name: '주문서조회',
-      component: () => import('../views/Department/sales/OrderForm.vue'),
-      meta: {
-        title: '주문서조회',
-      },
-    },
+    
     {
       path: '/ofm',
       name: '주문서관리',
