@@ -232,9 +232,9 @@ const router = createRouter({
       },
     },
     {
-      path: '/downtimeregister',
-      name: 'DownTimeRegister',
-      component: () => import('../views/Department/equipment/DowntimeRegister.vue'),
+      path: '/downtimemanage',
+      name: 'DownTimeManage',
+      component: () => import('../views/Department/equipment/DowntimeManage.vue'),
       meta: {
         title: '비가동 설비 관리',
       },
