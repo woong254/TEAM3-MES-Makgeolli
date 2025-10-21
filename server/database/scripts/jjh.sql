@@ -835,8 +835,12 @@ FROM	makeform;
 SELECT	*
 FROM	makedetail;
 SELECT	*
-FROM	processform;
-
+FROM	processform;	
+select * from emp_master;
+select * from orderform;
+select * from orderdetail;
+select * from prod_insp;
+select * from prod_insp_result;
 SELECT pf.procs_no,
               pm.prod_name,
               now_procs,
@@ -874,3 +878,20 @@ SELECT pf.procs_no,
               ON pf.emp_no = empm.emp_id
       WHERE empm.emp_id = 'EMP-20250616-0006'
       AND pf.procs_st = 't1';
+
+select * from processform;
+SELECT COUNT(*)
+      FROM processform
+      WHERE mk_list = 65
+      AND equip_code = 'EQ-025'
+      AND emp_no = 'EMP-20250616-0006'
+      AND procs_st <> 't3';
+      
+SELECT COUNT(*)
+      FROM processform
+      WHERE mk_list = 65
+      AND equip_code = 'EQ-025'
+      AND emp_no = 'EMP-20250616-0006'
+      AND procs_st <> 't1';
+      
+      
