@@ -395,7 +395,6 @@ watch(
                 <!-- ✅ v-if 불필요: TabPanel이 가시성 관리 -->
                 <DataTable
                   :value="downInProgress"
-                  v-model:selection="selectedRunning"
                   showGridlines
                   dataKey="downtimeCode"
                   scrollable
