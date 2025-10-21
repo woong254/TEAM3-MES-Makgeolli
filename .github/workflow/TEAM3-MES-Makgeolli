@@ -45,7 +45,7 @@ jobs:
       run: |
         scp   -r -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no -P ${{ secrets.SSH_PORT }} client/dist/* ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/${{ secrets.SSH_USER }}/deploy_project/server/public/
         ssh -vvv -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no -p ${{ secrets.SSH_PORT }}  ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
-            cd ~/deploy_project
+            cd ~/TEAM3-MES-Makgeolli
             git pull origin main
             cd server
             npm ci --no-audit --no-fund
