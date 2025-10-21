@@ -1,0 +1,1 @@
+const s=function(t,l){let e=t==null?new Date:new Date(t),a=e.getFullYear(),r=("0"+(e.getMonth()+1)).slice(-2),n=("0"+e.getDate()).slice(-2);return l.replace("yyyy",a).replace("MM",r).replace("dd",n)},o={dateFormat:s};export{o as u};
