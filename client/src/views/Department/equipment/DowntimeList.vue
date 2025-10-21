@@ -54,7 +54,7 @@ interface DowntimeItem {
 /* ========================
  * UI Const
  * ======================== */
-const currentPageTitle = ref('설비 기준정보 관리')
+const currentPageTitle = ref('비가동 설비 관리')
 const inputStyle =
   'dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-950 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
 const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400'
@@ -95,21 +95,20 @@ const goDowntimeRegister = () => {
   })
 }
 
-// 진행중 목록 row 클릭: "상세" 모드로
-const onClickDowntimeRow = (row: any) => {
-  if (!row) return
-  router.push({
-    name: 'DownTimeManage',
-    query: {
-      mode: 'detail',
-      downtimeCode: row.downtimeCode ?? row.downtime_code, // 백엔드 케이스까지 대비
-    },
-  })
+/** 비가동 진행중 목록 */
+const refreshPending = async () => {
+  try {
+    const { data } = await axios.get('/api/downtime', { params: { status: 'running' } })
+    downInProgress.value = Array.isArray(data) ? data : []
+  } catch (e) {
+    console.error('진행중 조회 실패:', e)
+    downInProgress.value = []
+  }
 }
-
 /* ========================
  * State
  * ======================== */
+const selectdownInProgress = ref<DowntimeItem | null>(null)
 //조회 폼
 const searchForm = ref(initSearch())
 //설비 목록(테이블 데이터)
@@ -155,14 +154,24 @@ const viewType = async () => {
 }
 
 /** 비가동 진행중 목록 */
-const refreshPending = async () => {
-  try {
-    const { data } = await axios.get('/api/downtime', { params: { status: 'running' } })
-    downInProgress.value = Array.isArray(data) ? data : []
-  } catch (e) {
-    console.error('진행중 조회 실패:', e)
-    downInProgress.value = []
+// 기존 onClickDowntimeRow 제거하고 아래로 대체
+const onClickEndButton = () => {
+  // 진행중 탭(0)에서만 동작
+  if (activeTab.value !== 0) return
+
+  const row = selectdownInProgress.value
+  if (!row) {
+    alert('진행중 목록에서 종료할 행을 선택하세요.')
+    return
   }
+
+  router.push({
+    name: 'DownTimeManage',
+    query: {
+      mode: 'detail',
+      downtimeCode: row.downtimeCode ?? (row as any).downtime_code, // 백엔드 케이스 대비
+    },
+  })
 }
 
 /** 비가동 이력 목록 */
@@ -349,7 +358,18 @@ watch(
       <ComponentCardWoong title="">
         <template #body-content>
           <!-- ✅ 슬롯 flatten 충돌 방지: 한 겹 감싸기 -->
-          <div class="h-78">
+          <div class="relative">
+            <div class="absolute right-0 top-0 z-10 flex space-x-2">
+              <button
+                v-if="activeTab != 1"
+                type="button"
+                class="btn-color btn-common"
+                @click="onClickEndButton"
+                style="width: 120px"
+              >
+                비가동 종료
+              </button>
+            </div>
             <TabView
               v-model:activeIndex="activeTab"
               @tab-change="onTabChange"
@@ -361,14 +381,19 @@ watch(
                 <DataTable
                   :value="downInProgress"
                   showGridlines
-                  dataKey="downtimeId"
+                  dataKey="downtimeCode"
                   scrollable
                   scrollHeight="220px"
                   class="text-sm"
                   :rows="20"
                   size="small"
-                  @row-click="({ data }) => onClickDowntimeRow(data)"
+                  v-model:selection="selectdownInProgress"
                 >
+                  <DataCol
+                    selection-mode="single"
+                    headerStyle="width:37px"
+                    bodyStyle="width:37px"
+                  />
                   <DataCol field="equipCode" header="설비코드" />
                   <DataCol field="equipName" header="설비명" />
                   <DataCol field="downtimeType" header="비가동유형" />
@@ -399,7 +424,6 @@ watch(
                   class="text-sm"
                   :rows="20"
                   size="small"
-                  @row-click="({ data }) => onClickDowntimeRow(data)"
                 >
                   <DataCol field="equipCode" header="설비코드" />
                   <DataCol field="equipName" header="설비명" />
@@ -428,3 +452,9 @@ watch(
     </div>
   </AdminLayout>
 </template>
+<style>
+/* 기존 유지 */
+.p-tabview-panels {
+  padding: 0 !important;
+}
+</style>
