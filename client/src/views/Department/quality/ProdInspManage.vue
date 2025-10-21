@@ -823,13 +823,13 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
       <template #header-right>
         <div class="flex justify-end">
           <button class="btn-common btn-white" @click="resetForm">초기화</button>
-          <button class="btn-common btn-color">PDF</button>
           <!-- 등록 모드 -->
           <template v-if="mode === 'create'">
             <button class="btn-common btn-color" @click="submitRegister">등록</button>
           </template>
           <!-- 수정 모드 -->
           <template v-else>
+            <button class="btn-common btn-color">PDF</button>
             <button class="btn-common btn-color" @click="submitUpdate">수정</button>
             <button class="btn-common btn-white" @click="confirmDelete">삭제</button>
           </template>
@@ -947,7 +947,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                   class="w-2/3 cursor-pointer hover:bg-gray-100 duration-300"
                   readonly
                   @click="openModal"
-                  :value="fmt2(prodInspTargetData.mk_qty)"
+                  v-mdoel="prodInspTargetData.mk_qty"
                   style="text-align: right; padding-right: 40px"
                 />
                 <button
@@ -997,7 +997,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                     class="w-2/3"
                     placeholder="검사량을 입력하세요."
                     style="text-align: right"
-                    :value="fmt2(prodInspQty)"
+                    v-model="prodInspQty"
                     @input="onInspValue"
                   />
                 </div>
@@ -1014,7 +1014,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                     class="w-2/3"
                     disabled
                     style="text-align: right"
-                    :value="fmt2(prodInspNG)"
+                    v-model="prodInspNG"
                   />
                 </div>
                 <div class="text-sm w-[100px] ml-2">
@@ -1030,7 +1030,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                     class="w-2/3"
                     disabled
                     style="text-align: right"
-                    :value="fmt2(prodInspPass)"
+                    v-model="prodInspPass"
                   />
                 </div>
                 <div class="text-sm w-[100px] ml-2">
@@ -1190,7 +1190,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                     type="text"
                     :class="inputStyleSM"
                     placeholder="측정값 입력하세요."
-                    :value="fmt2(slotProps.data.insp_result_value)"
+                    v-model="slotProps.data.insp_result_value"
                     @input="judgeRange(slotProps.data)"
                     style="text-align: right"
                   />

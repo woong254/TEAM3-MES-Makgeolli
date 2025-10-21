@@ -628,7 +628,7 @@ const updateMatInsp = async (payload) => {
 
     // 0) 필수값 검증
     const {
-      insp_id,          // 수정 대상 고유 ID (새로 생성 X, 그대로 사용)
+      insp_id, // 수정 대상 고유 ID (새로 생성 X, 그대로 사용)
       insp_name,
       insp_date,
       insp_qty,
@@ -636,10 +636,10 @@ const updateMatInsp = async (payload) => {
       fail_qty,
       remark = null,
       t_result,
-      emp_id,           // 수정자 사번 등
+      emp_id, // 수정자 사번 등
       // iis_id는 payload에 있더라도, 신뢰하지 말고 DB에서 조회하여 사용 권장
-      results = [],     // [{insp_result_value, r_value, insp_item_id}, ...]
-      ngs = [],         // [{qty, def_item_id}, ...]
+      results = [], // [{insp_result_value, r_value, insp_item_id}, ...]
+      ngs = [], // [{qty, def_item_id}, ...]
     } = payload || {};
 
     if (!insp_id) throw new Error("insp_id가 없습니다(수정 대상 식별 불가).");
@@ -694,7 +694,9 @@ const updateMatInsp = async (payload) => {
     //    ON DUPLICATE KEY UPDATE로도 가능(아래 대안 참고)
 
     // 3-1) 결과 삭제
-    await conn.query(`DELETE FROM mat_insp_result WHERE insp_id = ?`, [insp_id]);
+    await conn.query(`DELETE FROM mat_insp_result WHERE insp_id = ?`, [
+      insp_id,
+    ]);
 
     // 3-2) 결과 재삽입
     for (const r of results) {
@@ -748,7 +750,7 @@ const updateMatInsp = async (payload) => {
   }
 };
 
-// 2-7. 자재입고검사 관리 삭제 
+// 2-7. 자재입고검사 관리 삭제
 const deleteMatInsp = async (insp_id) => {
   let conn = null;
   try {
@@ -765,7 +767,9 @@ const deleteMatInsp = async (insp_id) => {
     );
     if (!hdr) throw new Error("삭제 대상이 존재하지 않습니다.");
 
-    await conn.query(`DELETE FROM mat_insp_result WHERE insp_id = ?`, [insp_id]);
+    await conn.query(`DELETE FROM mat_insp_result WHERE insp_id = ?`, [
+      insp_id,
+    ]);
     await conn.query(`DELETE FROM mat_insp_ng WHERE insp_id = ?`, [insp_id]);
     await conn.query(`DELETE FROM mat_insp WHERE insp_id = ?`, [insp_id]);
 
@@ -773,8 +777,8 @@ const deleteMatInsp = async (insp_id) => {
     await conn.query(
       `UPDATE iis 
           SET pass_qty = 0,
-              insp_status = '검사대기'
-              t_result = ''
+              insp_status = '검사대기',
+              t_result = null
         WHERE iis_id = ?`,
       [hdr.iis_id]
     );
@@ -790,9 +794,8 @@ const deleteMatInsp = async (insp_id) => {
   }
 };
 
-
-// 3. 자재입고검사 조회 
-// 3-1. 자재입고검사 조회 
+// 3. 자재입고검사 조회
+// 3-1. 자재입고검사 조회
 const matInspectSelect = async () => {
   let list = await mariadb
     .query("matInspSelect")
@@ -809,7 +812,7 @@ const searchMatInspList = async (data) => {
     comncode_code, //품목구분코드
     emp_id_name, //검사자
     start_date, //시작날짜
-    end_date //끝날짜
+    end_date, //끝날짜
   } = data;
 
   try {
@@ -838,12 +841,12 @@ const searchMatInspList = async (data) => {
       params.push(`%${emp_id_name.trim()}%`);
     }
     // 시작날짜 검색
-        if (start_date && start_date.trim() !== "") {
+    if (start_date && start_date.trim() !== "") {
       sql += ` AND mi.insp_date >= ?`;
       params.push(start_date.trim());
     }
-    // 끝날짜 검색 
-        if (end_date && end_date.trim() !== "") {
+    // 끝날짜 검색
+    if (end_date && end_date.trim() !== "") {
       sql += ` AND mi.insp_date < DATE_ADD(?, INTERVAL 1 DAY)`;
       params.push(end_date.trim());
     }
@@ -1017,7 +1020,7 @@ const registerProdInsp = async (payload) => {
   }
 };
 
-// 4-4. 완제품검사 검색 
+// 4-4. 완제품검사 검색
 const searchProdInsp = async (data) => {
   // 매개변수
   const {
@@ -1108,7 +1111,7 @@ const updateProdInsp = async (payload) => {
       pass_qty,
       fail_qty,
       remark = null,
-      final_result,   
+      final_result,
       emp_id,
       results = [],
       ngs = [],
@@ -1159,7 +1162,9 @@ const updateProdInsp = async (payload) => {
     );
 
     // 3) 결과/NG 재기록(전체 삭제 후 재삽입)
-    await conn.query(`DELETE FROM prod_insp_result WHERE insp_id = ?`, [insp_id]);
+    await conn.query(`DELETE FROM prod_insp_result WHERE insp_id = ?`, [
+      insp_id,
+    ]);
     for (const r of results) {
       await conn.query(
         `
@@ -1224,8 +1229,12 @@ const deleteProdInsp = async (insp_id) => {
     if (!hdr) throw new Error("삭제 대상이 존재하지 않습니다.");
 
     // 2) 자식부터 삭제
-    await conn.query(`DELETE FROM prod_insp_result WHERE insp_id = ?`, [insp_id]);
-    await conn.query(`DELETE FROM prod_insp_ng     WHERE insp_id = ?`, [insp_id]);
+    await conn.query(`DELETE FROM prod_insp_result WHERE insp_id = ?`, [
+      insp_id,
+    ]);
+    await conn.query(`DELETE FROM prod_insp_ng     WHERE insp_id = ?`, [
+      insp_id,
+    ]);
 
     // 3) 헤더 삭제
     await conn.query(`DELETE FROM prod_insp WHERE insp_id = ?`, [insp_id]);
@@ -1270,7 +1279,7 @@ const searchProdInspList = async (data) => {
     mat_name_word, //검사대상
     emp_id_name, //검사자
     start_date, //시작날짜
-    end_date //끝날짜
+    end_date, //끝날짜
   } = data;
 
   try {
@@ -1294,12 +1303,12 @@ const searchProdInspList = async (data) => {
       params.push(`%${emp_id_name.trim()}%`);
     }
     // 시작날짜 검색
-        if (start_date && start_date.trim() !== "") {
+    if (start_date && start_date.trim() !== "") {
       sql += ` AND pi.insp_date >= ?`;
       params.push(start_date.trim());
     }
-    // 끝날짜 검색 
-        if (end_date && end_date.trim() !== "") {
+    // 끝날짜 검색
+    if (end_date && end_date.trim() !== "") {
       sql += ` AND pi.insp_date < DATE_ADD(?, INTERVAL 1 DAY)`;
       params.push(end_date.trim());
     }

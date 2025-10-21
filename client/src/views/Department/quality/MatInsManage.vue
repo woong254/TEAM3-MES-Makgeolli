@@ -1071,7 +1071,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                   class="w-2/3 cursor-pointer hover:bg-gray-100 duration-300"
                   readonly
                   @click="openModal"
-                  :value="fmt2(matInspTargetData.pur_qty)"
+                  v-model="matInspTargetData.pur_qty"
                   style="text-align: right; padding-right: 20px"
                 />
                 <button
@@ -1121,7 +1121,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                     class="w-2/3 cursor-pointer hover:bg-gray-100 duration-300"
                     readonly
                     @click="openModal"
-                    :value="fmt2(matInspTargetData.receipt_qty)"
+                    v-model="matInspTargetData.receipt_qty"
                     style="text-align: right; padding-right: 20px"
                   />
                   <button
@@ -1142,7 +1142,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                     :class="inputStyleSM"
                     class="w-2/3"
                     placeholder="검사량을 입력하세요."
-                    :value="fmt2(matInspQty)"
+                    v-model="matInspQty"
                     style="text-align: right"
                     @input="onInspValue"
                   />
@@ -1158,7 +1158,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                     class="w-2/3"
                     disabled
                     style="text-align: right"
-                    :value="fmt2(matInspNG)"
+                    v-model="matInspNG"
                   />
                 </div>
                 <div class="text-sm w-[100px] ml-2">{{ matInspTargetData.mat_unit || '단위' }}</div>
@@ -1172,7 +1172,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                     class="w-2/3"
                     disabled
                     style="text-align: right"
-                    :value="fmt2(matInspPass)"
+                    v-model="matInspPass"
                   />
                 </div>
                 <div class="text-sm w-[100px] ml-2">{{ matInspTargetData.mat_unit || '단위' }}</div>
@@ -1328,7 +1328,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                     type="text"
                     :class="inputStyleSM"
                     placeholder="측정값 입력하세요."
-                    :value="fmt2(slotProps.data.insp_result_value)"
+                    v-model="slotProps.data.insp_result_value"
                     @input="judgeRange(slotProps.data)"
                     style="text-align: right"
                   />
