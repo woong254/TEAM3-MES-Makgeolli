@@ -51,7 +51,7 @@ app.get("/", (req, res) => {
 app.use("/", referenceRouter);
 
 // 1. 영업
-app.use("/", salesRouter);
+app.use("/api", salesRouter);
 
 // 2. 생산
 app.use("/", prodOrdRouter); // 생산지시서
