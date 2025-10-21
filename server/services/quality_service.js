@@ -5,6 +5,7 @@ const mariadb = require("../database/mapper.js");
 const matInspSearch = sqlList.matInspSearch;
 const matInspSelect = sqlList.matInspSelect;
 const prodInspSearch = sqlList.prodInspSearch;
+const procInspSearch = sqlList.procInspSearch;
 
 // 1. 품질 기준 관리
 // 1-1. 검사대상 조회
@@ -628,7 +629,7 @@ const updateMatInsp = async (payload) => {
 
     // 0) 필수값 검증
     const {
-      insp_id,          // 수정 대상 고유 ID (새로 생성 X, 그대로 사용)
+      insp_id, // 수정 대상 고유 ID (새로 생성 X, 그대로 사용)
       insp_name,
       insp_date,
       insp_qty,
@@ -636,10 +637,10 @@ const updateMatInsp = async (payload) => {
       fail_qty,
       remark = null,
       t_result,
-      emp_id,           // 수정자 사번 등
+      emp_id, // 수정자 사번 등
       // iis_id는 payload에 있더라도, 신뢰하지 말고 DB에서 조회하여 사용 권장
-      results = [],     // [{insp_result_value, r_value, insp_item_id}, ...]
-      ngs = [],         // [{qty, def_item_id}, ...]
+      results = [], // [{insp_result_value, r_value, insp_item_id}, ...]
+      ngs = [], // [{qty, def_item_id}, ...]
     } = payload || {};
 
     if (!insp_id) throw new Error("insp_id가 없습니다(수정 대상 식별 불가).");
@@ -694,7 +695,9 @@ const updateMatInsp = async (payload) => {
     //    ON DUPLICATE KEY UPDATE로도 가능(아래 대안 참고)
 
     // 3-1) 결과 삭제
-    await conn.query(`DELETE FROM mat_insp_result WHERE insp_id = ?`, [insp_id]);
+    await conn.query(`DELETE FROM mat_insp_result WHERE insp_id = ?`, [
+      insp_id,
+    ]);
 
     // 3-2) 결과 재삽입
     for (const r of results) {
@@ -748,7 +751,7 @@ const updateMatInsp = async (payload) => {
   }
 };
 
-// 2-7. 자재입고검사 관리 삭제 
+// 2-7. 자재입고검사 관리 삭제
 const deleteMatInsp = async (insp_id) => {
   let conn = null;
   try {
@@ -765,7 +768,9 @@ const deleteMatInsp = async (insp_id) => {
     );
     if (!hdr) throw new Error("삭제 대상이 존재하지 않습니다.");
 
-    await conn.query(`DELETE FROM mat_insp_result WHERE insp_id = ?`, [insp_id]);
+    await conn.query(`DELETE FROM mat_insp_result WHERE insp_id = ?`, [
+      insp_id,
+    ]);
     await conn.query(`DELETE FROM mat_insp_ng WHERE insp_id = ?`, [insp_id]);
     await conn.query(`DELETE FROM mat_insp WHERE insp_id = ?`, [insp_id]);
 
@@ -773,8 +778,8 @@ const deleteMatInsp = async (insp_id) => {
     await conn.query(
       `UPDATE iis 
           SET pass_qty = 0,
-              insp_status = '검사대기'
-              t_result = ''
+              insp_status = '검사대기',
+              t_result = null
         WHERE iis_id = ?`,
       [hdr.iis_id]
     );
@@ -790,9 +795,8 @@ const deleteMatInsp = async (insp_id) => {
   }
 };
 
-
-// 3. 자재입고검사 조회 
-// 3-1. 자재입고검사 조회 
+// 3. 자재입고검사 조회
+// 3-1. 자재입고검사 조회
 const matInspectSelect = async () => {
   let list = await mariadb
     .query("matInspSelect")
@@ -809,7 +813,7 @@ const searchMatInspList = async (data) => {
     comncode_code, //품목구분코드
     emp_id_name, //검사자
     start_date, //시작날짜
-    end_date //끝날짜
+    end_date, //끝날짜
   } = data;
 
   try {
@@ -838,12 +842,12 @@ const searchMatInspList = async (data) => {
       params.push(`%${emp_id_name.trim()}%`);
     }
     // 시작날짜 검색
-        if (start_date && start_date.trim() !== "") {
+    if (start_date && start_date.trim() !== "") {
       sql += ` AND mi.insp_date >= ?`;
       params.push(start_date.trim());
     }
-    // 끝날짜 검색 
-        if (end_date && end_date.trim() !== "") {
+    // 끝날짜 검색
+    if (end_date && end_date.trim() !== "") {
       sql += ` AND mi.insp_date < DATE_ADD(?, INTERVAL 1 DAY)`;
       params.push(end_date.trim());
     }
@@ -1017,7 +1021,7 @@ const registerProdInsp = async (payload) => {
   }
 };
 
-// 4-4. 완제품검사 검색 
+// 4-4. 완제품검사 검색
 const searchProdInsp = async (data) => {
   // 매개변수
   const {
@@ -1108,7 +1112,7 @@ const updateProdInsp = async (payload) => {
       pass_qty,
       fail_qty,
       remark = null,
-      final_result,   
+      final_result,
       emp_id,
       results = [],
       ngs = [],
@@ -1159,7 +1163,9 @@ const updateProdInsp = async (payload) => {
     );
 
     // 3) 결과/NG 재기록(전체 삭제 후 재삽입)
-    await conn.query(`DELETE FROM prod_insp_result WHERE insp_id = ?`, [insp_id]);
+    await conn.query(`DELETE FROM prod_insp_result WHERE insp_id = ?`, [
+      insp_id,
+    ]);
     for (const r of results) {
       await conn.query(
         `
@@ -1224,8 +1230,12 @@ const deleteProdInsp = async (insp_id) => {
     if (!hdr) throw new Error("삭제 대상이 존재하지 않습니다.");
 
     // 2) 자식부터 삭제
-    await conn.query(`DELETE FROM prod_insp_result WHERE insp_id = ?`, [insp_id]);
-    await conn.query(`DELETE FROM prod_insp_ng     WHERE insp_id = ?`, [insp_id]);
+    await conn.query(`DELETE FROM prod_insp_result WHERE insp_id = ?`, [
+      insp_id,
+    ]);
+    await conn.query(`DELETE FROM prod_insp_ng     WHERE insp_id = ?`, [
+      insp_id,
+    ]);
 
     // 3) 헤더 삭제
     await conn.query(`DELETE FROM prod_insp WHERE insp_id = ?`, [insp_id]);
@@ -1270,7 +1280,7 @@ const searchProdInspList = async (data) => {
     mat_name_word, //검사대상
     emp_id_name, //검사자
     start_date, //시작날짜
-    end_date //끝날짜
+    end_date, //끝날짜
   } = data;
 
   try {
@@ -1294,12 +1304,12 @@ const searchProdInspList = async (data) => {
       params.push(`%${emp_id_name.trim()}%`);
     }
     // 시작날짜 검색
-        if (start_date && start_date.trim() !== "") {
+    if (start_date && start_date.trim() !== "") {
       sql += ` AND pi.insp_date >= ?`;
       params.push(start_date.trim());
     }
-    // 끝날짜 검색 
-        if (end_date && end_date.trim() !== "") {
+    // 끝날짜 검색
+    if (end_date && end_date.trim() !== "") {
       sql += ` AND pi.insp_date < DATE_ADD(?, INTERVAL 1 DAY)`;
       params.push(end_date.trim());
     }
@@ -1317,6 +1327,225 @@ const searchProdInspList = async (data) => {
   } catch (err) {
     console.error("자재입고검사 검색 오류: ", err);
     return [];
+  }
+};
+
+// 6. 공정검사관리
+// 6-1. 공정검사 검사대상 조회
+const findProcInspTarget = async () => {
+  let list = await mariadb
+    .query("procInspTargetSelect")
+    .catch((err) => console.log(err));
+  return list;
+};
+
+// 6-2. 공정검사 타겟 조회 -> 불량조회 및 해당 품질기준관리 조회(4-2 재활용)
+// 6-3. 공정검사 등록
+const registerProcInsp = async (payload) => {
+  let conn = null;
+  try {
+    conn = await mariadb.getConnection();
+    await conn.beginTransaction();
+
+    // 1) id 생성
+    const idRows = await conn.query(`
+     SELECT CONCAT(
+		 'PQC-',
+		 DATE_FORMAT(NOW(), '%Y%m%d'),
+		 '-',
+		 LPAD(IFNULL(MAX(CAST(RIGHT(insp_id,3) AS UNSIGNED)),0) + 1, 3, '0')
+	   ) AS makeProcInspId
+     FROM proc_insp
+     WHERE SUBSTR(insp_id, 5, 8) = DATE_FORMAT(NOW(), '%Y%m%d')
+     FOR UPDATE`);
+
+    console.log("idRows[0]: ", idRows[0]); // idRows 확인 -> [object Object]
+    console.log("idRows[0].makeProcInspId: ", idRows[0].makeProcInspId);
+
+    const new_proc_insp_id = idRows[0].makeProcInspId;
+    console.log("new_proc_insp_id:", new_proc_insp_id);
+    if (!new_proc_insp_id) throw new Error("proc_insp_id 생성 실패");
+
+    // 2) 공통 헤더 값 준비(payload에서 꺼내기)
+    const {
+      insp_name,
+      insp_date,
+      insp_qty,
+      pass_qty,
+      fail_qty,
+      remark = null,
+      final_result,
+      emp_id,
+      procs_no,
+      results = [], // [{insp_result_value,r_value,insp_item_id}, ...]
+      ngs = [], // [{qty, def_item_id}, ...]
+    } = payload || {};
+
+    // 필수값 최소 검증(서버에서 한번더 확인)
+    if (!insp_name || !insp_date || !emp_id || !procs_no) {
+      throw new Error("필수 값 누락(insp_name/insp_date/emp_id/procs_no)");
+    }
+
+    // 3) 공통 prod_insp 값 넣기 + 유통기한계산(검사완료일+30일)
+    await conn.query(
+      `
+      INSERT INTO proc_insp
+        (insp_id
+        ,insp_name
+        ,insp_date
+        ,insp_qty
+        ,pass_qty
+        ,fail_qty
+        ,remark
+        ,final_result
+        ,emp_id
+        ,epep_dt
+        ,procs_no)
+      VALUES
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, DATE_ADD(?, INTERVAL 30 DAY), ?)`,
+      [
+        new_proc_insp_id,
+        insp_name,
+        insp_date,
+        insp_qty,
+        pass_qty,
+        fail_qty,
+        remark,
+        final_result,
+        emp_id,
+        insp_date,
+        procs_no,
+      ]
+    );
+
+    // 4) proc_insp_result INSERT (여러건)
+    for (const r of payload.results ?? []) {
+      await conn.query(
+        `
+          INSERT INTO proc_insp_result
+            (insp_result_value
+            ,r_value
+            ,insp_item_id
+            ,insp_id)
+          VALUES
+            (?, ?, ?, ?)`,
+        [r.insp_result_value, r.r_value, r.insp_item_id, new_proc_insp_id]
+      );
+    }
+
+    // 5) proc_insp_ng 불량 INSERT (여러건)
+    for (const n of payload.ngs ?? []) {
+      await conn.query(
+        `
+          INSERT INTO proc_insp_ng
+            (qty
+            ,def_item_id
+            ,insp_id)
+          VALUES
+            (?, ?, ?)`,
+        [n.qty, n.def_item_id, new_proc_insp_id]
+      );
+    }
+
+    // 6) processform (공정실적관리) 상태 업데이트
+    await conn.query(
+      `
+        UPDATE processform
+        SET insp_status = 'u2'
+            ,pass_qty = ?
+            ,fail_qty = ?
+        WHERE procs_no = ?`,
+      [pass_qty, fail_qty, procs_no]
+    );
+
+    // 결과/NG 루프 전에 길이 확인
+    console.log("results length:", (payload.results || []).length);
+    console.log("ngs length:", (payload.ngs || []).length);
+
+    await conn.commit();
+    return { ok: true, insp_id: new_proc_insp_id };
+  } catch (err) {
+    console.error(err);
+    if (conn) await conn.rollback();
+    return { ok: false, message: err.message || String(err) };
+  } finally {
+    if (conn) conn.release();
+  }
+};
+
+// 4-4. 공정검사 검색
+const searchProcInsp = async (data) => {
+  // 매개변수
+  const {
+    insp_name_word, //검사명
+    start_date, //검사일시(시작)
+    end_date, //검사일시(끝)
+  } = data;
+
+  try {
+    let sql = procInspSearch;
+    let params = [];
+
+    // 공백처리 안할시 오류 (WHERE 1=1로 마지막 처리되어있음)
+    if (insp_name_word && insp_name_word.trim() !== "") {
+      sql += ` AND pi.insp_name LIKE ?`;
+      params.push(`%${insp_name_word.trim()}%`);
+    }
+    if (start_date && start_date.trim() !== "") {
+      sql += ` AND pi.insp_date >= ?`;
+      params.push(start_date.trim());
+    }
+    if (end_date && end_date.trim() !== "") {
+      sql += ` AND pi.insp_date < DATE_ADD(?, INTERVAL 1 DAY)`;
+      params.push(end_date.trim());
+    }
+
+    // 정렬
+    sql += " ORDER BY pi.insp_date DESC, pi.insp_id DESC";
+
+    console.log("실제 SQL: ", sql);
+    console.log("파라미터: ", params);
+
+    const list = await mariadb.query(sql, params);
+    console.log("list 조회: ", list);
+
+    return list;
+  } catch (err) {
+    console.error("자재입고검사 검색 오류: ", err);
+    return [];
+  }
+};
+
+// 4-5. 공정검사 상세조회
+const procInspDetail = async (inspId) => {
+  try {
+    if (!inspId) return { ok: false, message: "inspId가 없습니다." };
+
+    let procInsp = await mariadb
+      .query("selectProcInspHeaderById", [inspId])
+      .catch((err) => console.log(err));
+    let procInspResult = await mariadb
+      .query("selectProcInspResultsById", [inspId])
+      .catch((err) => console.log(err));
+    let procInspNg = await mariadb
+      .query("selectProInspNGsById", [inspId])
+      .catch((err) => console.log(err));
+
+    const [header] = procInsp || [];
+    if (!header) return { ok: false, message: "데이터가 없습니다." };
+
+    return {
+      ok: true,
+      header,
+      results: procInspResult || [],
+      ngs: procInspNg || [],
+    };
+  } catch (err) {
+    console.error("procInspDetail ERROR:", err);
+    return {
+      ok: false,
+      message: err.sqlMessage || err.message || "상세 조회 실패",
+    };
   }
 };
 
@@ -1347,4 +1576,8 @@ module.exports = {
   deleteProdInsp,
   prodInspectSelect,
   searchProdInspList,
+  findProcInspTarget,
+  registerProcInsp,
+  searchProcInsp,
+  procInspDetail,
 };

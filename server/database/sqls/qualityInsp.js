@@ -398,7 +398,7 @@ JOIN def_master d ON d.def_item_id = n.def_item_id
 WHERE n.insp_id = 'IQC-20251017-001'
 ORDER BY d.def_item_name`;
 
-// 3. 자재입고검사 조회 
+// 3. 자재입고검사 조회
 const matInspSelect = `
 SELECT mi.insp_id -- 검사ID
        ,mi.insp_name -- 검사명
@@ -420,7 +420,6 @@ LEFT JOIN comncode_dt cd
 WHERE 1=1
 `;
 
-
 // 4. 완제품검사 관리
 // 4-1. 완제품검사 대상(검사대상) 조회
 const prodInspTargetSelect = `
@@ -441,8 +440,7 @@ WHERE now_procs = '포장'
   AND (pf.insp_status IS NULL OR pf.insp_status <> 'u2')
 `;
 
-
-// 4-2. 완제품검사 대상 조회시 -> 불량 자동조회 
+// 4-2. 완제품검사 대상 조회시 -> 불량 자동조회
 const prodInspTargetNg = `
 SELECT dmt.def_item_id
        ,dm.def_item_name
@@ -523,7 +521,7 @@ LEFT JOIN comncode_dt c
 WHERE 1=1
 `;
 
-// 4-5. 완제품 검사 상세조회 
+// 4-5. 완제품 검사 상세조회
 // 4-5-1. 헤더 (prod_insp + processform + prod_master 등)
 const selectProdInspHeaderById = `
 SELECT
@@ -606,7 +604,57 @@ WHERE n.insp_id = ?
 ORDER BY d.def_item_name
 `;
 
+// 5. 공정검사
+// 5-1. 공정검사 검사대상 조회
+const procInspTargetSelect = `
+SELECT 
+    pf.procs_no,        -- 공정실적번호
+    pf.prod_code,       -- 제품코드
+    pm.prod_name,       -- 제품명
+    pm.prod_spec,       -- 규격
+    c.comncode_dtnm,    -- 단위 공통코드 이름
+    pf.mk_qty,          -- 생산량
+    pf.procs_endtm,     -- 생산작업일시
+    pf.now_procs        -- 현재공정명
+FROM processform pf
+JOIN prod_master pm
+    ON pf.prod_code = pm.prod_code
+JOIN comncode_dt c
+    ON pm.prod_unit = c.comncode_detailid
+WHERE pf.procs_st = 't3'              -- 공정상태가 t3인 것
+  AND pf.now_procs <> '포장'          -- 현재 공정이 '포장'이 아닌 것
+  AND pf.procs_endtm IS NOT NULL      -- 생산작업일시가 있는 것
+ORDER BY procs_no
+`;
 
+// 5-2. 공정검사 검색
+const procInspSearch = `
+SELECT pi.insp_id        -- 검사ID
+       ,pi.insp_name     -- 검사명
+       ,pi.insp_date     -- 검사일시
+       ,pm.prod_name     -- 제품명
+       ,pm.prod_spec     -- 제품규격
+       ,c.comncode_dtnm  -- 제품단위 이름
+       ,pi.insp_qty      -- 검사량
+       ,pi.emp_id        -- 검사자
+       ,pi.procs_no      -- 공정실적번호
+       ,pf.now_procs     -- 현재공정명
+       ,pi.final_result  -- 최종합격여부
+FROM proc_insp pi
+LEFT JOIN processform pf
+  ON pi.procs_no = pf.procs_no
+LEFT JOIN prod_master pm
+  ON pf.prod_code = pm.prod_code
+LEFT JOIN comncode_dt c
+  ON pm.prod_unit = c.comncode_detailid
+WHERE 1=1
+`;
+
+// 5-3. 공정검사 상세조회
+// 5-3-1. 헤더 (proc_insp + processform + proc_master 등)
+
+// 5-3-2.
+// 5-3-3. 불량
 
 module.exports = {
   selectInspTargetList,
@@ -637,5 +685,7 @@ module.exports = {
   prodInspSearch,
   selectProdInspHeaderById,
   selectProdInspResultsById,
-  selectProdInspNGsById
+  selectProdInspNGsById,
+  procInspTargetSelect,
+  procInspSearch,
 };
