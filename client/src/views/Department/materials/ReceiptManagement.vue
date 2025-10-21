@@ -290,17 +290,20 @@ const registerIis = async () => {
               header="가입고일자"
               :pt="{ columnHeaderContent: 'justify-center' }"
               style="width: 150px; text-align: center"
+              class="text-sm"
             />
             <DataCol
               field="bcnc_code"
               header="매입처코드"
               style="width: 120px"
               :pt="{ columnHeaderContent: 'justify-center' }"
+              class="text-sm"
             />
             <DataCol
               field="bcnc_name"
               header="매입처명"
               :pt="{ columnHeaderContent: 'justify-center' }"
+              class="text-sm"
               style="padding: 8px"
             >
               <template #body="{ data, field }">
@@ -340,12 +343,14 @@ const registerIis = async () => {
               header="자재코드"
               style="width: 180px"
               :pt="{ columnHeaderContent: 'justify-center' }"
+              class="text-sm"
             />
             <DataCol
               field="mat_name"
               header="자재명"
               style="width: 190px; padding: 8px"
               :pt="{ columnHeaderContent: 'justify-center' }"
+              class="text-sm"
             >
               <template #body="{ data, field }">
                 <div class="relative">
@@ -383,18 +388,21 @@ const registerIis = async () => {
               header="규격"
               style="width: 160px"
               :pt="{ columnHeaderContent: 'justify-center' }"
+              class="text-sm"
             />
             <DataCol
               field="mat_unit"
               header="단위"
               style="width: 100px"
               :pt="{ columnHeaderContent: 'justify-center' }"
+              class="text-sm"
             />
             <DataCol
               field="receipt_qty"
               header="입고량"
               style="width: 120px; padding: 8px"
               :pt="{ columnHeaderContent: 'justify-center' }"
+              class="text-sm"
             >
               <template #body="{ data, field }">
                 <input
@@ -416,6 +424,7 @@ const registerIis = async () => {
               header="제조일자"
               :pt="{ columnHeaderContent: 'justify-center' }"
               style="width: 150px; padding: 8px"
+              class="text-sm"
             >
               <template #body="{ data, field }">
                 <div class="relative">
@@ -447,6 +456,7 @@ const registerIis = async () => {
               header="유통기한"
               :pt="{ columnHeaderContent: 'justify-center' }"
               style="width: 150px; padding: 8px"
+              class="text-sm"
             >
               <template #body="{ data, field }">
                 <div class="relative">
@@ -525,64 +535,76 @@ const registerIis = async () => {
                     selection-mode="multiple"
                     headerStyle="width:37px"
                     bodyStyle="width:37px"
+                    class="text-sm"
                   />
                   <DataCol
                     field="pur_code"
                     header="발주코드"
                     :pt="{ columnHeaderContent: 'justify-center' }"
+                    class="text-sm"
                   />
                   <DataCol
                     field="pur_name"
                     header="발주서명"
                     :pt="{ columnHeaderContent: 'justify-center' }"
+                    class="text-sm"
                   />
                   <DataCol
                     field="pre_receipt_date"
                     header="가입고일자"
                     :pt="{ columnHeaderContent: 'justify-center' }"
                     style="text-align: center"
+                    class="text-sm"
                   />
                   <DataCol
                     field="bcnc_name"
                     header="매입처명"
                     :pt="{ columnHeaderContent: 'justify-center' }"
+                    class="text-sm"
                   />
                   <DataCol
                     field="mat_code"
                     header="자재코드"
                     :pt="{ columnHeaderContent: 'justify-center' }"
+                    class="text-sm"
                   />
                   <DataCol
                     field="mat_name"
                     header="자재명"
                     :pt="{ columnHeaderContent: 'justify-center' }"
+                    class="text-sm"
                   />
                   <DataCol
                     field="mat_spec"
                     header="규격"
                     :pt="{ columnHeaderContent: 'justify-center' }"
+                    class="text-sm"
                   />
                   <DataCol
                     field="mat_unit"
                     header="단위"
                     :pt="{ columnHeaderContent: 'justify-center' }"
+                    class="text-sm"
                   />
                   <DataCol
                     field="receipt_qty"
                     header="입고량"
                     :pt="{ columnHeaderContent: 'justify-center' }"
+                    class="text-sm"
                     style="text-align: right"
                   />
                   <DataCol
                     field="prod_date"
                     header="제조일자"
                     :pt="{ columnHeaderContent: 'justify-center' }"
+                    class="text-sm"
                     style="text-align: center"
                   />
                   <DataCol
                     field="exp_date"
                     header="유통기한"
                     :pt="{ columnHeaderContent: 'justify-center' }"
+                    class="text-sm"
                     style="text-align: center"
                   />
                 </DataTable>
@@ -605,70 +627,83 @@ const registerIis = async () => {
                     selection-mode="multiple"
                     headerStyle="width:37px"
                     bodyStyle="width:37px"
+                    class="text-sm"
                   />
                   <DataCol
                     field="pur_code"
                     header="발주코드"
                     :pt="{ columnHeaderContent: 'justify-center' }"
+                    class="text-sm"
                   />
                   <DataCol
                     field="pur_name"
                     header="발주서명"
                     :pt="{ columnHeaderContent: 'justify-center' }"
+                    class="text-sm"
                   />
                   <DataCol
                     field="pre_receipt_date"
                     header="가입고일자"
                     :pt="{ columnHeaderContent: 'justify-center' }"
+                    class="text-sm"
                     style="text-align: center"
                   />
                   <DataCol
                     field="bcnc_name"
                     header="매입처명"
                     :pt="{ columnHeaderContent: 'justify-center' }"
+                    class="text-sm"
                   />
                   <DataCol
                     field="mat_code"
                     header="자재코드"
                     :pt="{ columnHeaderContent: 'justify-center' }"
+                    class="text-sm"
                   />
                   <DataCol
                     field="mat_name"
                     header="자재명"
                     :pt="{ columnHeaderContent: 'justify-center' }"
+                    class="text-sm"
                   />
                   <DataCol
                     field="mat_spec"
                     header="규격"
                     :pt="{ columnHeaderContent: 'justify-center' }"
+                    class="text-sm"
                   />
                   <DataCol
                     field="mat_unit"
                     header="단위"
                     :pt="{ columnHeaderContent: 'justify-center' }"
+                    class="text-sm"
                   />
                   <DataCol
                     field="receipt_qty"
                     header="입고량"
                     :pt="{ columnHeaderContent: 'justify-center' }"
+                    class="text-sm"
                     style="text-align: right"
                   />
                   <DataCol
                     field="pass_qty"
                     header="합격량"
                     :pt="{ columnHeaderContent: 'justify-center' }"
+                    class="text-sm"
                     style="text-align: right"
                   />
                   <DataCol
                     field="prod_date"
                     header="제조일자"
                     :pt="{ columnHeaderContent: 'justify-center' }"
+                    class="text-sm"
                     style="text-align: center"
                   />
                   <DataCol
                     field="exp_date"
                     header="유통기한"
                     :pt="{ columnHeaderContent: 'justify-center' }"
+                    class="text-sm"
                     style="text-align: center"
                   />
                 </DataTable>

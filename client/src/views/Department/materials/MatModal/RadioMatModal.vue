@@ -141,33 +141,47 @@ const selectMat = () => {
         >
           <DataCol selectionMode="single" headerStyle="width: 37px" bodyStyle="width: 37px" />
           <template #empty>
-            <div class="text-center">오늘 입고될 자재가 없습니다.</div>
+            <div class="text-center text-sm">오늘 입고될 자재가 없습니다.</div>
           </template>
 
           <DataCol
             field="mat_code"
             header="자재코드"
             :pt="{ columnHeaderContent: 'justify-center' }"
+            class="text-sm"
           />
           <DataCol
             field="mat_name"
             header="자재명"
             :pt="{ columnHeaderContent: 'justify-center' }"
+            class="text-sm"
           />
           <DataCol
             field="stock_qty"
             header="재고"
             :pt="{ columnHeaderContent: 'justify-center' }"
+            class="text-sm"
             style="text-align: right"
           />
           <DataCol
             field="safe_stock"
             header="안전재고"
             :pt="{ columnHeaderContent: 'justify-center' }"
+            class="text-sm"
             style="text-align: right"
           />
-          <DataCol field="mat_spec" header="규격" :pt="{ columnHeaderContent: 'justify-center' }" />
-          <DataCol field="mat_unit" header="단위" :pt="{ columnHeaderContent: 'justify-center' }" />
+          <DataCol
+            field="mat_spec"
+            header="규격"
+            :pt="{ columnHeaderContent: 'justify-center' }"
+            class="text-sm"
+          />
+          <DataCol
+            field="mat_unit"
+            header="단위"
+            :pt="{ columnHeaderContent: 'justify-center' }"
+            class="text-sm"
+          />
         </DataTable>
       </div>
     </template>

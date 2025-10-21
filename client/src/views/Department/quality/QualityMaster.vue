@@ -627,14 +627,14 @@ const fileStyle =
       </template>
     </ComponentCard>
 
-    <div class="flex gap-2 mt-2 width-full" style="height: 550px">
+    <div class="flex gap-2 mt-2 width-full" style="height: 540px">
       <ComponentCard title="목록" className="shadow-sm w-1/2">
         <template #body-content>
           <DataTable
             :value="inspData"
             showGridlines
             scrollable
-            scrollHeight="420px"
+            scrollHeight="430px"
             size="small"
             :rows="10"
             class="text-sm"

@@ -95,50 +95,68 @@ watch(
       <div class="modal-container flex gap-2 mb-2">
         <DataTable :value="displayed" show-gridlines style="width: 1200px" paginator :rows="8">
           <template #empty>
-            <div class="text-center">오늘 입고될 자재가 없습니다.</div>
+            <div class="text-center text-sm">오늘 입고될 자재가 없습니다.</div>
           </template>
           <DataCol
             field="pur_code"
             header="발주코드"
             :pt="{ columnHeaderContent: 'justify-center' }"
+            class="text-sm"
           />
           <DataCol
             field="pur_name"
             header="발주서명"
             :pt="{ columnHeaderContent: 'justify-center' }"
+            class="text-sm"
           />
           <DataCol
             field="bcnc_code"
             header="매입처코드"
             :pt="{ columnHeaderContent: 'justify-center' }"
+            class="text-sm"
           />
           <DataCol
             field="bcnc_name"
             header="매입처명"
             :pt="{ columnHeaderContent: 'justify-center' }"
+            class="text-sm"
           />
           <DataCol
             field="mat_code"
             header="자재코드"
             :pt="{ columnHeaderContent: 'justify-center' }"
+            class="text-sm"
           />
           <DataCol
             field="mat_name"
             header="자재명"
             :pt="{ columnHeaderContent: 'justify-center' }"
+            class="text-sm"
           />
-          <DataCol field="mat_spec" header="규격" :pt="{ columnHeaderContent: 'justify-center' }" />
-          <DataCol field="mat_unit" header="단위" :pt="{ columnHeaderContent: 'justify-center' }" />
+          <DataCol
+            field="mat_spec"
+            header="규격"
+            :pt="{ columnHeaderContent: 'justify-center' }"
+            class="text-sm"
+          />
+          <DataCol
+            field="mat_unit"
+            header="단위"
+            :pt="{ columnHeaderContent: 'justify-center' }"
+            class="text-sm"
+          />
           <DataCol
             field="unreceipt_qty"
             header="미입고량"
             style="text-align: right"
             :pt="{ columnHeaderContent: 'justify-center' }"
+            class="text-sm"
           />
           <DataCol
             field="receipt_status"
             header="입고상태"
             :pt="{ columnHeaderContent: 'justify-center' }"
+            class="text-sm"
           />
         </DataTable>
       </div>

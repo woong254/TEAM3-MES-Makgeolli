@@ -258,11 +258,46 @@ router.post("/procInspSearch", async (req, res) => {
 });
 
 // 6-3. 공정검사관리 상세조회
-router.get("/procInspDetail/:insp_id", async (req, res) => {
+router.get("/procInspDetail/:inspId", async (req, res) => {
+  const { inspId } = req.params;
+  let result = await qualityService
+    .procInspDetail(req.params.inspId)
+    .catch((err) => ({ ok: false, message: err?.message || "서버 오류" }));
+  res.send(result);
+});
+
+// 6-4. 공정검사관리 수정
+router.put("/procInsp/:insp_id", async (req, res) => {
+  const insp_id = req.params.insp_id;
+  const payload = { ...req.body, insp_id };
+  let result = await qualityService
+    .updateProcInsp(payload)
+    .catch((err) => ({ ok: false, message: err?.message || "서버 오류" }));
+  res.send(result);
+});
+
+// 6-5. 공정검사관리 삭제
+router.delete("/procInsp/:insp_id", async (req, res) => {
   const { insp_id } = req.params;
   let result = await qualityService
-    .procInspDetail(req.params.insp_id)
-    .catch((err) => ({ ok: false, message: err?.message || "서버 오류" }));
+    .deleteProcInsp(insp_id)
+    .catch((err) => console.error(err));
+  res.send(result);
+});
+
+// 7. 공정검사조회 리스트
+router.get("/procInspList", async (req, res) => {
+  let result = await qualityService
+    .procInspectSelect()
+    .catch((err) => console.error(err));
+  res.send(result);
+});
+
+// 8. 공정검사조회 검색
+router.post("/procInspListSearch", async (req, res) => {
+  let result = await qualityService
+    .searchProcInspList(req.body)
+    .catch((err) => console.error(err));
   res.send(result);
 });
 

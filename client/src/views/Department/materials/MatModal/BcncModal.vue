@@ -136,17 +136,20 @@ const selectBcnc = () => {
             header="매입처코드"
             :pt="{ columnHeaderContent: 'justify-center' }"
             style="width: 130px"
+            class="text-sm"
           />
           <DataCol
             field="bcnc_name"
             header="매입처명"
             :pt="{ columnHeaderContent: 'justify-center' }"
+            class="text-sm"
           />
           <DataCol
             field="bcnc_category"
             header="업종"
             style="width: 180px"
             :pt="{ columnHeaderContent: 'justify-center' }"
+            class="text-sm"
           />
         </DataTable>
       </div>
