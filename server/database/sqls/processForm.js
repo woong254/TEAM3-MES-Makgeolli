@@ -62,5 +62,7 @@ SELECT  pf.procs_no,
                 JOIN emp_master empm
                 ON pf.emp_no = empm.emp_id
         WHERE empm.emp_id = ?
-        AND pf.procs_st = 't1'`;
+        AND em.equip_code = ?
+        AND md.mkd_no = ?
+        AND pf.procs_st <> 't3'`;
 module.exports = { insertedResult, selectProcessControlData };
