@@ -5,6 +5,7 @@ const mariadb = require("../database/mapper.js");
 const matInspSearch = sqlList.matInspSearch;
 const matInspSelect = sqlList.matInspSelect;
 const prodInspSearch = sqlList.prodInspSearch;
+const procInspSearch = sqlList.procInspSearch;
 
 // 1. 품질 기준 관리
 // 1-1. 검사대상 조회
@@ -1329,6 +1330,225 @@ const searchProdInspList = async (data) => {
   }
 };
 
+// 6. 공정검사관리
+// 6-1. 공정검사 검사대상 조회
+const findProcInspTarget = async () => {
+  let list = await mariadb
+    .query("procInspTargetSelect")
+    .catch((err) => console.log(err));
+  return list;
+};
+
+// 6-2. 공정검사 타겟 조회 -> 불량조회 및 해당 품질기준관리 조회(4-2 재활용)
+// 6-3. 공정검사 등록
+const registerProcInsp = async (payload) => {
+  let conn = null;
+  try {
+    conn = await mariadb.getConnection();
+    await conn.beginTransaction();
+
+    // 1) id 생성
+    const idRows = await conn.query(`
+     SELECT CONCAT(
+		 'PQC-',
+		 DATE_FORMAT(NOW(), '%Y%m%d'),
+		 '-',
+		 LPAD(IFNULL(MAX(CAST(RIGHT(insp_id,3) AS UNSIGNED)),0) + 1, 3, '0')
+	   ) AS makeProcInspId
+     FROM proc_insp
+     WHERE SUBSTR(insp_id, 5, 8) = DATE_FORMAT(NOW(), '%Y%m%d')
+     FOR UPDATE`);
+
+    console.log("idRows[0]: ", idRows[0]); // idRows 확인 -> [object Object]
+    console.log("idRows[0].makeProcInspId: ", idRows[0].makeProcInspId);
+
+    const new_proc_insp_id = idRows[0].makeProcInspId;
+    console.log("new_proc_insp_id:", new_proc_insp_id);
+    if (!new_proc_insp_id) throw new Error("proc_insp_id 생성 실패");
+
+    // 2) 공통 헤더 값 준비(payload에서 꺼내기)
+    const {
+      insp_name,
+      insp_date,
+      insp_qty,
+      pass_qty,
+      fail_qty,
+      remark = null,
+      final_result,
+      emp_id,
+      procs_no,
+      results = [], // [{insp_result_value,r_value,insp_item_id}, ...]
+      ngs = [], // [{qty, def_item_id}, ...]
+    } = payload || {};
+
+    // 필수값 최소 검증(서버에서 한번더 확인)
+    if (!insp_name || !insp_date || !emp_id || !procs_no) {
+      throw new Error("필수 값 누락(insp_name/insp_date/emp_id/procs_no)");
+    }
+
+    // 3) 공통 prod_insp 값 넣기 + 유통기한계산(검사완료일+30일)
+    await conn.query(
+      `
+      INSERT INTO proc_insp
+        (insp_id
+        ,insp_name
+        ,insp_date
+        ,insp_qty
+        ,pass_qty
+        ,fail_qty
+        ,remark
+        ,final_result
+        ,emp_id
+        ,epep_dt
+        ,procs_no)
+      VALUES
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, DATE_ADD(?, INTERVAL 30 DAY), ?)`,
+      [
+        new_proc_insp_id,
+        insp_name,
+        insp_date,
+        insp_qty,
+        pass_qty,
+        fail_qty,
+        remark,
+        final_result,
+        emp_id,
+        insp_date,
+        procs_no,
+      ]
+    );
+
+    // 4) proc_insp_result INSERT (여러건)
+    for (const r of payload.results ?? []) {
+      await conn.query(
+        `
+          INSERT INTO proc_insp_result
+            (insp_result_value
+            ,r_value
+            ,insp_item_id
+            ,insp_id)
+          VALUES
+            (?, ?, ?, ?)`,
+        [r.insp_result_value, r.r_value, r.insp_item_id, new_proc_insp_id]
+      );
+    }
+
+    // 5) proc_insp_ng 불량 INSERT (여러건)
+    for (const n of payload.ngs ?? []) {
+      await conn.query(
+        `
+          INSERT INTO proc_insp_ng
+            (qty
+            ,def_item_id
+            ,insp_id)
+          VALUES
+            (?, ?, ?)`,
+        [n.qty, n.def_item_id, new_proc_insp_id]
+      );
+    }
+
+    // 6) processform (공정실적관리) 상태 업데이트
+    await conn.query(
+      `
+        UPDATE processform
+        SET insp_status = 'u2'
+            ,pass_qty = ?
+            ,fail_qty = ?
+        WHERE procs_no = ?`,
+      [pass_qty, fail_qty, procs_no]
+    );
+
+    // 결과/NG 루프 전에 길이 확인
+    console.log("results length:", (payload.results || []).length);
+    console.log("ngs length:", (payload.ngs || []).length);
+
+    await conn.commit();
+    return { ok: true, insp_id: new_proc_insp_id };
+  } catch (err) {
+    console.error(err);
+    if (conn) await conn.rollback();
+    return { ok: false, message: err.message || String(err) };
+  } finally {
+    if (conn) conn.release();
+  }
+};
+
+// 4-4. 공정검사 검색
+const searchProcInsp = async (data) => {
+  // 매개변수
+  const {
+    insp_name_word, //검사명
+    start_date, //검사일시(시작)
+    end_date, //검사일시(끝)
+  } = data;
+
+  try {
+    let sql = procInspSearch;
+    let params = [];
+
+    // 공백처리 안할시 오류 (WHERE 1=1로 마지막 처리되어있음)
+    if (insp_name_word && insp_name_word.trim() !== "") {
+      sql += ` AND pi.insp_name LIKE ?`;
+      params.push(`%${insp_name_word.trim()}%`);
+    }
+    if (start_date && start_date.trim() !== "") {
+      sql += ` AND pi.insp_date >= ?`;
+      params.push(start_date.trim());
+    }
+    if (end_date && end_date.trim() !== "") {
+      sql += ` AND pi.insp_date < DATE_ADD(?, INTERVAL 1 DAY)`;
+      params.push(end_date.trim());
+    }
+
+    // 정렬
+    sql += " ORDER BY pi.insp_date DESC, pi.insp_id DESC";
+
+    console.log("실제 SQL: ", sql);
+    console.log("파라미터: ", params);
+
+    const list = await mariadb.query(sql, params);
+    console.log("list 조회: ", list);
+
+    return list;
+  } catch (err) {
+    console.error("자재입고검사 검색 오류: ", err);
+    return [];
+  }
+};
+
+// 4-5. 공정검사 상세조회
+const procInspDetail = async (inspId) => {
+  try {
+    if (!inspId) return { ok: false, message: "inspId가 없습니다." };
+
+    let procInsp = await mariadb
+      .query("selectProcInspHeaderById", [inspId])
+      .catch((err) => console.log(err));
+    let procInspResult = await mariadb
+      .query("selectProcInspResultsById", [inspId])
+      .catch((err) => console.log(err));
+    let procInspNg = await mariadb
+      .query("selectProInspNGsById", [inspId])
+      .catch((err) => console.log(err));
+
+    const [header] = procInsp || [];
+    if (!header) return { ok: false, message: "데이터가 없습니다." };
+
+    return {
+      ok: true,
+      header,
+      results: procInspResult || [],
+      ngs: procInspNg || [],
+    };
+  } catch (err) {
+    console.error("procInspDetail ERROR:", err);
+    return {
+      ok: false,
+      message: err.sqlMessage || err.message || "상세 조회 실패",
+    };
+  }
+};
+
 module.exports = {
   findInspTarget,
   findInspTargetSearch,
@@ -1356,4 +1576,8 @@ module.exports = {
   deleteProdInsp,
   prodInspectSelect,
   searchProdInspList,
+  findProcInspTarget,
+  registerProcInsp,
+  searchProcInsp,
+  procInspDetail,
 };

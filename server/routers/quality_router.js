@@ -118,7 +118,7 @@ router.get("/matInspDetail/:inspId", async (req, res) => {
 // 2-6. 자재입고검사 관리 수정
 router.put("/matInsp/:id", async (req, res) => {
   const { id } = req.params;
-  const payload = { ...req.body, insp_id: id }; 
+  const payload = { ...req.body, insp_id: id };
   let result = await qualityService
     .updateMatInsp(payload)
     .catch((err) => ({ ok: false, message: err?.message || "서버 오류" }));
@@ -134,7 +134,7 @@ router.delete("/matInsp/:id", async (req, res) => {
   res.send(result);
 });
 
-// 3. 자재입고검사 조회 
+// 3. 자재입고검사 조회
 // 3-1. 자재입고검사 리스트 조회
 router.get("/matInspList", async (req, res) => {
   let result = await qualityService
@@ -158,7 +158,7 @@ router.get("/prodInspTargetSearch", async (req, res) => {
     .findProdInspTarget()
     .catch((err) => console.error(err));
   res.send(result);
-  console.log('완제품검사 타겟 조회: ', result);
+  console.log("완제품검사 타겟 조회: ", result);
 });
 
 // 4-2. 완제품검사 타겟 조회 선택시 -> 해당 품질기준관리 조회 + 불량조회
@@ -198,7 +198,7 @@ router.get("/prodInspDetail/:insp_id", async (req, res) => {
 // 4-6. 완제품 관리 수정
 router.put("/prodInsp/:insp_id", async (req, res) => {
   const insp_id = req.params.insp_id;
-  const payload = { ...req.body, insp_id }; 
+  const payload = { ...req.body, insp_id };
   let result = await qualityService
     .updateProdInsp(payload)
     .catch((err) => ({ ok: false, message: err?.message || "서버 오류" }));
@@ -223,11 +223,46 @@ router.get("/prodInspList", async (req, res) => {
   res.send(result);
 });
 
-// 5-2. 완제품검사 조회 검색 
+// 5-2. 완제품검사 조회 검색
 router.post("/prodInspListSearch", async (req, res) => {
   let result = await qualityService
     .searchProdInspList(req.body)
     .catch((err) => console.error(err));
+  res.send(result);
+});
+
+//6. 공정검사 관리
+//6-1. 공정검사관리 검사대상 조회
+router.get("/procInspTargetSearch", async (req, res) => {
+  let result = await qualityService
+    .findProcInspTarget()
+    .catch((err) => console.error(err));
+  res.send(result);
+  console.log("공정검사 타겟 조회: ", result);
+});
+
+// 6-2. 공정검사관리 등록
+router.post("/procInsp", async (req, res) => {
+  let result = await qualityService
+    .registerProcInsp(req.body)
+    .catch((err) => console.error(err));
+  res.send(result);
+});
+
+// 6-3. 공정검사관리 검색
+router.post("/procInspSearch", async (req, res) => {
+  let result = await qualityService
+    .searchProcInsp(req.body)
+    .catch((err) => console.error(err));
+  res.send(result);
+});
+
+// 6-3. 공정검사관리 상세조회
+router.get("/procInspDetail/:insp_id", async (req, res) => {
+  const { insp_id } = req.params;
+  let result = await qualityService
+    .procInspDetail(req.params.insp_id)
+    .catch((err) => ({ ok: false, message: err?.message || "서버 오류" }));
   res.send(result);
 });
 

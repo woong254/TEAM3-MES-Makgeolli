@@ -947,7 +947,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                   class="w-2/3 cursor-pointer hover:bg-gray-100 duration-300"
                   readonly
                   @click="openModal"
-                  v-mdoel="prodInspTargetData.mk_qty"
+                  v-model="prodInspTargetData.mk_qty"
                   style="text-align: right; padding-right: 40px"
                 />
                 <button
