@@ -578,6 +578,7 @@ const getNextProcessQty = async (mk_list, seq_no) => {
       FROM processform
       WHERE mk_list = ?
       AND seq_no = ?
+      AND insp_status = 'u2'
     `;
 
     const [rows] = await db.execute(sql, [mk_list, seq_no]);
