@@ -141,24 +141,27 @@ const selectBcnc = () => {
         >
           <DataCol selectionMode="single" headerStyle="width: 37px" bodyStyle="width: 37px" />
           <template #empty>
-            <div class="text-center">오늘 입고될 자재가 없습니다.</div>
+            <div class="text-center text-sm">오늘 입고될 자재가 없습니다.</div>
           </template>
           <DataCol
             field="bcnc_code"
             header="매입처코드"
             :pt="{ columnHeaderContent: 'justify-center' }"
             style="width: 130px"
+            class="text-sm"
           />
           <DataCol
             field="bcnc_name"
             header="매입처명"
             :pt="{ columnHeaderContent: 'justify-center' }"
+            class="text-sm"
           />
           <DataCol
             field="bcnc_category"
             header="업종"
             style="width: 180px"
             :pt="{ columnHeaderContent: 'justify-center' }"
+            class="text-sm"
           />
         </DataTable>
       </div>

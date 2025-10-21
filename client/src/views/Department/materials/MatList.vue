@@ -184,33 +184,39 @@ onMounted(fetchRows)
               field="mat_code"
               header="자재코드"
               :pt="{ columnHeaderContent: 'justify-center' }"
+              class="text-sm"
             />
             <DataCol
               field="mat_name"
               header="자재명"
               style="width: 260px"
               :pt="{ columnHeaderContent: 'justify-center' }"
+              class="text-sm"
             />
             <DataCol
               field="mat_spec"
               header="규격"
               :pt="{ columnHeaderContent: 'justify-center' }"
+              class="text-sm"
             />
             <DataCol
               field="mat_unit"
               header="단위"
               :pt="{ columnHeaderContent: 'justify-center' }"
+              class="text-sm"
             />
             <DataCol
               field="comncode_dtnm"
               header="자재유형"
               sortable
               :pt="{ columnHeaderContent: 'justify-center' }"
+              class="text-sm"
             />
             <DataCol
               field="mat_info"
               header="자재정보"
               :pt="{ columnHeaderContent: 'justify-center' }"
+              class="text-sm"
             />
             <DataCol
               field="stock_qty"
@@ -218,6 +224,7 @@ onMounted(fetchRows)
               sortable
               style="text-align: right"
               :pt="{ columnHeaderContent: 'justify-center' }"
+              class="text-sm"
             >
               <template #body="{ data }">{{ n(data.stock_qty) }}</template>
             </DataCol>
@@ -227,6 +234,7 @@ onMounted(fetchRows)
               sortable
               style="text-align: right"
               :pt="{ columnHeaderContent: 'justify-center' }"
+              class="text-sm"
             >
               <template #body="{ data }">{{ n(data.safe_stock) }}</template>
             </DataCol>
@@ -240,12 +248,13 @@ onMounted(fetchRows)
                 tableStyle="min-width: 800px"
               >
                 <template #empty>
-                  <div class="text-center">추가된 LOT자재가 없습니다.</div>
+                  <div class="text-center text-sm">추가된 LOT자재가 없습니다.</div>
                 </template>
                 <DataCol
                   field="mat_lot"
                   header="자재LOT"
                   :pt="{ columnHeaderContent: 'justify-center' }"
+                  class="text-sm"
                 />
                 <DataCol
                   field="prod_date"
@@ -253,6 +262,7 @@ onMounted(fetchRows)
                   sortable
                   :pt="{ columnHeaderContent: 'justify-center' }"
                   style="text-align: center"
+                  class="text-sm"
                 >
                   <template #body="{ data: lot }">{{ toYmd(lot.prod_date) }}</template>
                 </DataCol>
@@ -262,6 +272,7 @@ onMounted(fetchRows)
                   sortable
                   :pt="{ columnHeaderContent: 'justify-center' }"
                   style="text-align: center"
+                  class="text-sm"
                 >
                   <template #body="{ data: lot }">{{ toYmd(lot.exp_date) }}</template>
                 </DataCol>
@@ -271,6 +282,7 @@ onMounted(fetchRows)
                   sortable
                   :pt="{ columnHeaderContent: 'justify-center' }"
                   style="text-align: right"
+                  class="text-sm"
                 >
                   <template #body="{ data: lot }">{{ n(lot.release_qty) }}</template>
                 </DataCol>
@@ -280,6 +292,7 @@ onMounted(fetchRows)
                   sortable
                   :pt="{ columnHeaderContent: 'justify-center' }"
                   style="text-align: right"
+                  class="text-sm"
                 >
                   <template #body="{ data: lot }">{{ n(lot.receipt_qty) }}</template>
                 </DataCol>
@@ -289,6 +302,7 @@ onMounted(fetchRows)
                   sortable
                   :pt="{ columnHeaderContent: 'justify-center' }"
                   style="text-align: right"
+                  class="text-sm"
                 >
                   <template #body="{ data: lot }">{{ n(lot.stock_qty) }}</template>
                 </DataCol>

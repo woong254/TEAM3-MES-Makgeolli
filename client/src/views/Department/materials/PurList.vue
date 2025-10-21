@@ -424,6 +424,7 @@ onMounted(() => {
               headerClass="no-wrap"
               style="min-width: 90px"
               :pt="{ columnHeaderContent: 'justify-center' }"
+              class="text-sm"
             />
             <DataCol
               field="pur_name"
@@ -432,6 +433,7 @@ onMounted(() => {
               bodyClass="ellipsis"
               style="min-width: 200px"
               :pt="{ columnHeaderContent: 'justify-center' }"
+              class="text-sm"
             />
             <DataCol
               field="pur_date"
@@ -440,6 +442,7 @@ onMounted(() => {
               headerClass="no-wrap"
               style="text-align: center; min-width: 120px"
               :pt="{ columnHeaderContent: 'justify-center' }"
+              class="text-sm"
             />
             <DataCol
               field="receipt_date"
@@ -448,6 +451,7 @@ onMounted(() => {
               headerClass="no-wrap"
               style="text-align: center; min-width: 130px"
               :pt="{ columnHeaderContent: 'justify-center' }"
+              class="text-sm"
             />
             <DataCol
               field="emp_name"
@@ -455,6 +459,7 @@ onMounted(() => {
               headerClass="no-wrap"
               style="min-width: 100px"
               :pt="{ columnHeaderContent: 'justify-center' }"
+              class="text-sm"
             />
             <DataCol
               field="bcnc_code"
@@ -462,14 +467,16 @@ onMounted(() => {
               headerClass="no-wrap"
               style="min-width: 110px"
               :pt="{ columnHeaderContent: 'justify-center' }"
+              class="text-sm"
             />
             <DataCol
               field="bcnc_name"
               header="매입처명"
               headerClass="no-wrap"
               bodyClass="ellipsis"
-              style="min-width: 160px"
+              style="min-width: 110px"
               :pt="{ columnHeaderContent: 'justify-center' }"
+              class="text-sm"
             />
             <DataCol
               field="mat_code"
@@ -477,14 +484,16 @@ onMounted(() => {
               headerClass="no-wrap"
               style="min-width: 150px"
               :pt="{ columnHeaderContent: 'justify-center' }"
+              class="text-sm"
             />
             <DataCol
               field="mat_name"
               header="자재명"
               headerClass="no-wrap"
               bodyClass="ellipsis"
-              style="min-width: 160px"
+              style="min-width: 120px"
               :pt="{ columnHeaderContent: 'justify-center' }"
+              class="text-sm"
             />
             <DataCol
               field="mat_spec"
@@ -493,6 +502,7 @@ onMounted(() => {
               bodyClass="ellipsis"
               style="min-width: 80px"
               :pt="{ columnHeaderContent: 'justify-center' }"
+              class="text-sm"
             />
             <DataCol
               field="mat_unit"
@@ -500,6 +510,7 @@ onMounted(() => {
               headerClass="no-wrap"
               style="min-width: 80px"
               :pt="{ columnHeaderContent: 'justify-center' }"
+              class="text-sm"
             />
             <DataCol
               field="pur_qty"
@@ -508,6 +519,7 @@ onMounted(() => {
               headerClass="no-wrap"
               style="min-width: 110px; text-align: right"
               :pt="{ columnHeaderContent: 'justify-center' }"
+              class="text-sm"
             />
             <DataCol
               field="pur_status"
@@ -516,6 +528,7 @@ onMounted(() => {
               headerClass="no-wrap"
               style="min-width: 110px"
               :pt="{ columnHeaderContent: 'justify-center' }"
+              class="text-sm"
             />
             <DataCol
               field="remark"
@@ -524,6 +537,7 @@ onMounted(() => {
               bodyClass="ellipsis"
               style="min-width: 200px"
               :pt="{ columnHeaderContent: 'justify-center' }"
+              class="text-sm"
             />
             <DataCol
               field="pur_remark"
@@ -532,6 +546,7 @@ onMounted(() => {
               bodyClass="ellipsis"
               style="min-width: 200px"
               :pt="{ columnHeaderContent: 'justify-center' }"
+              class="text-sm"
             />
           </DataTable>
         </template>

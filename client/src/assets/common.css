@@ -75,6 +75,8 @@
   --p-checkbox-checked-hover-border-color: #213555 !important;
   --p-checkbox-checked-focus-border-color: #213555 !important;
   --p-primary-50: #ebeef3 !important;
+  --p-tabview-tab-active-border-color: #213555 !important ;
+  --p-tabview-tab-active-color: #213555 !important;
 }
 
 /* hover color */

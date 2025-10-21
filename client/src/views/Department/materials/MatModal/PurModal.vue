@@ -144,42 +144,58 @@ const selectPur = () => {
           :rows="8"
         >
           <template #empty>
-            <div class="text-center">등록된 발주서가 없습니다.</div>
+            <div class="text-center text-sm">등록된 발주서가 없습니다.</div>
           </template>
-          <DataCol selectionMode="single" headerStyle="width: 37px" bodyStyle="width: 37px" />
+          <DataCol
+            selectionMode="single"
+            headerStyle="width: 37px"
+            bodyStyle="width: 37px"
+            class="text-sm"
+          />
           <DataCol
             field="pur_code"
             header="발주코드"
             :pt="{ columnHeaderContent: 'justify-center' }"
+            class="text-sm"
           />
           <DataCol
             field="pur_name"
             header="발주서명"
             :pt="{ columnHeaderContent: 'justify-center' }"
+            class="text-sm"
           />
           <DataCol
             field="bcnc_name"
             header="매입처명"
             :pt="{ columnHeaderContent: 'justify-center' }"
+            class="text-sm"
           />
           <DataCol
             field="pur_date"
             header="발주일자"
             style="text-align: center"
             :pt="{ columnHeaderContent: 'justify-center' }"
+            class="text-sm"
           />
           <DataCol
             field="receipt_date"
             header="입고요청일자"
             style="text-align: center"
             :pt="{ columnHeaderContent: 'justify-center' }"
+            class="text-sm"
           />
           <DataCol
             field="emp_name"
             header="담당자"
             :pt="{ columnHeaderContent: 'justify-center' }"
+            class="text-sm"
           />
-          <DataCol field="remark" header="비고" :pt="{ columnHeaderContent: 'justify-center' }" />
+          <DataCol
+            field="remark"
+            header="비고"
+            :pt="{ columnHeaderContent: 'justify-center' }"
+            class="text-sm"
+          />
         </DataTable>
       </div>
     </template>

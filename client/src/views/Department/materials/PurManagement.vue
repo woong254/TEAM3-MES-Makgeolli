@@ -304,6 +304,7 @@ onMounted(async () => {
               v-if="purChase.length && purChase[0]?.pur_code"
               :pt="{ columnHeaderContent: 'justify-center' }"
               style="width: 120px"
+              class="text-sm"
             />
 
             <DataCol
@@ -311,6 +312,7 @@ onMounted(async () => {
               header="발주서명"
               :pt="{ columnHeaderContent: 'justify-center' }"
               style="width: 200px; padding: 8px"
+              class="text-sm"
             >
               <template #body="{ data, field }">
                 <input v-model="data[field]" type="text" :class="baseInputClass" />
@@ -323,6 +325,7 @@ onMounted(async () => {
               header="매입처명"
               :pt="{ columnHeaderContent: 'justify-center' }"
               style="width: 200px; padding: 8px"
+              class="text-sm"
             >
               <template #body="{ data, field }">
                 <div class="relative">
@@ -361,6 +364,7 @@ onMounted(async () => {
               header="발주일자"
               style="width: 170px; text-align: center; padding: 8px"
               :pt="{ columnHeaderContent: 'justify-center' }"
+              class="text-sm"
             />
 
             <!-- 입고요청일자 + 캘린더 아이콘 -->
@@ -369,6 +373,7 @@ onMounted(async () => {
               header="입고요청일자"
               style="width: 170px; padding: 8px"
               :pt="{ columnHeaderContent: 'justify-center' }"
+              class="text-sm"
             >
               <template #body="{ data, field }">
                 <div class="relative">
@@ -401,12 +406,14 @@ onMounted(async () => {
               header="담당자"
               :pt="{ columnHeaderContent: 'justify-center' }"
               style="width: 120px"
+              class="text-sm"
             />
             <DataCol
               field="remark"
               header="비고"
               :pt="{ columnHeaderContent: 'justify-center' }"
               style="width: 300px; padding: 8px"
+              class="text-sm"
             >
               <template #body="{ data, field }">
                 <input
@@ -443,50 +450,62 @@ onMounted(async () => {
             scrollHeight="350px"
           >
             <template #empty>
-              <div class="text-center">추가된 자재가 없습니다.</div>
+              <div class="text-center text-sm">추가된 자재가 없습니다.</div>
             </template>
-            <DataCol selectionMode="multiple" headerStyle="width: 37px" bodyStyle="width: 37px" />
+            <DataCol
+              selectionMode="multiple"
+              headerStyle="width: 37px"
+              bodyStyle="width: 37px"
+              class="text-sm"
+            />
             <DataCol
               field="mat_code"
               header="자재코드"
               style="width: 180px"
               :pt="{ columnHeaderContent: 'justify-center' }"
+              class="text-sm"
             />
             <DataCol
               field="mat_name"
               header="자재명"
               style="width: 200px"
               :pt="{ columnHeaderContent: 'justify-center' }"
+              class="text-sm"
             />
             <DataCol
               field="mat_spec"
               header="규격"
               style="width: 140px"
               :pt="{ columnHeaderContent: 'justify-center' }"
+              class="text-sm"
             />
             <DataCol
               field="mat_unit"
               header="단위"
               style="width: 140px"
               :pt="{ columnHeaderContent: 'justify-center' }"
+              class="text-sm"
             />
             <DataCol
               field="stock_qty"
               header="재고"
               style="width: 180px; text-align: right"
               :pt="{ columnHeaderContent: 'justify-center' }"
+              class="text-sm"
             />
             <DataCol
               field="safe_stock"
               header="안전재고"
               style="width: 180px; text-align: right"
               :pt="{ columnHeaderContent: 'justify-center' }"
+              class="text-sm"
             />
             <DataCol
               field="pur_qty"
               header="발주수량"
               style="width: 200px; padding: 8px"
               :pt="{ columnHeaderContent: 'justify-center' }"
+              class="text-sm"
             >
               <template #body="{ data, field }">
                 <input
@@ -508,6 +527,7 @@ onMounted(async () => {
               header="비고"
               :pt="{ columnHeaderContent: 'justify-center' }"
               style="width: 300px; padding: 8px"
+              class="text-sm"
             >
               <template #body="{ data, field }">
                 <input
