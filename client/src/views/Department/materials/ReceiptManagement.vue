@@ -277,7 +277,7 @@ const registerIis = async () => {
             <button type="button" class="btn-color btn-common" @click="isPurMatModalOpen = true">
               조회
             </button>
-            <button type="button" class="btn-white btn-common" @click="submitIis">등록</button>
+            <button type="button" class="btn-color btn-common" @click="submitIis">등록</button>
           </div>
         </template>
 
