@@ -51,25 +51,25 @@ app.get("/", (req, res) => {
 app.use("/", referenceRouter);
 
 // 1. 영업
-app.use("/api/", salesRouter);
+app.use("/", salesRouter);
 
 // 2. 생산
-app.use("/api/", prodOrdRouter); // 생산지시서
+app.use("/", prodOrdRouter); // 생산지시서
 
 // 3. 자재
-app.use("/api/", materialsRouter);
+app.use("/", materialsRouter);
 
 // 4. 품질
-app.use("/api/", qualityRouter);
+app.use("/", qualityRouter);
 
 // 5. 장비
-app.use("/api/", equipmentRouter);
+app.use("/", equipmentRouter);
 
 // 6. 업로드
 app.use("/", uploadsRouter);
 
 // pdf 출력
-app.post("/api/download-order-pdf", async (req, res) => {
+app.post("/download-order-pdf", async (req, res) => {
   // 1. 프론트엔드에서 POST 요청의 본문(body)으로 보낸 데이터를 받습니다.
   const { html, filename } = req.body;
 

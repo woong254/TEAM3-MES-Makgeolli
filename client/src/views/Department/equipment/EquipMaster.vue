@@ -2,7 +2,7 @@
 /* ========================
  * Imports
  * ======================== */
-import { ref, shallowRef, onMounted, onBeforeMount } from 'vue'
+import { ref, shallowRef, onMounted } from 'vue'
 import axios from 'axios'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
@@ -74,7 +74,7 @@ const toSnake = (p: CreateEquipPayload) => ({
   equip_name: p.equipName?.trim(),
   equip_type: p.equipType?.trim(),
   manager: p.manager ?? null,
-  equip_status: p.equipStatus || 'j2',
+  equip_status: p.equipStatus || 'j1',
   insp_cycle: p.inspCycle ?? null,
   install_date: p.installDate || null,
   model_name: p.modelName || null,
@@ -87,7 +87,7 @@ const initForm = (): CreateEquipPayload => ({
   equipName: '',
   equipType: '',
   manager: '',
-  equipStatus: 'j2',
+  equipStatus: 'j1',
   inspCycle: 0,
   installDate: '',
   modelName: '',
@@ -530,12 +530,16 @@ onMounted(async () => {
                     <!-- 신규 등록 시: 비가동 고정, 수정 시: 선택 가능 -->
                     <template v-if="!selectedRow">
                       <select v-model="createForm.equipStatus" :class="inputStyle" disabled>
-                        <option value="j2">비가동</option>
+                        <option value="j1">가동중</option>
                       </select>
                     </template>
 
                     <template v-else>
-                      <select v-model="createForm.equipStatus" :class="inputStyle">
+                      <select
+                        v-model="createForm.equipStatus"
+                        :class="inputStyle"
+                        :disabled="!!selectedRow"
+                      >
                         <option value="j1">가동중</option>
                         <option value="j2">비가동</option>
                       </select>

@@ -96,7 +96,6 @@ const goDowntimeRegister = () => {
   })
 }
 
-
 /** 비가동 진행중 목록 */
 const refreshPending = async () => {
   try {
@@ -158,23 +157,34 @@ const viewType = async () => {
 
 /** 비가동 진행중 목록 */
 // 기존 onClickDowntimeRow 제거하고 아래로 대체
-const onClickEndButton = () => {
-  // 진행중 탭(0)에서만 동작
+const ending = ref(false)
+
+const endRunningDowntime = async () => {
   if (activeTab.value !== 0) return
-
   const row = selectdownInProgress.value
-  if (!row) {
-    alert('진행중 목록에서 종료할 행을 선택하세요.')
-    return
-  }
+  if (!row) return alert('진행중 목록에서 종료할 행을 선택하세요.')
 
-  router.push({
-    name: 'DownTimeManage',
-    query: {
-      mode: 'detail',
-      downtimeCode: row.downtimeCode ?? (row as any).downtime_code, // 백엔드 케이스 대비
-    },
-  })
+  if (!confirm(`[${row.equipName}] 비가동을 종료할까요?`)) return
+
+  try {
+    ending.value = true
+    await axios.put(`/api/downtime/${encodeURIComponent(row.downtimeCode)}/end`, {
+      // 필요 시 설명/명시적 종료시각 전달
+      description: row.description ?? null,
+      progressStatus: '완료',
+      // downtimeEnd: new Date().toISOString(),
+    })
+
+    // 목록 새로고침 + 이력 탭으로 이동
+    await Promise.all([refreshPending(), refreshComplete(), getEquipList()])
+    activeTab.value = 1
+    selectdownInProgress.value = null
+    alert('비가동을 종료했습니다.')
+  } catch (e: any) {
+    alert(e?.response?.data?.message ?? '종료 처리에 실패했습니다.')
+  } finally {
+    ending.value = false
+  }
 }
 
 /** 비가동 이력 목록 */
@@ -233,15 +243,6 @@ const onRowClick = (e: { data: EquipItem }) => {
 }
 const onSelectionChange = (e: { value: EquipItem | null }) => {
   selectedRow.value = e.value // 버튼 활성화 용
-}
-
-// 진행중 비가동 목록용
-const selectedRunning = ref<DowntimeItem | null>(null)
-const onRunningSelectionChange = (e: { value: DowntimeItem | null }) => {
-  selectedRunning.value = e.value
-}
-const onRunningRowClick = (e: { data: DowntimeItem }) => {
-  selectedRunning.value = e.data
 }
 
 /** 탭 변경 */
@@ -369,9 +370,6 @@ watch(
     <div class="space-y-5 sm:space-y-6 mt-2">
       <ComponentCardWoong title="">
         <template #body-content>
-          <div class="flex justify-end">
-            <button class="btn-common btn-color" @click="">비가동</button>
-          </div>
           <!-- ✅ 슬롯 flatten 충돌 방지: 한 겹 감싸기 -->
           <div class="relative">
             <div class="absolute right-0 top-0 z-10 flex space-x-2">
@@ -379,7 +377,8 @@ watch(
                 v-if="activeTab != 1"
                 type="button"
                 class="btn-color btn-common"
-                @click="onClickEndButton"
+                @click="endRunningDowntime"
+                :disabled="ending || !selectdownInProgress"
                 style="width: 120px"
               >
                 비가동 종료
@@ -395,7 +394,6 @@ watch(
                 <!-- ✅ v-if 불필요: TabPanel이 가시성 관리 -->
                 <DataTable
                   :value="downInProgress"
-                  v-model:selection="selectedRunning"
                   showGridlines
                   dataKey="downtimeCode"
                   scrollable

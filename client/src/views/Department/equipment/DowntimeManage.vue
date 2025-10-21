@@ -4,8 +4,7 @@ import axios from 'axios'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import ComponentCard from '@/components/common/ComponentCardButton.vue'
-import flatPickr from 'vue-flatpickr-component'
-import 'flatpickr/dist/flatpickr.css'
+
 import { useRoute, useRouter } from 'vue-router'
 import equipSelectModal from './equipSelectModal.vue'
 import 'primeicons/primeicons.css'
@@ -51,15 +50,6 @@ const currentPageTitle = ref('비가동 등록')
 const inputStyle =
   'dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-950 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
 
-// 날짜+시간 픽커 설정
-const dtConfig = {
-  enableTime: true,
-  time_24hr: true,
-  dateFormat: 'Y-m-d H:i',
-  altInput: true,
-  altFormat: 'Y-m-d H:i',
-}
-
 // 상태값
 const starting = ref(false)
 const currentCode = ref<string | null>(null)
@@ -102,6 +92,11 @@ async function startDowntime() {
     console.error(e)
     alert(e?.response?.data?.message || '비가동 시작 중 오류가 발생했습니다.')
   } finally {
+    router.push({
+      name: 'DownTimeList',
+      query: { refresh: '1' },
+    })
+
     starting.value = false
   }
 }
