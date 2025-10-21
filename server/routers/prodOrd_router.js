@@ -125,12 +125,12 @@ router.get("/getCurrentProcessQty", async (req, res) => {
 router.post("/startProcess", async (req, res) => {
   // 1. 요청 본문(req.body)에서 필요한 '평면적인' 데이터를 직접 구조 분해 할당으로 가져옵니다.
   // 클라이언트가 보낸 실제 필드 이름: mkd_no, prod_code, inpt_qty, equip_code, emp_id
-  const { mkd_no, prod_code, inpt_qty, equip_code, emp_id, proc_id } = req.body;
+  const { mkd_no, prod_code, inpt_qty, equip_code, emp_id, proc_id, seq_no } = req.body;
 
   try {
     // 2. 필수 데이터 누락 체크 (주요 필드만 검사)
     // 이전의 make, equip, emp 객체 대신, 핵심 ID 필드들을 직접 확인합니다.
-    if (!mkd_no || !prod_code || !equip_code || !emp_id || !proc_id) {
+    if (!mkd_no || !prod_code || !equip_code || !emp_id || !proc_id || !seq_no) {
       console.error("필수 요청 데이터 누락:", req.body);
       return res.status(400).json({
         error: "Bad Request",
@@ -147,6 +147,7 @@ router.post("/startProcess", async (req, res) => {
       prod_code: prod_code,
       inpt_qty: inpt_qty,
       proc_id: proc_id,
+      seq_no: seq_no, // 우선 순위
       mk_qty: 0, // 초기 생산량 0
       procs_st: "t1", // 실적상태: 생산대기
     }; // 4. DB에 작업시작 행 등록
@@ -173,6 +174,19 @@ router.get("/findProcess", async (req, res) => {
   const { mkd_no, equip_code, emp_id } = req.body;
   const result = await calculateRemainingQty(item_code, target_qty);
   res.json(result);
+});
+
+// 다음 공정 가능 수량 체크
+// routes/prodOrd_router.js
+router.post("/getPreviousQty", async (req, res) => {
+  try {
+    const { mkd_no, now_procs } = req.body;
+    const qty = await prodOrdService.getNextProcessQty(mkd_no, now_procs);
+    res.json({ previousQty: qty });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "합격량 조회 실패" });
+  }
 });
 
 module.exports = router;

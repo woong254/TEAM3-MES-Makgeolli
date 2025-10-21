@@ -69,6 +69,7 @@ const findAllMakeList = async () => {
   const [makeRows, empRows] = await Promise.all([
     mariadb.query("selectMakeAll").catch((err) => console.error(err)),
     mariadb.query("selectEmpAll").catch((err) => console.error(err)),
+    
   ]);
   return { makeRows, empRows };
 };
@@ -568,6 +569,18 @@ WHERE prod_code = ?`,
   }
 };
 
+const getNextProcessQty = async (mkd_no, prev_proc) => {
+  const sql = `
+    SELECT SUM(pass_qty) as total_pass
+    FROM processform
+    WHERE mk_list = ?
+    AND now_procs = ?
+  `;
+  const [rows] = await db.execute(sql, [mkd_no, prev_proc]);
+  return rows[0].total_pass || 0; // 값이 없으면 0
+}
+
+
 module.exports = {
   findByEmpId,
   addMakeForm,
@@ -579,4 +592,5 @@ module.exports = {
   updateProcessForm,
   processStart,
   getCurrentProcessQty,
+  getNextProcessQty,
 };
