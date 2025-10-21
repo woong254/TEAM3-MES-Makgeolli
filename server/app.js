@@ -38,9 +38,11 @@ const equipmentRouter = require("./routers/equipment_router.js");
 // 6. 파일업로드
 const uploadsRouter = require("./routers/upload_router.js");
 
+const publicPath = path.join(__dirname, "public");
+app.use(express.static(publicPath));
 // 기본 라우팅
 app.get("/", (req, res) => {
-  res.send("Welcome!!");
+  res.sendFile(path.join(__dirname, "./public", "index.html"));
 });
 
 // 라우팅 영역
@@ -49,25 +51,25 @@ app.get("/", (req, res) => {
 app.use("/", referenceRouter);
 
 // 1. 영업
-app.use("/", salesRouter);
+app.use("/api/", salesRouter);
 
 // 2. 생산
-app.use("/", prodOrdRouter); // 생산지시서
+app.use("/api/", prodOrdRouter); // 생산지시서
 
 // 3. 자재
-app.use("/", materialsRouter);
+app.use("/api/", materialsRouter);
 
 // 4. 품질
-app.use("/", qualityRouter);
+app.use("/api/", qualityRouter);
 
 // 5. 장비
-app.use("/", equipmentRouter);
+app.use("/api/", equipmentRouter);
 
 // 6. 업로드
 app.use("/", uploadsRouter);
 
 // pdf 출력
-app.post("/download-order-pdf", async (req, res) => {
+app.post("/api/download-order-pdf", async (req, res) => {
   // 1. 프론트엔드에서 POST 요청의 본문(body)으로 보낸 데이터를 받습니다.
   const { html, filename } = req.body;
 
@@ -103,4 +105,8 @@ app.post("/download-order-pdf", async (req, res) => {
     // 500 오류 메시지에도 filename 오류 메시지가 포함되지 않도록 명확하게 처리합니다.
     res.status(500).send(`PDF Generation Failed: ${error.message}`);
   }
+});
+
+app.use((req, res) => {
+  res.status(404).sendFile(path.join(__dirname, "./public", "index.html"));
 });
