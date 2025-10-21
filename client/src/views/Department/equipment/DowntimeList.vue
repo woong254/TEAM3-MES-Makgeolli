@@ -54,7 +54,7 @@ interface DowntimeItem {
 /* ========================
  * UI Const
  * ======================== */
-const currentPageTitle = ref('설비 기준정보 관리')
+const currentPageTitle = ref('비가동 관리')
 const inputStyle =
   'dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-950 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
 const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400'
@@ -89,20 +89,7 @@ const goDowntimeRegister = () => {
   router.push({
     name: 'DownTimeManage', // ← 라우터 설정과 같은 name으로 통일
     query: {
-      mode: 'register',
       equipCode: selectedRow.value.equipCode,
-    },
-  })
-}
-
-// 진행중 목록 row 클릭: "상세" 모드로
-const onClickDowntimeRow = (row: any) => {
-  if (!row) return
-  router.push({
-    name: 'DownTimeManage',
-    query: {
-      mode: 'detail',
-      downtimeCode: row.downtimeCode ?? row.downtime_code, // 백엔드 케이스까지 대비
     },
   })
 }
@@ -221,6 +208,15 @@ const onRowClick = (e: { data: EquipItem }) => {
 }
 const onSelectionChange = (e: { value: EquipItem | null }) => {
   selectedRow.value = e.value // 버튼 활성화 용
+}
+
+// 진행중 비가동 목록용
+const selectedRunning = ref<DowntimeItem | null>(null)
+const onRunningSelectionChange = (e: { value: DowntimeItem | null }) => {
+  selectedRunning.value = e.value
+}
+const onRunningRowClick = (e: { data: DowntimeItem }) => {
+  selectedRunning.value = e.data
 }
 
 /** 탭 변경 */
@@ -348,6 +344,9 @@ watch(
     <div class="space-y-5 sm:space-y-6 mt-2">
       <ComponentCardWoong title="">
         <template #body-content>
+          <div class="flex justify-end">
+            <button class="btn-common btn-color" @click="">비가동</button>
+          </div>
           <!-- ✅ 슬롯 flatten 충돌 방지: 한 겹 감싸기 -->
           <div class="h-78">
             <TabView
@@ -360,15 +359,18 @@ watch(
                 <!-- ✅ v-if 불필요: TabPanel이 가시성 관리 -->
                 <DataTable
                   :value="downInProgress"
+                  v-model:selection="selectedRunning"
                   showGridlines
-                  dataKey="downtimeId"
+                  dataKey="downtimeCode"
                   scrollable
                   scrollHeight="220px"
                   class="text-sm"
                   :rows="20"
                   size="small"
-                  @row-click="({ data }) => onClickDowntimeRow(data)"
+                  @row-click="onRunningRowClick"
+                  @selection-change="onRunningSelectionChange"
                 >
+                  <DataCol selectionMode="single" headerStyle="width: 2.5rem" />
                   <DataCol field="equipCode" header="설비코드" />
                   <DataCol field="equipName" header="설비명" />
                   <DataCol field="downtimeType" header="비가동유형" />
@@ -393,13 +395,12 @@ watch(
                 <DataTable
                   :value="downHistory"
                   showGridlines
-                  dataKey="downtimeId"
+                  dataKey="downtimeCode"
                   scrollable
                   scrollHeight="220px"
                   class="text-sm"
                   :rows="20"
                   size="small"
-                  @row-click="({ data }) => onClickDowntimeRow(data)"
                 >
                   <DataCol field="equipCode" header="설비코드" />
                   <DataCol field="equipName" header="설비명" />
