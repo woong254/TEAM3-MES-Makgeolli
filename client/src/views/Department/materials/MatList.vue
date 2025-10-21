@@ -136,7 +136,7 @@ onMounted(fetchRows)
               <div class="relative z-20 bg-transparent">
                 <select v-model="form.type" :class="selectStyle">
                   <option value="">전체</option>
-                  <option value="a1">원자재</option>
+                  <option value="a1">주자재</option>
                   <option value="a2">부자재</option>
                 </select>
                 <span
