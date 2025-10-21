@@ -87,6 +87,7 @@ const chooseAboutEquip = async (procName) => {
  */
 const selectProcessControlData = async (data) => {
   const { emp_id, equip_code, mkd_no } = data;
+  console.log("data:", data);
 
   try {
     const result = await mariadb.query("selectProcessControlData", [
@@ -94,11 +95,12 @@ const selectProcessControlData = async (data) => {
       equip_code,
       mkd_no,
     ]);
-
+    console.log("result1", result);
     // 대부분의 DB 라이브러리가 [rows, fields] 형태로 반환하는 경우를 대비해 rows만 추출
     if (Array.isArray(result) && Array.isArray(result[0])) {
       return result[0];
     }
+    console.log("result2", result);
 
     // 이미 rows만 반환되거나, 데이터가 없는 경우 (e.g. [] 또는 null)
     return result;
@@ -418,9 +420,31 @@ const insertProcessForm = async (params) => {
     // 최종적으로 params.inpt_qty에 확정된 값을 할당
     params.inpt_qty = finalInputQty;
 
-    // 2. 공정실적관리 테이블에 삽입 (conn 객체 사용)
-    const insertResult = await conn.query(
-      `INSERT INTO processform (mk_list, 
+    const checkResult = await conn.query(
+      `SELECT procs_no,
+              mk_list, 
+              equip_code, 
+              emp_no, 
+              prod_code, 
+              inpt_qty, 
+              procs_st, 
+              now_procs, 
+              mk_qty
+      FROM processform
+      WHERE mk_list = ?
+      AND equip_code = ?
+      AND emp_no = ?
+      AND procs_st <> 't3'`,
+      [params.mk_list, params.equip_code, params.emp_no]
+    );
+
+    if (checkResult.length > 0) {
+      await conn.commit(); // 모든 쿼리가 성공하면 최종 반영
+      return { isSuccessed: true };
+    } else {
+      // 2. 공정실적관리 테이블에 삽입 (conn 객체 사용)
+      const insertResult = await conn.query(
+        `INSERT INTO processform (mk_list, 
                                 equip_code, 
                                 emp_no, 
                                 prod_code, 
@@ -429,20 +453,19 @@ const insertProcessForm = async (params) => {
                                 now_procs, 
                                 mk_qty)
        VALUES (?, ?, ?, ?, ?, ?, ?, 0)`, // mk_qty를 0으로 명시적 초기화
-      [
-        params.mk_list,
-        params.equip_code,
-        params.emp_no,
-        params.prod_code,
-        params.inpt_qty,
-        params.procs_st,
-        now_procs,
-      ]
-    );
-
-    await conn.commit(); // 모든 쿼리가 성공하면 최종 반영
-
-    return { isSuccessed: true, result: insertResult };
+        [
+          params.mk_list,
+          params.equip_code,
+          params.emp_no,
+          params.prod_code,
+          params.inpt_qty,
+          params.procs_st,
+          now_procs,
+        ]
+      );
+      await conn.commit(); // 모든 쿼리가 성공하면 최종 반영
+      return { isSuccessed: true, result: insertResult };
+    }
   } catch (err) {
     console.error("insertProcessForm 오류 : ", err);
     if (conn) await conn.rollback(); // 에러 발생 시 롤백 (데이터 원상 복구)
