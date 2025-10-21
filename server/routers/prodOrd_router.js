@@ -75,7 +75,9 @@ router.post("/modifyProcessForm", async (req, res) => {
 router.get("/getProcessData", async (req, res) => {
   // 가져온 데이터 각각의 코드가 어떤건지 실체 확인
   const emp_id = req.query.emp_id;
-  const param = { emp_id };
+  const equip_code = req.query.equip_code;
+  const mkd_no = req.query.mkd_no;
+  const param = { emp_id, equip_code, mkd_no };
   try {
     const result = await prodOrdService.selectProcessControlData(param); // 저장된 실제 데이터가 있는 경우
     return res.json({ result });

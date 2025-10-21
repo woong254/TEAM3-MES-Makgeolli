@@ -9,6 +9,8 @@ import { useRoute } from 'vue-router'
 
 const route = useRoute()
 const empId = route.query.emp_id as string
+const equipCode = route.query.equip_code as string
+const mkdNo = route.query.mkd_no as string
 console.log('넘어온 사원번호:', empId)
 
 // 제목이름 지정 변수
@@ -49,12 +51,12 @@ const processForm = ref<processFormItem>({
 
 // 작업시작 버튼 누르고 나온 결과값 받는 함수
 const sf = ref({
-  procs_bgntm: '작업시작을 해주세요', // 작업시작시간
+  procs_bgntm: '', // 작업시작시간
 })
 
 // 작업종료 버튼 누르고 나온 결과값 받는 함수
 const ed = ref({
-  procs_endtm: '작업종료를 해주세요', // 작업종료시간
+  procs_endtm: '', // 작업종료시간
   procs_no: 0,
   mk_qty: 0, // 생산량 (실시간 업데이트 대상)
   fail_qty: 0,
@@ -159,6 +161,8 @@ const fetchProcessData = async () => {
     const response = await axios.get('/api/getProcessData', {
       params: {
         emp_id: empId,
+        equip_code: equipCode,
+        mkd_no: mkdNo,
       },
     })
     const dbResult = response.data.result[0]
@@ -218,7 +222,7 @@ const processEnd = async () => {
     alert('작업이 시작되지 않았습니다.')
     return
   }
-  if (ed.value.mk_qty === processForm.value.inpt_qty) {
+  if (ed.value.procs_endtm) {
     alert('이미 작업이 종료되었습니다.')
     return
   }
