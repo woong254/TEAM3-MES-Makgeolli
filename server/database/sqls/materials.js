@@ -15,7 +15,9 @@ const selectPurList = `
   FROM pur_form p
   LEFT JOIN bcnc_master b ON p.bcnc_code = b.bcnc_code
   LEFT JOIN emp_master  e ON p.emp_id    = e.emp_id
+  LEFT JOIN iis i ON i.pur_code = p.pur_code
   WHERE p.pur_status = '입고대기'
+  AND i.pur_code IS NULL
   ORDER BY p.pur_code DESC
 `;
 
@@ -31,8 +33,10 @@ const selectPurTarget = `
   FROM pur_form p
   LEFT JOIN bcnc_master b ON p.bcnc_code = b.bcnc_code
   LEFT JOIN emp_master  e ON p.emp_id    = e.emp_id
+  LEFT JOIN iis i ON i.pur_code = p.pur_code
   WHERE p.pur_status = '입고대기'
-    AND p.pur_name LIKE ?
+  AND i.pur_code IS NULL
+  AND p.pur_name LIKE ?
   ORDER BY p.pur_code DESC
 `;
 
