@@ -524,7 +524,7 @@ const submitUpdate = async () => {
     if (!validateBeforeSubmit()) return //유효성검사
 
     const payload = buildPayload()
-    const { data } = await axios.put(`/api/prodInsp/${currentInspId.value}`, payload)
+    const { data } = await axios.put(`/api/procInsp/${currentInspId.value}`, payload)
     if (data?.ok) {
       alert(`수정되었습니다.\n검사ID: ${currentInspId.value}`)
     } else {
@@ -541,7 +541,7 @@ const confirmDelete = async () => {
   try {
     if (!currentInspId.value) return alert('삭제할 검사ID가 없습니다.')
     if (!confirm('정말 삭제하시겠습니까?')) return
-    const { data } = await axios.delete(`/api/prodInsp/${currentInspId.value}`)
+    const { data } = await axios.delete(`/api/procInsp/${currentInspId.value}`)
     if (data?.ok) {
       alert('삭제되었습니다.')
       resetForm()
@@ -725,7 +725,7 @@ async function onPickedRow(row: modalRowDT) {
 }
 
 // toFixed(2) 소수점 두번째자리 까지 나타내기
-const fmt2 = (v: any) => (Number.isFinite(Number(v)) ? Number(v).toFixed(2) : '0.00')
+// const fmt2 = (v: any) => (Number.isFinite(Number(v)) ? Number(v).toFixed(2) : '0.00')
 
 // style
 const inputStyle =
