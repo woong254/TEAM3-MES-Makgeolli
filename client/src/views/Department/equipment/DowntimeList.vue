@@ -80,25 +80,31 @@ const toCamel = (r: any): EquipItem => ({
 
 const initSearch = () => ({ equipCode: '', equipName: '', equipType: '', equipStatus: 'j1' })
 
-//등록페이지로 이동하는 라우터
+// 설비목록 > [비가동] 버튼: 항상 "등록" 모드로
 const goDowntimeRegister = () => {
   if (!selectedRow.value) {
     alert('설비를 선택하세요.')
     return
   }
-  // ✅ URL은 간단히 equipCode만 전달
   router.push({
-    name: 'DownTimeRegister',
-    query: { equipCode: selectedRow.value.equipCode },
+    name: 'DownTimeManage', // ← 라우터 설정과 같은 name으로 통일
+    query: {
+      mode: 'register',
+      equipCode: selectedRow.value.equipCode,
+    },
   })
 }
 
-// ✅ 진행중/이력 목록 행 클릭 → 상세 페이지
+// 진행중 목록 row 클릭: "상세" 모드로
 const onClickDowntimeRow = (row: any) => {
   if (!row) return
-  // 진행중 상세 라우트: 예) name: 'DowntimeDetailRunning'
-  // 이력 상세 라우트가 따로 있으면 분기하세요.
-  router.push({ name: 'DowntimeDetail', params: { code: row.downtimeId || row.downtimeCode } })
+  router.push({
+    name: 'DownTimeManage',
+    query: {
+      mode: 'detail',
+      downtimeCode: row.downtimeCode ?? row.downtime_code, // 백엔드 케이스까지 대비
+    },
+  })
 }
 
 /* ========================
@@ -148,17 +154,6 @@ const viewType = async () => {
   }
 }
 
-// 상세 단건 조회
-const getEquipDetail = async (code: string): Promise<EquipItem | null> => {
-  try {
-    const { data } = await axios.get(`/api/equipment/${encodeURIComponent(code)}`)
-    return toCamel(data)
-  } catch (e) {
-    console.error('상세 조회 실패:', e)
-    return null
-  }
-}
-
 /** 비가동 진행중 목록 */
 const refreshPending = async () => {
   try {
@@ -191,40 +186,41 @@ const refreshAll = async () => {
  * ======================== */
 
 // utils/date.ts (혹은 현재 파일 상단)
-function formatDt(iso?: string | null, tz = 'Asia/Seoul') {
+function formatDt(iso?: string | null, opt: { weekday?: boolean } = {}) {
   if (!iso) return ''
-  const d = new Date(iso) // 서버가 Z(UTC)로 보내면 로컬/타임존 변환됨
-  // 한국식 "YYYY. M. D. HH:MM" 형태
-  return new Intl.DateTimeFormat('ko-KR', {
+  const d = new Date(iso)
+  const s = new Intl.DateTimeFormat('ko-KR', {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
+    ...(opt.weekday ? { weekday: 'short' } : {}),
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
-    timeZone: tz,
-  })
-    .format(d)
-    .replace(/\.\s/g, '-')
-    .replace(/\.$/, '') // 2025-10-20 17:15 처럼
-}
+    timeZone: 'Asia/Seoul',
+  }).format(d) // 예: "2025. 10. 21. 화 10:46" 또는 "2025. 10. 21. 10:46"
 
+  // 공백과 점을 정리해서: "2025.10.21 10:46" 또는 "2025.10.21 (화) 10:46"
+  if (opt.weekday && /[월화수목금토일]/.test(s)) {
+    return s
+      .replace(/\.\s/g, '.')
+      .replace(/\s([월화수목금토일])\s/, ' ($1) ')
+      .replace(/\.$/, '')
+      .replace(/(\d{4}\.\d{2}\.\d{2})/, '$1') // "2025.10.21 (화) 10:46"
+  }
+  return s
+    .replace(/\.\s/g, '.')
+    .replace(/\.$/, '')
+    .replace(/(\d{4}\.\d{2}\.\d{2})\./, '$1 ') // 날짜와 시간 사이엔 공백!
+}
 //조회 폼 초기화.
 const resetSearchForm = () => Object.assign(searchForm.value, initSearch())
 
-const fillFormFromRow = (row: EquipItem) => {
-  createForm.value = { ...row, inspCycle: row.inspCycle ?? 0 }
+const onRowClick = (e: { data: EquipItem }) => {
+  selectedRow.value = e.data // 버튼 활성화 용
 }
-const onRowClick = async (e: { data: EquipItem }) => {
-  selectedRow.value = e.data
-  const detail = await getEquipDetail(e.data.equipCode)
-  fillFormFromRow(detail ?? e.data)
-}
-const onSelectionChange = async (e: { value: EquipItem | null }) => {
-  if (!e.value) return
-  selectedRow.value = e.value
-  const detail = await getEquipDetail(e.value.equipCode)
-  fillFormFromRow(detail ?? e.value)
+const onSelectionChange = (e: { value: EquipItem | null }) => {
+  selectedRow.value = e.value // 버튼 활성화 용
 }
 
 /** 탭 변경 */
@@ -290,7 +286,7 @@ watch(
                 </option>
               </select>
             </div>
-            <div class="w-1/4">
+            <div class="hidden">
               <div :class="labelStyle">설비상태</div>
               <label class="flex items-center gap-2">
                 <input
@@ -377,8 +373,17 @@ watch(
                   <DataCol field="equipName" header="설비명" />
                   <DataCol field="downtimeType" header="비가동유형" />
                   <DataCol field="workerId" header="담당자" />
-                  <DataCol field="downtimeStart" header="비가동시작일시" />
-                  <DataCol field="downtimeEnd" header="비가동종료일시" />
+                  <!-- ✅ 시작일시/종료일시 포맷 적용 -->
+                  <DataCol field="downtimeStart" header="비가동시작일시">
+                    <template #body="{ data }">
+                      {{ formatDt(data.downtimeStart) }}
+                    </template>
+                  </DataCol>
+                  <DataCol field="downtimeEnd" header="비가동종료일시">
+                    <template #body="{ data }">
+                      {{ data.downtimeEnd ? formatDt(data.downtimeEnd) : '—' }}
+                    </template>
+                  </DataCol>
                   <DataCol field="progressStatus" header="진행상태" />
                 </DataTable>
               </TabPanel>

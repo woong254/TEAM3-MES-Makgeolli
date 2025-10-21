@@ -23,17 +23,11 @@ const {
 function toYmdHmsOrNull(v) {
   if (!v) return null;
   const pad = (n) => String(n).padStart(2, "0");
-  if (v instanceof Date) {
-    const d = v;
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(
-      d.getDate()
-    )} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-  }
-  const s = toNullTrim(v);
-  return typeof s === "string" &&
-    /^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}$/.test(s)
-    ? s
-    : null;
+  const d = v instanceof Date ? v : new Date(v);
+  if (Number.isNaN(+d)) return null;
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(
+    d.getHours()
+  )}:${pad(d.getMinutes())}:00`; // 초는 항상 00으로 고정
 }
 function makeDowntimeCode() {
   const d = new Date();
@@ -400,7 +394,7 @@ async function startDowntime(payload = {}) {
       downtimeStart, // downtime_start
       null, // downtime_end (시작 시 NULL)
       description, // description
-      worker, // worker_id
+      workerId, // worker_id
       "진행중", // progress_status
       equipCode, // equip_code
     ];

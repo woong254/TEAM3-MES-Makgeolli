@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, reactive } from 'vue'
+import { ref, onMounted, reactive, computed } from 'vue'
 import axios from 'axios'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
@@ -8,6 +8,7 @@ import flatPickr from 'vue-flatpickr-component'
 import 'flatpickr/dist/flatpickr.css'
 import { useRoute, useRouter } from 'vue-router'
 import equipSelectModal from './equipSelectModal.vue'
+import 'primeicons/primeicons.css'
 
 const route = useRoute()
 const router = useRouter()
@@ -60,8 +61,11 @@ const dtConfig = {
 }
 
 // 상태값
-const starting = ref(false)
+const mode = ref<'register' | 'detail'>((route.query.mode as any) || 'register')
 const currentCode = ref<string | null>(null)
+const starting = ref(false)
+const ending = ref(false)
+const isDetail = computed(() => currentCode.value !== null)
 const isRunning = () => !!currentCode.value
 
 /* (optional) 담당자 모달 & 이미지 프리뷰 */
@@ -75,18 +79,51 @@ const closeModal = () => {
   isModalOpen.value = false
 }
 
-async function startDowntime() {
-  if (!createForm.equipCode.trim()) {
-    alert('설비코드를 입력하세요.')
-    return
+// 상세 1건 조회
+async function fetchDetail(code: string) {
+  const { data } = await axios.get(`/api/downtime/${encodeURIComponent(code)}`)
+  currentCode.value = data.downtimeCode ?? data.downtime_code
+  createForm.equipCode = data.equipCode ?? data.equip_code
+  createForm.equipName = data.equipName ?? data.equip_name
+  createForm.downtimeType = data.downtimeType ?? data.downtime_type
+  createForm.workerId = data.workerId ?? data.worker_id ?? ''
+  createForm.description = data.description ?? ''
+  createForm.downtimeStart = data.downtimeStart ?? data.downtime_start
+  createForm.downtimeEnd = data.downtimeEnd ?? data.downtime_end ?? null
+  createForm.progressStatus = data.progressStatus ?? data.progress_status ?? '진행중'
+}
+
+// 설비코드로 진입: 설비 기본정보 + 진행중 여부 확인
+async function loadByEquipCode(equipCode: string) {
+  // 1) 설비 기본정보
+  const { data: equip } = await axios.get(`/api/equipment/${encodeURIComponent(equipCode)}`)
+  createForm.equipCode = equip.equip_code
+  createForm.equipName = equip.equip_name
+
+  // 2) 진행중 비가동 여부(해당 설비)
+  const { data: running } = await axios.get('/api/downtime', {
+    params: { status: 'running', equip_code: equipCode },
+  })
+  if (Array.isArray(running) && running.length > 0) {
+    await fetchDetail(running[0].downtimeCode ?? running[0].downtime_code)
+  } else {
+    currentCode.value = null // 등록 모드 유지
+    createForm.progressStatus = '진행중'
+    createForm.downtimeEnd = null
   }
-  if (starting.value || isRunning()) return
+}
+
+async function startDowntime() {
+  if (!createForm.equipCode.trim()) return alert('설비코드를 확인하세요.')
+  if (!createForm.workerId.trim()) return alert('담당자를 입력/선택하세요.')
+  if (isDetail.value || starting.value) return
 
   try {
     starting.value = true
     const body = {
       equip_code: createForm.equipCode.trim(),
       equip_name: createForm.equipName.trim() || null,
+      worker_id: createForm.workerId.trim(),
       downtime_type: createForm.downtimeType || '비계획정지',
       description: createForm.description.trim() || null,
       progress_status: '진행중',
@@ -96,6 +133,7 @@ async function startDowntime() {
     const { data } = await axios.post('/api/downtime', body)
     currentCode.value = data?.downtime_code || null
     alert('비가동이 시작되었습니다.')
+    if (currentCode.value) await fetchDetail(currentCode.value)
   } catch (e: any) {
     console.error(e)
     alert(e?.response?.data?.message || '비가동 시작 중 오류가 발생했습니다.')
@@ -104,23 +142,52 @@ async function startDowntime() {
   }
 }
 
-// ✅ 설비코드로 기본정보 불러오기
+// 비가동 종료(상세 모드에서만)
+async function endDowntime() {
+  if (!currentCode.value) return
+  if (!confirm('비가동을 종료하시겠습니까?')) return
+  try {
+    ending.value = true
+    await axios.put(`/api/downtime/${encodeURIComponent(currentCode.value)}/end`, {
+      progress_status: '완료', // 서버에서 NOW()로 종료시간 처리
+    })
+    alert('비가동이 종료되었습니다.')
+    // 종료 후: 같은 설비 기준으로 모드 재판단(대부분 등록 모드로 복귀)
+    await loadByEquipCode(createForm.equipCode)
+  } catch (e: any) {
+    console.error(e)
+    alert(e?.response?.data?.message || '종료 처리 중 오류가 발생했습니다.')
+  } finally {
+    ending.value = false
+  }
+}
+
+/* ===== 초기 진입 로직 ===== */
 onMounted(async () => {
-  const code = route.query.equipCode as string
-  if (!code) {
+  // 1) 상세 딥링크 지원: ?downtimeCode=...
+  const downtimeCode = route.query.downtimeCode as string | undefined
+  if (downtimeCode) {
+    try {
+      await fetchDetail(downtimeCode)
+      return
+    } catch (err) {
+      console.error(err)
+      alert('상세 정보를 불러오지 못했습니다.')
+    }
+  }
+
+  // 2) 기본 진입: ?equipCode=...
+  const equipCode = route.query.equipCode as string | undefined
+  if (!equipCode) {
     alert('선택된 설비가 없습니다.')
     router.push('/downtimelist')
     return
   }
-
   try {
-    const { data } = await axios.get(`/api/equipment/${encodeURIComponent(code)}`)
-    createForm.equipCode = data.equip_code
-    createForm.equipName = data.equip_name
-    createForm.workerId = data.manager
+    await loadByEquipCode(equipCode)
   } catch (err) {
     console.error(err)
-    alert('설비 정보를 불러오는 중 오류가 발생했습니다.')
+    alert('정보를 불러오는 중 오류가 발생했습니다.')
   }
 })
 </script>
@@ -251,12 +318,30 @@ onMounted(async () => {
 
           <div class="mt-6 w-full flex items-center justify-center">
             <button
+              v-if="!isDetail"
               @click="startDowntime"
               class="btn-common btn-color disabled:opacity-50 w-48 h-12 text-base font-semibold whitespace-nowrap"
               :disabled="starting || !createForm.equipCode || isRunning()"
             >
               {{ starting ? '시작 중...' : isRunning() ? '진행중' : '비가동 시작' }}
             </button>
+            <!-- 상세(진행중) 모드: 진행중(비활성) + 종료 -->
+            <template v-else>
+              <button
+                class="btn-common btn-white cursor-not-allowed opacity-70 w-36 h-12 text-base font-semibold"
+                disabled
+              >
+                진행중
+              </button>
+
+              <button
+                class="btn-common btn-color disabled:opacity-50 w-48 h-12 text-base font-semibold"
+                :disabled="ending"
+                @click="endDowntime"
+              >
+                {{ ending ? '종료 중...' : '비가동 종료' }}
+              </button>
+            </template>
           </div>
           <equipSelectModal
             @selectedEmpValue="SelectEmp"
