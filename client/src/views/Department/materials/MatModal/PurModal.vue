@@ -112,11 +112,11 @@ const selectPur = () => {
     title="발주서 조회"
     title-align="left"
     header-align="right"
+    footer-align="center"
     width="1200px"
   >
     <template #modal-header>
-      <button type="button" class="btn-white btn-common" @click="searchPur">조회</button>
-      <button type="button" class="btn-color btn-common" @click="selectPur">등록</button>
+      <button type="button" class="btn-color btn-common" @click="searchPur">조회</button>
     </template>
 
     <template #modal-body>
@@ -182,6 +182,9 @@ const selectPur = () => {
           <DataCol field="remark" header="비고" :pt="{ columnHeaderContent: 'justify-center' }" />
         </DataTable>
       </div>
+    </template>
+    <template #modal-footer>
+      <button type="button" class="btn-white btn-common" @click="selectPur">확인</button>
     </template>
   </Modal>
 </template>

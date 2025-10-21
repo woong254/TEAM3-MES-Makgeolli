@@ -452,8 +452,19 @@ const matPageList = `
   LEFT JOIN lot_mat l ON l.mat_code = m.mat_code
   JOIN comncode_dt c ON c.comncode_detailid = m.mat_item_code
   `;
-// GROUP BY m.mat_code, m.mat_name, m.safe_stock, m.mat_spec, m.mat_unit
-// ORDER BY m.mat_code;
+
+const lotMatList = `
+  SELECT 
+	l.mat_lot,
+	l.prod_date,
+	l.exp_date,
+	l.stock_qty,
+    l.receipt_qty,
+    l.release_qty
+FROM lot_mat l JOIN mat_master m 
+ON m.mat_code = l.mat_code
+WHERE l.mat_code = ?
+`;
 
 module.exports = {
   // 목록/검색
@@ -465,6 +476,7 @@ module.exports = {
   iisModalMat,
   purPagePurList,
   matPageList,
+  lotMatList,
 
   // 단건 조회
   selectPurHeaderByCode,
