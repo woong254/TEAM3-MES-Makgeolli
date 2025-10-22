@@ -296,47 +296,68 @@ onMounted(async () => {
     <PageBreadcrumb :pageTitle="currentPageTitle" />
 
     <!-- 조회 -->
-    <ComponentCard title="조회" className="shadow-sm">
-      <template #header-right>
-        <div class="flex justify-end gap-2">
-          <button @click="resetSearchForm" class="btn-common btn-color">초기화</button>
-          <button @click="getEquipList" class="btn-common btn-white">조회</button>
-        </div>
-      </template>
+    <div class="space-y-5 sm:space-y-6 mt-2">
+      <ComponentCard title="조회" className="shadow-sm">
+        <template #header-right>
+          <div class="flex justify-end gap-2">
+            <button @click="resetSearchForm" class="btn-common btn-color">초기화</button>
+            <button @click="getEquipList" class="btn-common btn-white">조회</button>
+          </div>
+        </template>
 
-      <template #body-content>
-        <div class="flex gap-4">
-          <div class="w-1/4">
-            <label :class="labelStyle">설비코드</label>
-            <input v-model="searchForm.equipCode" type="text" :class="inputStyle" />
+        <template #body-content>
+          <div class="flex gap-4">
+            <div class="w-1/4">
+              <label :class="labelStyle">설비코드</label>
+              <input v-model="searchForm.equipCode" type="text" :class="inputStyle" />
+            </div>
+            <div class="w-1/4">
+              <label :class="labelStyle">설비명</label>
+              <input v-model="searchForm.equipName" type="text" :class="inputStyle" />
+            </div>
+            <div class="w-1/4">
+              <label :class="labelStyle">설비유형</label>
+              <select v-model="searchForm.equipType" :class="inputStyle">
+                <option value="">설비유형 선택</option>
+                <option v-for="(item, index) in TypeInfo" :key="index" :value="item.code">
+                  {{ item.name }}
+                </option>
+              </select>
+            </div>
+            <div class="w-1/4">
+              <div :class="labelStyle">설비상태</div>
+              <label class="flex items-center gap-2">
+                <input
+                  v-model="searchForm.equipStatus"
+                  type="radio"
+                  name="equip-using"
+                  value="j1"
+                />
+                가동중
+              </label>
+              <label class="flex items-center gap-2">
+                <input
+                  v-model="searchForm.equipStatus"
+                  type="radio"
+                  name="equip-using"
+                  value="j2"
+                />
+                비가동
+              </label>
+              <label class="flex items-center gap-2">
+                <input
+                  v-model="searchForm.equipStatus"
+                  type="radio"
+                  name="equip-using"
+                  value="j5"
+                />
+                가동대기
+              </label>
+            </div>
           </div>
-          <div class="w-1/4">
-            <label :class="labelStyle">설비명</label>
-            <input v-model="searchForm.equipName" type="text" :class="inputStyle" />
-          </div>
-          <div class="w-1/4">
-            <label :class="labelStyle">설비유형</label>
-            <select v-model="searchForm.equipType" :class="inputStyle">
-              <option value="">설비유형 선택</option>
-              <option v-for="(item, index) in TypeInfo" :key="index" :value="item.code">
-                {{ item.name }}
-              </option>
-            </select>
-          </div>
-          <div class="w-1/4">
-            <div :class="labelStyle">설비상태</div>
-            <label class="flex items-center gap-2">
-              <input v-model="searchForm.equipStatus" type="radio" name="equip-using" value="j1" />
-              가동중
-            </label>
-            <label class="flex items-center gap-2">
-              <input v-model="searchForm.equipStatus" type="radio" name="equip-using" value="j2" />
-              비가동
-            </label>
-          </div>
-        </div>
-      </template>
-    </ComponentCard>
+        </template>
+      </ComponentCard>
+    </div>
 
     <div class="flex gap-2 mt-2 w-full" style="height: 550px">
       <!-- 목록 -->
@@ -363,9 +384,19 @@ onMounted(async () => {
             @row-click="onRowClick"
             @selection-change="onSelectionChange"
           >
-            <DataCol selectionMode="single" headerStyle="width: 2.5rem" />
-            <DataCol field="equipCode" header="설비코드" />
-            <DataCol field="equipName" header="설비명" />
+            <DataCol selectionMode="single" headerStyle="width: 2.5rem; text-align: center" />
+            <DataCol
+              field="equipCode"
+              header="설비코드"
+              :pt="{ columnHeaderContent: 'justify-center' }"
+              style="min-width: 100px; text-align: center"
+            />
+            <DataCol
+              field="equipName"
+              header="설비명"
+              :pt="{ columnHeaderContent: 'justify-center' }"
+              style="min-width: 100px"
+            />
             <DataCol field="equipTypeName" header="설비유형" sortable />
             <DataCol field="manager" header="담당자" sortable />
             <DataCol field="equipStatusName" header="설비상태" sortable />
@@ -542,6 +573,7 @@ onMounted(async () => {
                       >
                         <option value="j1">가동중</option>
                         <option value="j2">비가동</option>
+                        <option value="j5">가동대기</option>
                       </select>
                     </template>
                   </td>
@@ -560,3 +592,9 @@ onMounted(async () => {
     </div>
   </AdminLayout>
 </template>
+
+<style scoped>
+.center-header .p-column-header-content {
+  justify-content: center !important;
+}
+</style>

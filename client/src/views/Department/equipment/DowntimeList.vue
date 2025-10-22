@@ -280,50 +280,44 @@ watch(
     <PageBreadcrumb :pageTitle="currentPageTitle" />
 
     <!-- 조회 -->
-    <div class="space-y-5 sm:space-y-6 mt-2">
-      <ComponentCard title="조회">
-        <template #header-right>
-          <div class="flex justify-end gap-2">
-            <button @click="resetSearchForm" class="btn-common btn-color">초기화</button>
-            <button @click="getEquipList" class="btn-common btn-white">조회</button>
-          </div>
-        </template>
 
-        <template #body-content>
-          <div class="flex gap-4">
-            <div class="w-1/4">
-              <label :class="labelStyle">설비코드</label>
-              <input v-model="searchForm.equipCode" type="text" :class="inputStyle" />
-            </div>
-            <div class="w-1/4">
-              <label :class="labelStyle">설비명</label>
-              <input v-model="searchForm.equipName" type="text" :class="inputStyle" />
-            </div>
-            <div class="w-1/4">
-              <label :class="labelStyle">설비유형</label>
-              <select v-model="searchForm.equipType" :class="inputStyle">
-                <option value="">설비유형 선택</option>
-                <option v-for="(item, index) in TypeInfo" :key="index" :value="item.code">
-                  {{ item.name }}
-                </option>
-              </select>
-            </div>
-            <div class="hidden">
-              <div :class="labelStyle">설비상태</div>
-              <label class="flex items-center gap-2">
-                <input
-                  v-model="searchForm.equipStatus"
-                  type="radio"
-                  name="equip-using"
-                  value="j1"
-                />
-                가동중
-              </label>
-            </div>
+    <ComponentCard title="조회">
+      <template #header-right>
+        <div class="flex justify-end gap-2">
+          <button @click="resetSearchForm" class="btn-common btn-color">초기화</button>
+          <button @click="getEquipList" class="btn-common btn-white">조회</button>
+        </div>
+      </template>
+
+      <template #body-content>
+        <div class="flex gap-4">
+          <div class="w-1/4">
+            <label :class="labelStyle">설비코드</label>
+            <input v-model="searchForm.equipCode" type="text" :class="inputStyle" />
           </div>
-        </template>
-      </ComponentCard>
-    </div>
+          <div class="w-1/4">
+            <label :class="labelStyle">설비명</label>
+            <input v-model="searchForm.equipName" type="text" :class="inputStyle" />
+          </div>
+          <div class="w-1/4">
+            <label :class="labelStyle">설비유형</label>
+            <select v-model="searchForm.equipType" :class="inputStyle">
+              <option value="">설비유형 선택</option>
+              <option v-for="(item, index) in TypeInfo" :key="index" :value="item.code">
+                {{ item.name }}
+              </option>
+            </select>
+          </div>
+          <div class="hidden">
+            <div :class="labelStyle">설비상태</div>
+            <label class="flex items-center gap-2">
+              <input v-model="searchForm.equipStatus" type="radio" name="equip-using" value="j1" />
+              가동중
+            </label>
+          </div>
+        </div>
+      </template>
+    </ComponentCard>
 
     <!-- 기준정보 설비 목록 -->
     <div class="space-y-5 sm:space-y-6 mt-2">
@@ -349,16 +343,41 @@ watch(
             @selection-change="onSelectionChange"
           >
             <DataCol selectionMode="single" headerStyle="width: 2.5rem" />
-            <DataCol field="equipCode" header="설비코드" />
-            <DataCol field="equipName" header="설비명" />
-            <DataCol field="equipTypeName" header="설비유형" sortable />
-            <DataCol field="manager" header="담당자" sortable />
-            <DataCol field="equipStatusName" header="설비상태" sortable />
+            <DataCol
+              field="equipCode"
+              header="설비코드"
+              :pt="{ columnHeaderContent: 'justify-center' }"
+              style="min-width: 100px"
+            />
+            <DataCol
+              field="equipName"
+              header="설비명"
+              :pt="{ columnHeaderContent: 'justify-center' }"
+              style="min-width: 100px"
+            />
+            <DataCol
+              field="equipTypeName"
+              header="설비유형"
+              :pt="{ columnHeaderContent: 'justify-center' }"
+              style="min-width: 100px"
+            />
+            <DataCol
+              field="manager"
+              header="담당자"
+              :pt="{ columnHeaderContent: 'justify-center' }"
+              style="min-width: 100px"
+            />
+            <DataCol
+              field="equipStatusName"
+              header="설비상태"
+              :pt="{ columnHeaderContent: 'justify-center' }"
+              style="min-width: 100px"
+            />
             <DataCol
               field="inspCycle"
               header="점검주기"
-              sortable
-              style="width: 110px; text-align: center"
+              :pt="{ columnHeaderContent: 'justify-center' }"
+              style="min-width: 100px"
             />
           </DataTable>
         </template>
@@ -409,22 +428,57 @@ watch(
                     bodyStyle="width:37px"
                   />
 
-                  <DataCol field="equipCode" header="설비코드" />
-                  <DataCol field="equipName" header="설비명" />
-                  <DataCol field="downtimeType" header="비가동유형" />
-                  <DataCol field="workerId" header="담당자" />
+                  <DataCol
+                    field="equipCode"
+                    header="설비코드"
+                    :pt="{ columnHeaderContent: 'justify-center' }"
+                    style="min-width: 100px"
+                  />
+                  <DataCol
+                    field="equipName"
+                    header="설비명"
+                    :pt="{ columnHeaderContent: 'justify-center' }"
+                    style="min-width: 100px"
+                  />
+                  <DataCol
+                    field="downtimeType"
+                    header="비가동유형"
+                    :pt="{ columnHeaderContent: 'justify-center' }"
+                    style="min-width: 100px"
+                  />
+                  <DataCol
+                    field="workerId"
+                    header="담당자"
+                    :pt="{ columnHeaderContent: 'justify-center' }"
+                    style="min-width: 100px"
+                  />
                   <!-- ✅ 시작일시/종료일시 포맷 적용 -->
-                  <DataCol field="downtimeStart" header="비가동시작일시">
+                  <DataCol
+                    field="downtimeStart"
+                    header="비가동시작일시"
+                    :pt="{ columnHeaderContent: 'justify-center' }"
+                    style="min-width: 100px"
+                  >
                     <template #body="{ data }">
                       {{ formatDt(data.downtimeStart) }}
                     </template>
                   </DataCol>
-                  <DataCol field="downtimeEnd" header="비가동종료일시">
+                  <DataCol
+                    field="downtimeEnd"
+                    header="비가동종료일시"
+                    :pt="{ columnHeaderContent: 'justify-center' }"
+                    style="min-width: 100px"
+                  >
                     <template #body="{ data }">
                       {{ data.downtimeEnd ? formatDt(data.downtimeEnd) : '—' }}
                     </template>
                   </DataCol>
-                  <DataCol field="progressStatus" header="진행상태" />
+                  <DataCol
+                    field="progressStatus"
+                    header="진행상태"
+                    :pt="{ columnHeaderContent: 'justify-center' }"
+                    style="min-width: 100px"
+                  />
                 </DataTable>
               </TabPanel>
 
@@ -440,24 +494,59 @@ watch(
                   :rows="20"
                   size="small"
                 >
-                  <DataCol field="equipCode" header="설비코드" />
-                  <DataCol field="equipName" header="설비명" />
-                  <DataCol field="downtimeType" header="비가동유형" />
-                  <DataCol field="workerId" header="담당자" />
+                  <DataCol
+                    field="equipCode"
+                    header="설비코드"
+                    :pt="{ columnHeaderContent: 'justify-center' }"
+                    style="min-width: 100px"
+                  />
+                  <DataCol
+                    field="equipName"
+                    header="설비명"
+                    :pt="{ columnHeaderContent: 'justify-center' }"
+                    style="min-width: 100px"
+                  />
+                  <DataCol
+                    field="downtimeType"
+                    header="비가동유형"
+                    :pt="{ columnHeaderContent: 'justify-center' }"
+                    style="min-width: 100px"
+                  />
+                  <DataCol
+                    field="workerId"
+                    header="담당자"
+                    :pt="{ columnHeaderContent: 'justify-center' }"
+                    style="min-width: 100px"
+                  />
                   <!-- 시작일시 포맷 -->
-                  <DataCol field="downtimeStart" header="비가동시작일시">
+                  <DataCol
+                    field="downtimeStart"
+                    header="비가동시작일시"
+                    :pt="{ columnHeaderContent: 'justify-center' }"
+                    style="min-width: 100px"
+                  >
                     <template #body="{ data }">
                       {{ formatDt(data.downtimeStart) }}
                     </template>
                   </DataCol>
 
                   <!-- 종료일시 포맷 -->
-                  <DataCol field="downtimeEnd" header="비가동종료일시">
+                  <DataCol
+                    field="downtimeEnd"
+                    header="비가동종료일시"
+                    :pt="{ columnHeaderContent: 'justify-center' }"
+                    style="min-width: 100px"
+                  >
                     <template #body="{ data }">
                       {{ formatDt(data.downtimeEnd) }}
                     </template>
                   </DataCol>
-                  <DataCol field="progressStatus" header="진행상태" />
+                  <DataCol
+                    field="progressStatus"
+                    header="진행상태"
+                    :pt="{ columnHeaderContent: 'justify-center' }"
+                    style="min-width: 100px"
+                  />
                 </DataTable>
               </TabPanel>
             </TabView>
