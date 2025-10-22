@@ -266,7 +266,7 @@ const goToProcess = async () => {
     const res = await axios.post('/api/startProcess', payload)
     console.log('API Response (Process Started):', res) // API 호출 성공 시에만 페이지 이동
     router.push({
-      path: '/processControl',
+      path: '/api/processControl',
       query: {
         emp_id: emp.emp_id,
         equip_code: equip.equip_code,
