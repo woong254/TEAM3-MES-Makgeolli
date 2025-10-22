@@ -5,7 +5,7 @@ import ComponentCard from '@/components/common/ComponentCardOrder.vue'
 import DataTable from 'primevue/datatable' // datatable 컴포넌트 import
 import Column from 'primevue/column'
 // import InputText from 'primevue/inputtext' // PrimeVue InputText 컴포넌트 import
-import { ref, computed } from 'vue' // computed import 추가
+import { ref, computed, onMounted } from 'vue' // computed import 추가
 // flatPickr 달력
 import flatPickr from 'vue-flatpickr-component' // flatPickr 달력 컴포넌트 import
 import 'flatpickr/dist/flatpickr.css' // flatPickr 달력 css import
@@ -94,7 +94,7 @@ const submitSearchForm = () => {
 }
 
 // 완제품 입고 관리 검색 조회 버튼 눌렀을때 데이터 가져오는 함수
-const getEpIsManage = async (showAlert = true) => {
+const getEpIsManage = async () => {
   try {
     const result = await axios.get('/api/viewEpIsManage', {
       params: search.value,
@@ -109,7 +109,7 @@ const getEpIsManage = async (showAlert = true) => {
     selectedProducts.value = []
     products.value = rows
     console.log('조회버튼 누르고 나오는 products.value 값:', products.value)
-    if (showAlert) alert('조회성공!')
+    // if (showAlert) alert('조회성공!')
   } catch (err) {
     console.error('getEpIsManage 오류:', err)
   }
@@ -150,7 +150,7 @@ const submitEpIs = async () => {
     }
     if (addRes.isSuccessed) {
       alert('입고성공')
-      getEpIsManage(false)
+      getEpIsManage()
       rowUnselectHook()
       return
     }
@@ -183,6 +183,11 @@ const selectAllChangeHook = (event: { checked: boolean }) => {
 const rowUnselectHook = () => {
   selectAll.value = false
 }
+
+// 첫 화면에 바로 조회 되도록
+onMounted(() => {
+  getEpIsManage()
+})
 </script>
 <template>
   <AdminLayout>
@@ -358,7 +363,7 @@ const rowUnselectHook = () => {
                   field="insp_id"
                   header="검사ID"
                   :pt="{ columnHeaderContent: 'justify-center' }"
-                  style="min-width: 150px"
+                  style="min-width: 150px; text-align: center"
                 ></Column>
                 <Column
                   field="insp_name"
@@ -370,7 +375,7 @@ const rowUnselectHook = () => {
                   field="prod_code"
                   header="제품코드"
                   :pt="{ columnHeaderContent: 'justify-center' }"
-                  style="min-width: 200px"
+                  style="min-width: 200px; text-align: center"
                 ></Column>
                 <Column
                   field="prod_name"
@@ -406,7 +411,7 @@ const rowUnselectHook = () => {
                   field="ep_lot"
                   header="제품lot번호"
                   :pt="{ columnHeaderContent: 'justify-center' }"
-                  style="min-width: 200px"
+                  style="min-width: 200px; text-align: center"
                 ></Column>
                 <Column
                   field="comncode_dtnm"

@@ -4,7 +4,7 @@ import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import ComponentCard from '@/components/common/ComponentCardOrder.vue'
 import DataTable from 'primevue/datatable' // datatable 컴포넌트 import
 import Column from 'primevue/column'
-import { ref, computed } from 'vue' // computed import 추가
+import { ref, computed, onMounted } from 'vue' // computed import 추가
 // flatPickr 달력
 import flatPickr from 'vue-flatpickr-component' // flatPickr 달력 컴포넌트 import
 import 'flatpickr/dist/flatpickr.css' // flatPickr 달력 css import
@@ -104,7 +104,7 @@ const submitSearchForm = () => {
 }
 
 // 완제품 입고 관리 검색 조회 버튼 눌렀을때 데이터 가져오는 함수
-const getEpOsManage = async (showAlert = true) => {
+const getEpOsManage = async () => {
   try {
     const result = await axios.get('/api/viewEpOsManage', {
       params: search.value,
@@ -133,7 +133,7 @@ const getEpOsManage = async (showAlert = true) => {
     selectedProducts.value = []
     products.value = computedRows
     console.log('조회버튼 누르고 나오는 products.value 값:', products.value)
-    if (showAlert) alert('조회성공!')
+    // if (showAlert) alert('조회성공!')
   } catch (err) {
     console.error('getEpIsManage 오류:', err)
   }
@@ -205,7 +205,7 @@ const submitEpOs = async () => {
       alert('출고완료')
     }
 
-    getEpOsManage(false) // 테이블 갱신
+    getEpOsManage() // 테이블 갱신
     selectedProducts.value = [] // 선택 초기화
   } catch (err) {
     console.error('추가 중 오류 발생', err)
@@ -310,6 +310,11 @@ const selectAllChangeHook = (event: { checked: boolean }) => {
 const rowUnselectHook = () => {
   selectAll.value = false
 }
+
+// 첫 화면에 바로 조회 되도록
+onMounted(() => {
+  getEpOsManage()
+})
 </script>
 <template>
   <AdminLayout>
@@ -536,7 +541,7 @@ const rowUnselectHook = () => {
                   field="prod_code"
                   header="제품코드"
                   :pt="{ columnHeaderContent: 'justify-center' }"
-                  style="min-width: 170px"
+                  style="min-width: 170px; text-align: center"
                 ></Column>
                 <Column
                   field="prod_name"
@@ -548,7 +553,7 @@ const rowUnselectHook = () => {
                   field="prod_spec"
                   header="규격"
                   :pt="{ columnHeaderContent: 'justify-center' }"
-                  style="min-width: 50px; text-align: right"
+                  style="min-width: 50px; text-align: left"
                 ></Column>
                 <Column
                   field="prod_unit"
@@ -577,10 +582,14 @@ const rowUnselectHook = () => {
                 </Column>
                 <Column
                   field=""
-                  header="제품현출고수량"
                   :pt="{ columnHeaderContent: 'justify-center' }"
                   style="min-width: 130px; text-align: right"
                 >
+                  <template #header>
+                    <span style="font-weight: bold"
+                      >제품현출고수량<span style="color: red">*</span></span
+                    >
+                  </template>
                   <template #body="{ data }">
                     <div class="relative w-full">
                       <input
@@ -639,6 +648,9 @@ const rowUnselectHook = () => {
 </template>
 
 <style scoped>
+.custom-header span {
+  color: red !important;
+}
 input {
   height: 40px; /* input 높이 */
   line-height: 40px; /* line-height를 input 높이와 같게 */

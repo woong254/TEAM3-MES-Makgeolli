@@ -18,7 +18,6 @@ import ProductSelectmodal from './ProductSelectmodal.vue' // 제품선택
 import axios from 'axios' // axios 노드쪽 연결
 import isEqual from 'lodash/isEqual'
 import OrderSelectmodal from './OrderSelectmodal.vue' // 모달import
-
 const baseInputClass =
   'dark:bg-dark-900 h-8 w-full rounded-lg border border-gray-300 bg-transparent pl-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
 // 주문서관리 props 인터페이스
@@ -235,12 +234,12 @@ const getOrderFormSearch = async () => {
       // 주문 제품 리스트 숫자 변환
       const convertedList = result.data.list1.map((item: OrderItem) => ({
         ...item,
-        op_qty: Number(item.op_qty).toFixed(2), // 문자열 -> 숫자
+        op_qty: Number(item.op_qty), // 문자열 -> 숫자
       }))
 
       dbOrderProducts.value = structuredClone(convertedList)
       products.value = structuredClone(convertedList)
-      alert('조회성공!')
+      // alert('조회성공!')
     } else {
       // 2개 이상이면 모달창 띄우고 선택 대기
       matchedOrders.value = payload.list
@@ -275,7 +274,7 @@ const selectOrderFromModal = async (selectedOrder: OrderInfoInterface) => {
 
     const convertedList = result.data.map((item: OrderItem) => ({
       ...item,
-      op_qty: Number(item.op_qty).toFixed(2),
+      op_qty: Number(item.op_qty),
     }))
 
     dbOrderProducts.value = structuredClone(convertedList)
@@ -479,7 +478,7 @@ const deleteOrder = async () => {
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-400 mb-2">
-                  주문서명*
+                  주문서명<span style="color: #d70000">*</span>
                 </label>
                 <input
                   type="text"
@@ -658,7 +657,7 @@ const deleteOrder = async () => {
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-400 mb-2">
-                  주문서명*
+                  주문서명<span style="color: #d70000">*</span>
                 </label>
                 <input
                   type="text"
@@ -670,7 +669,7 @@ const deleteOrder = async () => {
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-400 mb-2">
-                  거래처명*
+                  거래처명<span style="color: #d70000">*</span>
                 </label>
                 <input
                   type="text"
@@ -689,7 +688,7 @@ const deleteOrder = async () => {
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-400 mb-2">
-                  대표자*
+                  대표자<span style="color: #d70000">*</span>
                 </label>
                 <input
                   type="text"
@@ -734,7 +733,7 @@ const deleteOrder = async () => {
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-400 mb-2">
-                  납기날짜*
+                  납기날짜<span style="color: #d70000">*</span>
                 </label>
                 <div class="relative w-full">
                   <flat-pickr
@@ -848,6 +847,7 @@ const deleteOrder = async () => {
                   header="제품코드"
                   :pt="{ columnHeaderContent: 'justify-center' }"
                   headerStyle="width: 10%"
+                  style="text-align: center"
                 ></Column>
                 <Column
                   field="prod_name"

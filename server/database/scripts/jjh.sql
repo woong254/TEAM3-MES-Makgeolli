@@ -840,6 +840,10 @@ select * from emp_master;
 select * from orderform;
 select * from orderdetail;
 select * from prod_insp;
+desc prod_insp;
+desc orderdetail;
+select * from edcts;
+desc edcts;
 select * from prod_insp_result;
 SELECT pf.procs_no,
               pm.prod_name,
@@ -894,4 +898,7 @@ SELECT COUNT(*)
       AND emp_no = 'EMP-20250616-0006'
       AND procs_st <> 't1';
       
-      
+select * from epis;
+desc epis;
+select * from orderform;
+SELECT * FROM orderdetail;

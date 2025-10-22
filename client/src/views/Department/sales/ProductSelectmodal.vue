@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, defineEmits, watch } from 'vue'
+import { ref, defineEmits, watch, onMounted } from 'vue'
 import '@/assets/common.css'
 import Modal from '@/components/ui/Modal.vue'
 import DataTable from 'primevue/datatable'
@@ -130,6 +130,10 @@ const selectAllChangeHook = (event: { checked: boolean }) => {
 const rowUnselectHook = () => {
   selectAll.value = false
 }
+
+onMounted(() => {
+  submitSearchForm()
+})
 </script>
 
 <template>

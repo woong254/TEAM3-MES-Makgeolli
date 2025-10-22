@@ -14,7 +14,10 @@ router.post("/download-order-pdf", async (req, res) => {
   const safeFilename = encodeURIComponent(filename);
 
   try {
-    const browser = await puppeteer.launch({});
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    });
     const page = await browser.newPage(); // 2. 페이지에 HTML 삽입 // 여기서 받은 html 변수(프론트에서 보낸 주문서 템플릿 전체)를 사용합니다. // networkidle0: 네트워크 활동이 없을 때까지 기다림 (모든 리소스 로드 보장)
 
     await page.setContent(html, { waitUntil: "networkidle0" }); // 3. PDF로 변환 (가장 중요한 부분: 브라우저 인쇄 옵션 사용)
