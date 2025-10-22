@@ -4,6 +4,7 @@ const express = require("express");
 const router = express.Router();
 
 const prodOrdService = require("../services/prodOrd_service.js");
+const { getNextProcessQty } = require('../services/prodOrd_service.js');
 
 // 본인이 작성한 지시서 조회
 router.get("/makeList", async (req, res) => {
@@ -186,11 +187,12 @@ router.post('/nextProcessMaxQty', async (req, res) => {
       console.error(err);
     }
 
-    const maxQty = await getNextProcessMaxQty(mk_list, seq_no - 1);
+    const maxQty = await getNextProcessQty(mk_list, seq_no - 1);
 
     res.json({ success: true, maxQty });
   } catch (err) {
     console.error(err);
   }
 });
+
 module.exports = router;
