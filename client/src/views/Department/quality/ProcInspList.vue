@@ -327,6 +327,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
             header="검사일시"
             sortable
             :pt="{ columnHeaderContent: 'justify-center' }"
+            style="text-align: center"
           >
             <template #body="slotProps">
               {{ slotProps.data.insp_date ? slotProps.data.insp_date.slice(0, 10) : '' }}
@@ -337,6 +338,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
             field="procs_no"
             header="공정실적번호"
             :pt="{ columnHeaderContent: 'justify-center' }"
+            style="text-align: center"
           />
           <Column
             field="now_procs"

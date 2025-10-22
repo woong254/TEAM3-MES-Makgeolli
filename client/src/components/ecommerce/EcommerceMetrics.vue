@@ -106,7 +106,7 @@
       </div>
     </div>
   </div> -->
-  <div class="w-[1500px] h-[800px] rounded-lg bg-amber-400" style="overflow: hidden">
+  <div class="w-[1500px] h-[800px] rounded-lg" style="overflow: hidden">
     <img
       src="../../../public/images/mainImage02.jpg"
       alt=""

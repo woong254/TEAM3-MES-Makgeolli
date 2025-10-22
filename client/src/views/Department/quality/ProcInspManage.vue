@@ -108,17 +108,17 @@ interface modalRowDT {
 const inspector = ref('이한솔') // 검사자
 // 3-1. 검사대상(공정실적번호 반제품)
 const procInspTargetData = reactive({
-  procs_no: 0, //공정실적번호
+  procs_no: null as number | null, //공정실적번호
   prod_code: '', //제품코드
   prod_name: '', //제품명
   prod_spec: '', //규격
   comncode_dtnm: '', //단위 공통코드 이름
-  mk_qty: 0, //생산량
+  mk_qty: null as number | null, //생산량
   procs_endtm: '', //생산종료날짜
   now_procs: '', //공정명
 })
 const inspName = ref('') // 검사명
-const procInspQty = ref<number>(0) // 검사량
+const procInspQty = ref<number>() // 검사량
 const procInspNG = ref<number>(0) // 불량량
 const procInspPass = ref<number>(0) // 합격량
 const remark = ref('') // 비고
@@ -540,13 +540,13 @@ const submitUpdate = async () => {
 const confirmDelete = async () => {
   try {
     if (!currentInspId.value) return alert('삭제할 검사ID가 없습니다.')
-    if (!confirm('정말 삭제하시겠습니까?')) return
+    if (!confirm(`'${inspName.value}'를 삭제하시겠습니까?`)) return
     const { data } = await axios.delete(`/api/procInsp/${currentInspId.value}`)
     if (data?.ok) {
-      alert('삭제되었습니다.')
+      alert(`'${inspName.value}'가 삭제되었습니다.`)
       resetForm()
     } else {
-      alert(data?.message || '삭제 실패')
+      alert(data?.message || '삭제를 실패했습니다.')
     }
   } catch (e) {
     console.error('[FE] 삭제 오류:', e)
@@ -847,7 +847,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
           <div class="rounded-lg border border-gray-200 shadow-sm p-4 mb-2">
             <h3 class="text-md mb-2 font-medium">기본정보</h3>
             <div class="w-full flex items-center mb-2">
-              <label :class="labelStyle" class="w-[86px]"> 검사명 </label>
+              <label :class="labelStyle" class="w-[86px]"> 검사명 *</label>
               <input
                 type="text"
                 :class="inputStyleSM"
@@ -858,7 +858,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
             </div>
             <div class="flex flex-wrap justify-between gap-2">
               <div class="w-1/5 flex items-center relative">
-                <label :class="labelStyle" class="w-[120px]"> 제품코드 </label>
+                <label :class="labelStyle" class="w-[120px]"> 제품코드 *</label>
                 <input
                   type="text"
                   :class="inputStyleClick"
@@ -1014,7 +1014,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
             <h3 class="text-md mb-2 font-medium">수량입력</h3>
             <div class="flex flex-wrap mb-2">
               <div class="w-1/4 flex items-center">
-                <label :class="labelStyle" class="w-[120px]"> 검사량 </label>
+                <label :class="labelStyle" class="w-[120px]"> 검사량 *</label>
                 <div>
                   <input
                     type="number"
@@ -1118,7 +1118,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
             >
               <!-- 데이터가 없을 때 나타낼 방법 #empty슬롯 -->
               <template #empty>
-                <div class="text-center">추가된 검사대상이 없습니다.</div>
+                <div class="text-center" style="color: #888">추가된 검사대상이 없습니다.</div>
               </template>
 
               <Column
@@ -1147,25 +1147,6 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                   </div>
                 </template>
               </Column>
-              <!-- <Column
-                field="file_name"
-                header="첨부파일"
-                :pt="{ columnHeaderContent: 'justify-center' }"
-                style="width: 100px"
-              >
-                <template #body="slotProps">
-                  <div class="flex justify-center">
-                    <Button
-                      icon="pi pi-paperclip"
-                      :text="true"
-                      severity="secondary"
-                      class="p-button-sm"
-                      style="width: 20px; height: 15px; text-align: center; color: #999"
-                      :disabled="!slotProps.data.file_name"
-                    />
-                  </div>
-                </template>
-              </Column> -->
               <Column
                 field="range_stand"
                 header="범위기준"
@@ -1259,7 +1240,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
             >
               <!-- 데이터가 없을 때 나타낼 방법 #empty슬롯 -->
               <template #empty>
-                <div class="text-center">추가된 검사대상이 없습니다.</div>
+                <div class="text-center" style="color: #888">추가된 검사대상이 없습니다.</div>
               </template>
 
               <Column expander style="width: 3rem" />
