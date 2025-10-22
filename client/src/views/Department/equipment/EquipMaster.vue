@@ -2,7 +2,7 @@
 /* ========================
  * Imports
  * ======================== */
-import { ref, shallowRef, onMounted } from 'vue'
+import { ref, shallowRef, onMounted, computed } from 'vue'
 import axios from 'axios'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
@@ -50,6 +50,8 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
 const flatpickrConfig = { dateFormat: 'Y-m-d', altInput: true, altFormat: 'Y-m-d', wrap: true }
 const fileStyle =
   'focus:border-ring-brand-300 h-11 w-full overflow-hidden rounded-lg border border-gray-300 bg-transparent text-sm text-gray-500 shadow-theme-xs transition-colors file:mr-5 file:border-collapse file:cursor-pointer file:rounded-l-lg file:border-0 file:border-r file:border-solid file:border-gray-200 file:bg-gray-50 file:py-3 file:pl-3.5 file:pr-3 file:text-sm file:text-gray-700 placeholder:text-gray-400 hover:file:bg-gray-100 focus:outline-hidden focus:file:ring-brand-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400 dark:text-white/90 dark:file:border-gray-800 dark:file:bg-white/[0.03] dark:file:text-gray-400 dark:placeholder:text-gray-400'
+const inputDisabled =
+  'dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-gray-100 px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30'
 
 /* ========================
  * Utils (mappers & inits)
@@ -113,6 +115,7 @@ const searchForm = ref(initSearch())
 const equipList = shallowRef<EquipItem[]>([])
 const selectedRow = ref<EquipItem | null>(null)
 const createForm = ref<CreateEquipPayload>(initForm())
+const isEditing = computed(() => !!selectedRow.value)
 
 /* (optional) 담당자 모달 & 이미지 프리뷰 */
 
@@ -198,11 +201,12 @@ const viewType = async () => {
 const saveEquip = async () => {
   // 필수값
   if (
-    !createForm.value.equipCode?.trim() ||
     !createForm.value.equipName?.trim() ||
-    !createForm.value.equipType?.trim()
+    !createForm.value.equipType?.trim() ||
+    !createForm.value.installDate?.trim() ||
+    !createForm.value.mfgDt?.trim()
   ) {
-    alert('설비코드/설비명/설비유형은 필수입니다.')
+    alert('설비명/설비유형/설치일자/제조일자는 필수입니다.')
     return
   }
   try {
@@ -239,7 +243,7 @@ const deleteOne = async () => {
 
   try {
     await axios.delete(`/api/equipment/${encodeURIComponent(code)}`)
-    alert('삭제 완료')
+    alert('삭제가 완료되었습니다.')
     selectedRow.value = null // 선택 해제
     resetCreateForm() // 오른쪽 폼 초기화(있으면)
     await getEquipList() // 목록 새로고침
@@ -268,17 +272,11 @@ const fillFormFromRow = (row: EquipItem) => {
     equipStatus: row.equipStatus || 'j2',
   }
 }
-// (수정) 클릭/선택 시 상세 먼저 가져와서 폼 채우기
-const onRowClick = async (e: { data: EquipItem }) => {
+
+const onRowSelect = async (e: { data: EquipItem }) => {
   selectedRow.value = e.data
-  const detail = await getEquipDetail(e.data.equipCode)
+  const detail = await getEquipDetail(e.data.equipCode).catch(() => null)
   fillFormFromRow(detail ?? e.data)
-}
-const onSelectionChange = async (e: { value: EquipItem | null }) => {
-  if (!e.value) return
-  selectedRow.value = e.value
-  const detail = await getEquipDetail(e.value.equipCode)
-  fillFormFromRow(detail ?? e.value)
 }
 
 /* ========================
@@ -300,8 +298,8 @@ onMounted(async () => {
       <ComponentCard title="조회" className="shadow-sm">
         <template #header-right>
           <div class="flex justify-end gap-2">
-            <button @click="resetSearchForm" class="btn-common btn-color">초기화</button>
-            <button @click="getEquipList" class="btn-common btn-white">조회</button>
+            <button @click="resetSearchForm" class="btn-common btn-white">초기화</button>
+            <button @click="getEquipList" class="btn-common btn-color">조회</button>
           </div>
         </template>
 
@@ -381,8 +379,7 @@ onMounted(async () => {
             class="text-sm"
             :rows="20"
             size="small"
-            @row-click="onRowClick"
-            @selection-change="onSelectionChange"
+            @row-select="onRowSelect"
           >
             <DataCol selectionMode="single" headerStyle="width: 2.5rem; text-align: center" />
             <DataCol
@@ -397,13 +394,12 @@ onMounted(async () => {
               :pt="{ columnHeaderContent: 'justify-center' }"
               style="min-width: 100px"
             />
-            <DataCol field="equipTypeName" header="설비유형" sortable />
-            <DataCol field="manager" header="담당자" sortable />
-            <DataCol field="equipStatusName" header="설비상태" sortable />
+            <DataCol field="equipTypeName" header="설비유형" />
+            <DataCol field="manager" header="담당자" />
+            <DataCol field="equipStatusName" header="설비상태" />
             <DataCol
               field="inspCycle"
-              header="점검주기"
-              sortable
+              header="점검주기(일)"
               style="width: 110px; text-align: center"
             />
           </DataTable>
@@ -414,8 +410,13 @@ onMounted(async () => {
       <ComponentCard title="등록/수정" class="shadow-sm w-1/2">
         <template #header-right>
           <div class="flex justify-end gap-2">
-            <button @click="saveEquip" class="btn-common btn-color">저장</button>
-            <button @click="resetCreateForm" class="btn-common btn-white">신규</button>
+            <!-- 저장 버튼: 편집모드면 '수정', 아니면 '등록' -->
+            <button @click="saveEquip" class="btn-common btn-color">
+              {{ isEditing ? '수정' : '등록' }}
+            </button>
+
+            <!-- 초기화 버튼: 항상 초기화 동작, 누르면 신규 모드로 전환됨 -->
+            <button @click="resetCreateForm" class="btn-common btn-white">초기화</button>
           </div>
         </template>
 
@@ -431,17 +432,21 @@ onMounted(async () => {
               <tbody>
                 <tr>
                   <th class="border border-gray-300 bg-gray-50 text-sm text-center p-2">
-                    설비코드
+                    설비코드 *
                   </th>
                   <td class="border border-gray-300 p-2">
                     <input
                       v-model="createForm.equipCode"
                       :disabled="!!selectedRow"
                       type="text"
-                      :class="inputStyle"
+                      :class="inputDisabled"
+                      style="outline: none"
+                      readonly
                     />
                   </td>
-                  <th class="border border-gray-300 bg-gray-50 text-sm text-center p-2">설비명</th>
+                  <th class="border border-gray-300 bg-gray-50 text-sm text-center p-2">
+                    설비명 *
+                  </th>
                   <td class="border border-gray-300 p-2">
                     <input v-model="createForm.equipName" type="text" :class="inputStyle" />
                   </td>
@@ -449,7 +454,7 @@ onMounted(async () => {
 
                 <tr>
                   <th class="border border-gray-300 bg-gray-50 text-sm text-center p-2">
-                    설비유형
+                    설비유형 *
                   </th>
                   <td class="border border-gray-300 p-2">
                     <div class="relative">
@@ -518,7 +523,6 @@ onMounted(async () => {
                   </th>
                   <td class="border border-gray-300 p-2">
                     <input
-                      v-model="createForm.equipImage"
                       :key="imageKey"
                       ref="fileInputEl"
                       @change="onFileChange"
@@ -559,24 +563,32 @@ onMounted(async () => {
                     설비상태
                   </th>
                   <td class="border border-gray-300 p-2" colspan="3">
+                    <input
+                      :class="inputDisabled"
+                      :value="
+                        { j1: '가동중', j2: '비가동', j5: '가동대기' }[createForm.equipStatus] ?? ''
+                      "
+                      disabled
+                    />
                     <!-- 신규 등록 시: 비가동 고정, 수정 시: 선택 가능 -->
-                    <template v-if="!selectedRow">
+                    <!-- v-if="!selectedRow" -->
+                    <!-- <template>
                       <select v-model="createForm.equipStatus" :class="inputStyle" disabled>
                         <option value="j1">가동중</option>
                       </select>
-                    </template>
+                    </template> -->
 
-                    <template v-else>
+                    <!-- <template v-else>
                       <select
                         v-model="createForm.equipStatus"
                         :class="inputStyle"
-                        :disabled="!!selectedRow"
+                        :disabled="!!selectedRow"s
                       >
                         <option value="j1">가동중</option>
                         <option value="j2">비가동</option>
                         <option value="j5">가동대기</option>
                       </select>
-                    </template>
+                    </template> -->
                   </td>
                 </tr>
               </tbody>

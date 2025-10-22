@@ -155,62 +155,100 @@ async function list(filters = {}) {
  * - pick()으로 둘 다 지원합니다.
  * ========================= */
 async function create(payload = {}) {
-  // 1) 입력 매핑 + 정리
-  const equipCode = toNullTrim(pick(payload, "equip_code", "equipCode"));
-  const equipName = toNullTrim(pick(payload, "equip_name", "equipName"));
-  const equipType = toNullTrim(pick(payload, "equip_type", "equipType"));
-  const manager = toNullTrim(pick(payload, "manager", "manager"));
-
-  const equipStatus =
-    toNullTrim(pick(payload, "equip_status", "equipStatus")) || "j2";
-  const inspCycle = toNullTrim(pick(payload, "insp_cycle", "inspCycle"));
-
-  const installDate = toYmdOrNull(pick(payload, "install_date", "installDate")); // 'YYYY-MM-DD'
-  const modelName = toNullTrim(pick(payload, "model_name", "modelName"));
-  const equipImage = toNullTrim(pick(payload, "equip_image", "equipImage")); // URL/경로 (파일업로드면 라우터에서 req.file로 경로 생성)
-  const mfgDt = toYmdOrNull(pick(payload, "mfg_dt", "mfgDt")); // 'YYYY-MM-DD'
-  const maker = toNullTrim(pick(payload, "maker", "maker"));
-
-  // 2) 필수값 가드 — 왜 필요한지 설명하기 쉬움
-  //    최소한의 기준(코드/이름/타입)이 없으면 등록 자체를 막습니다.
-  const missing = [];
-  if (!equipCode) missing.push("equip_code");
-  if (!equipName) missing.push("equip_name");
-  if (!equipType) missing.push("equip_type");
-  if (missing.length) {
-    const err = new Error(`필수값 누락: ${missing.join(", ")}`);
-    err.status = 400;
-    throw err;
-  }
-
-  // 3) INSERT 파라미터 — SQL의 컬럼 순서와 반드시 일치해야 합니다.
-  const params = [
-    equipCode,
-    equipName,
-    manager,
-    inspCycle,
-    installDate,
-    modelName,
-    equipImage,
-    mfgDt,
-    maker,
-    equipType,
-    equipStatus,
-  ];
-
-  console.log(params);
-
-  // 4) DB 실행 + 에러 매핑(중복코드 등)
+  const conn = await mariadb.getConnection();
   try {
-    const result = await mariadb.query(insertEquip, params);
-    return { id: result.insertId, affectedRows: result.affectedRows };
+    await conn.beginTransaction();
+
+    // 0) 입력 매핑
+    const equipName = toNullTrim(pick(payload, "equip_name", "equipName"));
+    const equipType = toNullTrim(pick(payload, "equip_type", "equipType"));
+    const manager = toNullTrim(pick(payload, "manager", "manager"));
+    const equipStatus =
+      toNullTrim(pick(payload, "equip_status", "equipStatus")) || "j2";
+    const inspCycle = toNullTrim(pick(payload, "insp_cycle", "inspCycle"));
+    const installDate = toYmdOrNull(
+      pick(payload, "install_date", "installDate")
+    );
+    const modelName = toNullTrim(pick(payload, "model_name", "modelName"));
+    const equipImage = toNullTrim(pick(payload, "equip_image", "equipImage"));
+    const mfgDt = toYmdOrNull(pick(payload, "mfg_dt", "mfgDt"));
+    const maker = toNullTrim(pick(payload, "maker", "maker"));
+
+    // 1) 필수값 가드
+    const missing = [];
+    if (!equipName) missing.push("equip_name");
+    if (!equipType) missing.push("equip_type");
+    if (!installDate) missing.push("install_date");
+    if (!mfgDt) missing.push("mfg_dt");
+    if (missing.length) {
+      const err = new Error(`필수값 누락: ${missing.join(", ")}`);
+      err.status = 400;
+      throw err;
+    }
+
+    const equipCode =
+      await conn.query(`SELECT CONCAT('EQ-', CONCAT(DATE_FORMAT(NOW(), '%y%m'),LPAD(IFNULL(MAX(SUBSTR(equip_code, -3)),0) + 1, 3, '0'))) 
+                        FROM equip_master
+                        WHERE SUBSTR(equip_code, 4, 4) = DATE_FORMAT(NOW(), '%y%m')
+                        FOR UPDATE;`); // EQ-001 형태
+
+    // 3) INSERT 파라미터 (SQL 컬럼 순서 일치)
+    const params = [
+      equipName,
+      manager,
+      inspCycle,
+      installDate,
+      modelName,
+      equipImage,
+      mfgDt,
+      maker,
+      equipType,
+      equipStatus,
+    ];
+
+    // 4) DB 실행
+    const result = await conn.query(
+      `
+INSERT INTO equip_master (
+  equip_code, equip_name, equip_type, manager, equip_status,
+  insp_cycle, install_date, model_name, equip_image, mfg_dt, maker
+)
+SELECT
+  CONCAT('EQ-', DATE_FORMAT(NOW(), '%y%m'),
+         LPAD(
+           COALESCE((
+             SELECT MAX(CAST(SUBSTRING(em.equip_code, 7, 3) AS UNSIGNED))
+             FROM equip_master em
+             WHERE SUBSTRING(em.equip_code, 4, 4) = DATE_FORMAT(NOW(), '%y%m')
+           ), 0) + 1, 3, '0'
+         )),
+   ? ,t.comncode_detailid, ?, s.comncode_detailid,
+  ?, ?, ?, ?, ?, ?
+FROM comncode_dt s
+JOIN comncode_dt t
+  ON t.comncode_id = '0S' AND t.comncode_detailid = ?
+WHERE s.comncode_id = '0J' AND s.comncode_detailid = ?
+`,
+      params
+    );
+
+    await conn.commit();
+    return {
+      equipCode,
+      id: result.insertId,
+      affectedRows: result.affectedRows,
+    };
   } catch (err) {
+    await conn.rollback();
+    // 유니크 충돌은 거의 불가능하지만, 혹시 있으면 메시지만 정리
     if (err.code === "ER_DUP_ENTRY") {
       const e = new Error("이미 존재하는 설비코드입니다.");
       e.status = 409;
       throw e;
     }
     throw err;
+  } finally {
+    conn.release();
   }
 }
 

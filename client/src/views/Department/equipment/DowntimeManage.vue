@@ -166,7 +166,7 @@ onMounted(async () => {
 
                 <tr>
                   <th class="border border-gray-200 bg-gray-50 text-sm text-center p-2">
-                    비가동유형
+                    비가동유형 *
                   </th>
                   <td class="border border-gray-200 p-2">
                     <select
@@ -179,7 +179,9 @@ onMounted(async () => {
                       <option value="점검/수리">점검/수리</option>
                     </select>
                   </td>
-                  <th class="border border-gray-200 bg-gray-50 text-sm text-center p-2">담당자</th>
+                  <th class="border border-gray-200 bg-gray-50 text-sm text-center p-2">
+                    담당자 *
+                  </th>
                   <td class="border border-gray-200 p-2">
                     <div class="relative">
                       <input
