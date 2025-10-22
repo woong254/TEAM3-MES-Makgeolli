@@ -48,7 +48,7 @@ app.get("/", (req, res) => {
 // 라우팅 영역
 
 // 0. 기준정보
-app.use("/", referenceRouter);
+app.use("/api", referenceRouter);
 
 // 1. 영업
 app.use("/api", salesRouter);

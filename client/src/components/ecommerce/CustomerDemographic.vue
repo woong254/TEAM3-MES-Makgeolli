@@ -1,5 +1,5 @@
 <template>
-  <div
+  <!-- <div
     class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] sm:p-6"
   >
     <div class="flex justify-between">
@@ -68,7 +68,7 @@
         </div>
       </div>
     </div>
-  </div>
+  </div> -->
 </template>
 
 <script setup lang="ts">
