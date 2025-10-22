@@ -106,7 +106,7 @@ LEFT JOIN prod_master AS p
        ON p.prod_code = qct.product_code
 LEFT JOIN mat_master AS m
        ON m.mat_code = qct.mat_code
-ORDER BY qcm.insp_item_id;
+ORDER BY qcm.insp_item_id DESC;
 `;
 
 // 1-5. 품질기준관리 수정
@@ -399,6 +399,26 @@ WHERE n.insp_id = 'IQC-20251017-001'
 ORDER BY d.def_item_name`;
 
 // 3. 자재입고검사 조회
+const matInspSelect_basic = `
+SELECT mi.insp_id -- 검사ID
+       ,mi.insp_name -- 검사명
+       ,mi.insp_date -- 검사일시
+       ,mi.emp_id -- 검사자
+       ,m.mat_name -- 검사대상(자재명)
+       ,cd.comncode_dtnm -- 품목구분
+       ,m.mat_spec -- 규격
+       ,m.mat_unit -- 단위
+       ,mi.insp_qty -- 검사량
+       ,mi.t_result -- 합격여부
+FROM mat_insp mi
+LEFT JOIN iis i
+  ON mi.iis_id = i.iis_id
+LEFT JOIN mat_master m
+  ON i.mat_code = m.mat_code
+LEFT JOIN comncode_dt cd
+  ON m.mat_item_code = cd.comncode_detailid
+ORDER BY mi.insp_date DESC, mi.insp_id DESC
+`;
 const matInspSelect = `
 SELECT mi.insp_id -- 검사ID
        ,mi.insp_name -- 검사명
@@ -500,6 +520,26 @@ ORDER BY qt.insp_item_id
 `;
 
 // 4-4. 완제품검사 검색
+const prodInspSearch_basic = `
+SELECT pi.insp_id        -- 검사ID
+       ,pi.insp_name     -- 검사명
+       ,pi.insp_date     -- 검사일시
+       ,pm.prod_name     -- 제품명
+       ,pm.prod_spec     -- 제품규격
+       ,c.comncode_dtnm  -- 제품단위 이름
+       ,pi.insp_qty      -- 검사량
+       ,pi.emp_id        -- 검사자
+       ,pi.procs_no      -- 공정실적번호
+       ,pi.final_result  -- 최종합격여부
+FROM prod_insp pi
+LEFT JOIN processform pf
+  ON pi.procs_no = pf.procs_no
+LEFT JOIN prod_master pm
+  ON pf.prod_code = pm.prod_code
+LEFT JOIN comncode_dt c
+  ON pm.prod_unit = c.comncode_detailid
+ORDER BY pi.insp_date DESC, pi.insp_id DESC
+`;
 const prodInspSearch = `
 SELECT pi.insp_id        -- 검사ID
        ,pi.insp_name     -- 검사명
@@ -629,6 +669,28 @@ ORDER BY procs_no
 `;
 
 // 5-2. 공정검사 검색
+const procInspSearch_basic = `
+SELECT pi.insp_id        -- 검사ID
+       ,pi.insp_name     -- 검사명
+       ,pi.insp_date     -- 검사일시
+       ,pm.prod_name     -- 제품명
+       ,pm.prod_spec     -- 제품규격
+       ,c.comncode_dtnm  -- 제품단위 이름
+       ,pi.insp_qty      -- 검사량
+       ,pi.emp_id        -- 검사자
+       ,pi.procs_no      -- 공정실적번호
+       ,pf.now_procs     -- 현재공정명
+       ,pi.final_result  -- 최종합격여부
+FROM proc_insp pi
+LEFT JOIN processform pf
+  ON pi.procs_no = pf.procs_no
+LEFT JOIN prod_master pm
+  ON pf.prod_code = pm.prod_code
+LEFT JOIN comncode_dt c
+  ON pm.prod_unit = c.comncode_detailid
+ORDER BY pi.insp_date DESC, pi.insp_id DESC
+`;
+
 const procInspSearch = `
 SELECT pi.insp_id        -- 검사ID
        ,pi.insp_name     -- 검사명
@@ -755,14 +817,17 @@ module.exports = {
   selectMatInspResultsById,
   selectMatInspHeaderById,
   matInspSelect,
+  matInspSelect_basic,
   prodInspTargetSelect,
   prodInspTargetNg,
   prodInspTargetQcMaster,
   prodInspSearch,
+  prodInspSearch_basic,
   selectProdInspHeaderById,
   selectProdInspResultsById,
   selectProdInspNGsById,
   procInspTargetSelect,
+  procInspSearch_basic,
   procInspSearch,
   selectProcInspHeaderById,
   selectProcInspResultsById,

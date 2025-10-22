@@ -107,6 +107,7 @@ watch(
               field="insp_date"
               header="검사일시"
               :pt="{ columnHeaderContent: 'justify-center' }"
+              style="text-align: center"
             >
               <template #body="slotProps">
                 {{ formatDateTime(slotProps.data.insp_date) }}

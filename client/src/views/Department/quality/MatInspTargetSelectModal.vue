@@ -92,11 +92,6 @@ const confirmData = () => {
   emit('checked', checkedData.value)
   emit('close')
 }
-
-// style
-const inputStyle =
-  'dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-950 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
-const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400'
 </script>
 
 <template>
@@ -109,19 +104,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
       width="900px"
       @close="closeModal"
     >
-      <!-- <template #modal-header>
-        <div class="flex justify-end">
-          <button type="button" class="btn-common-modal btn-white">초기화</button>
-          <button type="button" class="btn-common-modal btn-color">조회</button>
-        </div>
-      </template> -->
       <template #modal-body>
-        <!-- <div class="modal-container flex gap-2 mb-2">
-          <div class="w-1/3">
-            <label :class="labelStyle" for="insp-name"> 발주명 </label>
-            <input type="text" id="insp-name" :class="inputStyle" />
-          </div>
-        </div> -->
         <div class="modal-container">
           <DataTable
             :value="inspTargetData"
@@ -159,7 +142,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
               field="pur_date"
               header="발주일자"
               :pt="{ columnHeaderContent: 'justify-center' }"
-              style="width: 120px"
+              style="width: 120px; text-align: center"
             />
             <Column
               field="mat_name"

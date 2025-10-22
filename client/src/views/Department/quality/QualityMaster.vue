@@ -836,7 +836,7 @@ const fileStyle =
                 :pt="{ columnHeaderContent: 'justify-center' }"
               />
               <Column
-                field="t_unit"
+                field="t_unit_name"
                 header="단위"
                 :pt="{ columnHeaderContent: 'justify-center' }"
               />
