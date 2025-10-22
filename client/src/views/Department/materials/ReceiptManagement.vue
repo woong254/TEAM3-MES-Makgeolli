@@ -207,7 +207,7 @@ const deleteIis = async () => {
     const { data } = await axios.post('/api/iis/delete', { ids })
 
     if (!data?.ok) {
-      return alert(data?.msg || '삭제 실패')
+      return alert(data?.msg || '삭제가 실패 되었습니다.')
     }
 
     await refreshBoth()
@@ -218,7 +218,7 @@ const deleteIis = async () => {
     const notDeleted = selected.filter((s) => pendingSet.has(s.iis_id) || completeSet.has(s.iis_id))
     const deletedCnt = data.deleted ?? ids.length - notDeleted.length
 
-    let msg = `삭제 처리 완료: ${deletedCnt}건`
+    let msg = `${deletedCnt}건이 삭제 되었습니다.`
     if (notDeleted.length) {
       const lines = notDeleted.map((s) => {
         const reason = completeSet.has(s.iis_id)
@@ -295,13 +295,13 @@ const registerIis = async () => {
             <DataCol
               field="bcnc_code"
               header="매입처코드"
-              style="width: 100px"
+              style="width: 110px; text-align: center"
               :pt="{ columnHeaderContent: 'justify-center' }"
               class="text-sm"
             />
             <DataCol
               field="bcnc_name"
-              header="매입처명"
+              header="매입처명*"
               :pt="{ columnHeaderContent: 'justify-center' }"
               class="text-sm"
               style="padding: 8px"
@@ -341,13 +341,13 @@ const registerIis = async () => {
             <DataCol
               field="mat_code"
               header="자재코드"
-              style="width: 180px"
+              style="width: 180px; text-align: center"
               :pt="{ columnHeaderContent: 'justify-center' }"
               class="text-sm"
             />
             <DataCol
               field="mat_name"
-              header="자재명"
+              header="자재명*"
               style="width: 190px; padding: 8px"
               :pt="{ columnHeaderContent: 'justify-center' }"
               class="text-sm"
@@ -399,7 +399,7 @@ const registerIis = async () => {
             />
             <DataCol
               field="receipt_qty"
-              header="입고량"
+              header="입고량*"
               style="width: 120px; padding: 8px"
               :pt="{ columnHeaderContent: 'justify-center' }"
               class="text-sm"
@@ -421,7 +421,7 @@ const registerIis = async () => {
             </DataCol>
             <DataCol
               field="prod_date"
-              header="제조일자"
+              header="제조일자*"
               :pt="{ columnHeaderContent: 'justify-center' }"
               style="width: 150px; padding: 8px"
               class="text-sm"
@@ -453,7 +453,7 @@ const registerIis = async () => {
             </DataCol>
             <DataCol
               field="exp_date"
-              header="유통기한"
+              header="유통기한*"
               :pt="{ columnHeaderContent: 'justify-center' }"
               style="width: 150px; padding: 8px"
               class="text-sm"
@@ -488,7 +488,7 @@ const registerIis = async () => {
       </ComponentCard>
 
       <!-- 하단: 검사대기/검사완료 카드 -->
-      <ComponentWoong style="height: 536px">
+      <ComponentWoong style="height: 526px">
         <template #body-content>
           <!-- 카드 바디 패딩(초록) 안에서만 작업 -->
           <div class="relative">
@@ -526,7 +526,7 @@ const registerIis = async () => {
                   show-gridlines
                   size="small"
                   scrollable
-                  scroll-height="350px"
+                  scroll-height="400px"
                 >
                   <template #empty>
                     <div class="text-center text-sm">검사대기중인 자재가 없습니다.</div>
@@ -541,6 +541,7 @@ const registerIis = async () => {
                     field="pur_code"
                     header="발주코드"
                     :pt="{ columnHeaderContent: 'justify-center' }"
+                    style="text-align: center"
                     class="text-sm"
                   />
                   <DataCol
@@ -566,6 +567,7 @@ const registerIis = async () => {
                     field="mat_code"
                     header="자재코드"
                     :pt="{ columnHeaderContent: 'justify-center' }"
+                    style="text-align: center"
                     class="text-sm"
                   />
                   <DataCol
@@ -618,7 +620,7 @@ const registerIis = async () => {
                   data-key="iis_id"
                   size="small"
                   scrollable
-                  scroll-height="380px"
+                  scroll-height="400px"
                 >
                   <template #empty>
                     <div class="text-center text-sm">검사완료된 자재가 없습니다.</div>
@@ -633,6 +635,7 @@ const registerIis = async () => {
                     field="pur_code"
                     header="발주코드"
                     :pt="{ columnHeaderContent: 'justify-center' }"
+                    style="text-align: center"
                     class="text-sm"
                   />
                   <DataCol
@@ -658,6 +661,7 @@ const registerIis = async () => {
                     field="mat_code"
                     header="자재코드"
                     :pt="{ columnHeaderContent: 'justify-center' }"
+                    style="text-align: center"
                     class="text-sm"
                   />
                   <DataCol

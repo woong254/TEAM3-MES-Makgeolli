@@ -102,6 +102,7 @@ watch(
             header="발주코드"
             :pt="{ columnHeaderContent: 'justify-center' }"
             class="text-sm"
+            style="text-align: center"
           />
           <DataCol
             field="pur_name"
@@ -114,6 +115,7 @@ watch(
             header="매입처코드"
             :pt="{ columnHeaderContent: 'justify-center' }"
             class="text-sm"
+            style="text-align: center"
           />
           <DataCol
             field="bcnc_name"
@@ -125,6 +127,7 @@ watch(
             field="mat_code"
             header="자재코드"
             :pt="{ columnHeaderContent: 'justify-center' }"
+            style="text-align: center"
             class="text-sm"
           />
           <DataCol

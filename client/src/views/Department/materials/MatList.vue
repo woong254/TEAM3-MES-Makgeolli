@@ -165,7 +165,7 @@ onMounted(fetchRows)
       </ComponentCard>
 
       <!-- 자재 목록 -->
-      <ComponentCard title="자재 재고 목록" style="height: 561px">
+      <ComponentCard title="자재 재고 목록" style="height: 551px">
         <template #body-content>
           <DataTable
             v-model:expandedRows="expanded"
@@ -173,7 +173,7 @@ onMounted(fetchRows)
             dataKey="mat_code"
             @rowExpand="onRowExpand"
             scrollable
-            scrollHeight="431px"
+            scrollHeight="421px"
             size="small"
             showGridlines
             :tableStyle="{ minWidth: '1200px' }"
@@ -188,6 +188,7 @@ onMounted(fetchRows)
               header="자재코드"
               :pt="{ columnHeaderContent: 'justify-center' }"
               class="text-sm"
+              style="text-align: center"
             />
             <DataCol
               field="mat_name"

@@ -233,7 +233,7 @@ JOIN bcnc_master b ON b.bcnc_code = i.bcnc_code
 JOIN pur_form f ON f.pur_code  = i.pur_code  
 WHERE i.insp_status = ?
   AND (i.t_result IS NULL OR i.t_result = 'P')
-ORDER BY i.iis_id;
+ORDER BY i.iis_id DESC;
 `;
 
 const deleteIis = `

@@ -154,7 +154,7 @@ const exportPDF = async () => {
               <tbody>
                 <tr>
                   <th>발주코드</th>
-                  <td class="left">{{ cur.headerInfo.pur_code }}</td>
+                  <td class="center">{{ cur.headerInfo.pur_code }}</td>
                   <th>발주서명</th>
                   <td class="left">{{ cur.headerInfo.pur_name }}</td>
                 </tr>

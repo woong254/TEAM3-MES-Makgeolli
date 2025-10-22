@@ -147,7 +147,7 @@ const selectBcnc = () => {
             field="bcnc_code"
             header="매입처코드"
             :pt="{ columnHeaderContent: 'justify-center' }"
-            style="width: 130px"
+            style="width: 130px; text-align: center"
             class="text-sm"
           />
           <DataCol
