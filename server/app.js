@@ -69,7 +69,7 @@ app.use("/api", equipmentRouter);
 app.use("/", uploadsRouter);
 
 // pdf 출력
-app.post("/download-order-pdf", async (req, res) => {
+app.post("/api/download-order-pdf", async (req, res) => {
   // 1. 프론트엔드에서 POST 요청의 본문(body)으로 보낸 데이터를 받습니다.
   const { html, filename } = req.body;
 
