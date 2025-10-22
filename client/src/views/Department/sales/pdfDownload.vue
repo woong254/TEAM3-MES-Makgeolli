@@ -598,9 +598,6 @@ const exportPDF = async () => {
           </div>
           <!-- /PDF 변환 대상 템플릿 끝 -->
         </div>
-        <div class="flex justify-center mt-3 control-buttons">
-          <button class="btn-common btn-color" @click="closeModal">취소</button>
-        </div>
       </template>
     </Modal>
   </div>

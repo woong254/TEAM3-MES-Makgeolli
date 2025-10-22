@@ -363,6 +363,9 @@ onMounted(async () => {
             @row-click="onRowClick"
             @selection-change="onSelectionChange"
           >
+            <template #empty>
+              <div class="text-center text-sm">등록된 설비가 없습니다.</div>
+            </template>
             <DataCol selectionMode="single" headerStyle="width: 2.5rem" />
             <DataCol field="equipCode" header="설비코드" />
             <DataCol field="equipName" header="설비명" />
