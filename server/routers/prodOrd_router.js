@@ -4,7 +4,10 @@ const express = require("express");
 const router = express.Router();
 
 const prodOrdService = require("../services/prodOrd_service.js");
-const { getNextProcessQty } = require("../services/prodOrd_service.js");
+const { 
+  nowProcessQty,
+  getNextProcessQty
+} = require("../services/prodOrd_service.js");
 
 // 본인이 작성한 지시서 조회
 router.get("/makeList", async (req, res) => {
@@ -188,11 +191,21 @@ router.post("/startProcess", async (req, res) => {
   }
 });
 
-// 이미 공정 들어간 정보 찾기
-router.get("/findProcess", async (req, res) => {
-  const { mkd_no, equip_code, emp_id } = req.body;
-  const result = await calculateRemainingQty(item_code, target_qty);
-  res.json(result);
+// 현재 투입된 총수량
+router.post("/nowProcessInputQty", async (req, res) => {
+  try {
+    const { mk_list, seq_no } = req.body;
+
+    if (!mk_list || seq_no === undefined) {
+      console.error(err);
+    }
+
+    const inputQty = await nowProcessQty(mk_list, seq_no);
+
+    res.json({ success: true, inputQty });
+  } catch (err) {
+    console.error(err);
+  }
 });
 
 // 다음 공정 가능 수량 체크
