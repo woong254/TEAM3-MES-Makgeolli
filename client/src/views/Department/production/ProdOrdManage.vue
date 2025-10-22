@@ -245,6 +245,7 @@ const goToProcess = async () => {
         emp_id: emp.emp_id,
         equip_code: equip.equip_code,
         mkd_no: make.mkd_no, // 다음 페이지에서 데이터를 조회하는 데 필요한 최소한의 정보를 쿼리로 전달
+        now_procs: payload.now_procs,
       },
     }) // 페이지 이동에 성공하면 이 컴포넌트는 언마운트되므로 isSubmitting을 false로 되돌릴 필요가 없습니다.
   } catch (err) {

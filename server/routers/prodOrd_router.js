@@ -4,7 +4,7 @@ const express = require("express");
 const router = express.Router();
 
 const prodOrdService = require("../services/prodOrd_service.js");
-const { getNextProcessQty } = require('../services/prodOrd_service.js');
+const { getNextProcessQty } = require("../services/prodOrd_service.js");
 
 // 본인이 작성한 지시서 조회
 router.get("/makeList", async (req, res) => {
@@ -78,7 +78,8 @@ router.get("/getProcessData", async (req, res) => {
   const emp_id = req.query.emp_id;
   const equip_code = req.query.equip_code;
   const mkd_no = req.query.mkd_no;
-  const param = { emp_id, equip_code, mkd_no };
+  const now_procs = req.query.now_procs;
+  const param = { emp_id, equip_code, mkd_no, now_procs };
   console.log("param:", param);
 
   try {
@@ -126,12 +127,28 @@ router.get("/getCurrentProcessQty", async (req, res) => {
 router.post("/startProcess", async (req, res) => {
   // 1. 요청 본문(req.body)에서 필요한 '평면적인' 데이터를 직접 구조 분해 할당으로 가져옵니다.
   // 클라이언트가 보낸 실제 필드 이름: mkd_no, prod_code, inpt_qty, equip_code, emp_id
-  const { mkd_no, prod_code, inpt_qty, equip_code, emp_id, proc_id, seq_no } = req.body;
+  const {
+    mkd_no,
+    prod_code,
+    inpt_qty,
+    equip_code,
+    emp_id,
+    proc_id,
+    seq_no,
+    now_procs,
+  } = req.body;
 
   try {
     // 2. 필수 데이터 누락 체크 (주요 필드만 검사)
     // 이전의 make, equip, emp 객체 대신, 핵심 ID 필드들을 직접 확인합니다.
-    if (!mkd_no || !prod_code || !equip_code || !emp_id || !proc_id || !seq_no) {
+    if (
+      !mkd_no ||
+      !prod_code ||
+      !equip_code ||
+      !emp_id ||
+      !proc_id ||
+      !seq_no
+    ) {
       console.error("필수 요청 데이터 누락:", req.body);
       return res.status(400).json({
         error: "Bad Request",
@@ -151,6 +168,7 @@ router.post("/startProcess", async (req, res) => {
       seq_no: seq_no, // 우선 순위
       mk_qty: 0, // 초기 생산량 0
       procs_st: "t1", // 실적상태: 생산대기
+      now_procs: now_procs,
     }; // 4. DB에 작업시작 행 등록
 
     const result = await prodOrdService.insertProcessForm(processObj); // 5. 성공 응답 (HTTP 201 Created 권장)
@@ -179,7 +197,7 @@ router.get("/findProcess", async (req, res) => {
 
 // 다음 공정 가능 수량 체크
 // routes/prodOrd_router.js
-router.post('/nextProcessMaxQty', async (req, res) => {
+router.post("/nextProcessMaxQty", async (req, res) => {
   try {
     const { mk_list, seq_no } = req.body;
 

@@ -86,7 +86,7 @@ const chooseAboutEquip = async (procName) => {
  * **기투입량(prev_input_qty) 및 미투입량(remain_qty) 계산 로직 추가.**
  */
 const selectProcessControlData = async (data) => {
-  const { emp_id, equip_code, mkd_no } = data;
+  const { emp_id, equip_code, mkd_no, now_procs } = data;
   console.log("data:", data);
 
   try {
@@ -94,6 +94,7 @@ const selectProcessControlData = async (data) => {
       emp_id,
       equip_code,
       mkd_no,
+      now_procs,
     ]);
     console.log("result1", result);
     // 대부분의 DB 라이브러리가 [rows, fields] 형태로 반환하는 경우를 대비해 rows만 추출
@@ -317,13 +318,7 @@ const insertProcessForm = async (params) => {
     await conn.beginTransaction(); // 트랜잭션 시작
 
     // 1. 현재 공정명 가져오기 (conn 객체 사용)
-    const procRowResult = await conn.query(
-      `SELECT pm.proc_name
-      FROM proc_master pm JOIN equip_master em 
-      ON pm.equip_type = em.equip_type
-      WHERE em.equip_code = ?`,
-      [params.equip_code]
-    );
+    const procRowResult = params.now_procs;
 
     const procRow =
       Array.isArray(procRowResult) &&
@@ -435,12 +430,18 @@ const insertProcessForm = async (params) => {
       WHERE mk_list = ?
       AND equip_code = ?
       AND emp_no = ?
+      AND now_procs = ?
       AND procs_st <> 't3'`,
-      [params.mk_list, params.equip_code, params.emp_no]
+      [params.mk_list, params.equip_code, params.emp_no, params.now_procs]
     );
 
     if (checkResult.length > 0) {
       await conn.commit(); // 모든 쿼리가 성공하면 최종 반영
+      console.log("checkResult", {
+        mk_list: params.mk_list,
+        equip_code: params.equip_code,
+        emp_no: params.emp_no,
+      });
       return { isSuccessed: true };
     } else {
       // 2. 공정실적관리 테이블에 삽입 (conn 객체 사용)
@@ -463,9 +464,20 @@ const insertProcessForm = async (params) => {
           params.inpt_qty,
           params.procs_st,
           params.seq_no,
-          now_procs,
+          params.now_procs,
         ]
       );
+      console.log("insertResult:", {
+        mk_list: params.mk_list,
+        equip_code: params.equip_code,
+        emp_no: params.emp_no,
+        prod_code: params.prod_code,
+        inpt_qty: params.inpt_qty,
+        procs_st: params.procs_st,
+        seq_no: params.seq_no,
+        now_procs: params.now_procs,
+      });
+
       await conn.commit(); // 모든 쿼리가 성공하면 최종 반영
       return { isSuccessed: true, result: insertResult };
     }
