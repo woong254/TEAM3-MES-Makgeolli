@@ -408,7 +408,9 @@ watch(
                     headerStyle="width:37px"
                     bodyStyle="width:37px"
                   />
-
+                  <template #empty>
+                    <div class="text-center text-sm">비가동된 설비가 없습니다.</div>
+                  </template>
                   <DataCol field="equipCode" header="설비코드" />
                   <DataCol field="equipName" header="설비명" />
                   <DataCol field="downtimeType" header="비가동유형" />
@@ -440,6 +442,9 @@ watch(
                   :rows="20"
                   size="small"
                 >
+                  <template #empty>
+                    <div class="text-center text-sm">등록된 비가동 이력이 없습니다.</div>
+                  </template>
                   <DataCol field="equipCode" header="설비코드" />
                   <DataCol field="equipName" header="설비명" />
                   <DataCol field="downtimeType" header="비가동유형" />

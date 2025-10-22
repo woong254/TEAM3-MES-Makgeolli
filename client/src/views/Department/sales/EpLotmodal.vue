@@ -254,7 +254,6 @@ const onBlurCheck = (row: EpLot) => {
           </div>
           <div class="flex justify-center mt-3">
             <button type="button" class="btn-common btn-white" @click="selectedEpLot">확인</button>
-            <button class="btn-common btn-color" @click="closeModal">취소</button>
           </div>
         </template>
       </Modal>
