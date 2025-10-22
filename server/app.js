@@ -60,7 +60,7 @@ app.use("/", prodOrdRouter); // 생산지시서
 app.use("/", materialsRouter);
 
 // 4. 품질
-app.use("/", qualityRouter);
+app.use("/api", qualityRouter);
 
 // 5. 장비
 app.use("/", equipmentRouter);
