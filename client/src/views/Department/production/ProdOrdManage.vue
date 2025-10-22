@@ -42,6 +42,8 @@ interface MakeOrderDetail {
   proc_name: string // 공정명
   total_inpt_qty: string // 실적상태
   inpt_qty: number
+  remaining_qty: number // 잔여수량
+  total_input: number
 }
 
 interface ChooseEquip {
@@ -156,6 +158,15 @@ onMounted(async () => {
     const item = makeRows.value[i];
     if (item.seq_no > 1) {
       try {
+        // 현재 공정에서의 투입 수량 total_input
+        const totalInput = await axios.post('/api/nowProcessInputQty', {
+          mk_list: item.mkd_no,
+          seq_no: item.seq_no
+        });
+        item.total_input = totalInput.data.success ? Number(totalInput.data.inputQty || 0) : 0;
+
+
+        // 다음 공정의 최대 지시 수량을 위한 mk_num
         const apiRes = await axios.post('/api/nextProcessMaxQty', {
           mk_list: item.mkd_no,
           seq_no: item.seq_no
@@ -166,6 +177,11 @@ onMounted(async () => {
         item.mk_num = 0;
       }
     }
+  }
+  
+
+  if (selectMake.value && !isSelectableRow(selectMake.value)) {
+    selectMake.value = null;
   }
 });
 
@@ -223,7 +239,6 @@ const goToProcess = async () => {
     inpt_qty: make.inpt_qty, // 현 투입량 (최신값)
     equip_code: equip.equip_code, // 설비코드
     emp_id: emp.emp_id, // 사원번호
-    // 기타 필요한 데이터 (예: proc_id, mk_ord_no 등)
     proc_id: make.proc_id,
     mk_ord_no: make.mk_ord_no,
     seq_no: make.seq_no, // 우선순위
@@ -257,30 +272,49 @@ const goToProcess = async () => {
   // isSubmitting.value = false 를 남겨둘 수도 있지만, 여기서는 catch에서 명시적으로 처리했습니다.
 }
 
-//preitteir 오류 input 빼내기
+// 지시 가능 수량
 const onInputInptQty = (data: MakeOrderDetail) => {
   const max = Number(data.mk_num || 0)
-  // ----------------------------------------------------
-  // [수정 위치 2] 입력값 안정성 확보
-  // ----------------------------------------------------
-  // v-model.number를 사용하지만, 혹시 모를 상황을 대비해 Number()로 다시 감싸줍니다.
-  const cur = Number(data.inpt_qty || 0)
-  // ----------------------------------------------------
+  const cur = Number(data.inpt_qty || 0) 
 
-  // 1) 입력값을 0~max 범위로 보정
-  // ----------------------------------------------------
-  // [수정 위치 3] inpt_qty는 number 타입이므로 string 대신 number로 할당
-  // ----------------------------------------------------
-  data.inpt_qty = Math.min(max, Math.max(0, cur))
-  // ----------------------------------------------------
+  const newInptQty = Math.min(max, Math.max(0, cur))
+  
+  // 2. makeRows 배열에서 해당 행의 인덱스를 찾습니다.
+  const index = makeRows.value.findIndex(row => row.mkd_no === data.mkd_no)
 
-  // 2) 현재 선택행(selectMake)도 함께 동기화
-  // 주의: <script setup>함수 내부에서는 ref는 .value로 접근
-  if (selectMake.value && selectMake.value.mk_ord_no === data.mk_ord_no) {
-    selectMake.value.inpt_qty = data.inpt_qty
+  console.log(index)
+
+  if (index !== -1) {
+    // 3. 새로운 inpt_qty를 가진 새로운 객체를 생성합니다.
+    const updatedRow = { 
+        ...makeRows.value[index], // 기존 데이터 복사
+        inpt_qty: newInptQty      // 새로운 inpt_qty 할당
+    }
+    
+    // 4. makeRows 배열의 요소를 새로운 객체로 교체하여 PrimeVue/Vue에 변경을 명시적으로 알립니다.
+    makeRows.value[index] = updatedRow;
+    
+    // 5. 현재 선택된 행이 수정된 행이라면, selectMake.value도 동기화합니다.
+    if (selectMake.value && selectMake.value.mk_ord_no === updatedRow.mk_ord_no) {
+        // Vue의 반응성을 유지하며 값을 할당해야 합니다.
+        // selectMake.value는 makeRows의 객체를 참조할 수 있으므로,
+        // makeRows[index] = updatedRow 이후 이 코드는 사실상 불필요할 수 있지만,
+        // 안전을 위해 명시적으로 동기화합니다.
+        selectMake.value.inpt_qty = newInptQty
+    }
   }
 }
 
+// mk_num: 문자 0 -> 숫자 0으로 변환 
+const isSelectableRow = (data: MakeOrderDetail): boolean => {
+  const mkNum = Math.max(0, Number(data.mk_num || 0) - Number(data.total_input || 0));
+  return mkNum > 0; // false 반환
+}
+
+// comncode_dtnm가 있는 행은 비활성화
+const rowClassHook = (data: MakeOrderDetail) => {
+  return !isSelectableRow(data) ? 'disabled-row' : ''
+}
 
 const currentPageTitle = ref('공정 실적 관리')
 
@@ -413,6 +447,8 @@ const baseInputClass =
                   selectionMode="single"
                   @row-select="selectProcName"
                   v-model:selection="selectMake"
+                  :rowSelectable="isSelectableRow"
+                  :rowClass="rowClassHook"
                 >
                   <template #empty>
                     <div class="text-center">지시건이 없습니다</div>
@@ -478,16 +514,21 @@ const baseInputClass =
                     headerStyle="width: 7%"
                   >
                     <template #body="{ data }">
-                      <input
-                        v-model.number="data.inpt_qty"
-                        type="number"
-                        :min="0"
-                        :max="Number(data.mk_num || 0)"
-                        :class="baseInputClass"
-                        style="text-align: right; height: 2rem"
-                        @input="onInputInptQty(data)"
-                        placeholder="투입"
-                      />
+                      <template v-if="Number(data.mk_num || 0) > 0">
+                        <input
+                          v-model.number="data.inpt_qty"
+                          type="number"
+                          :min="0"
+                          :max="Number(data.mk_num || 0)"
+                          :class="baseInputClass"
+                          style="text-align: right; height: 2rem"
+                          @input="onInputInptQty(data)"
+                          placeholder="투입"
+                        />
+                      </template>
+                      <template v-else>
+                        <span style="display: block; text-align: center;">-</span>
+                      </template>
                     </template>
                   </Column>
                   <Column
@@ -498,8 +539,12 @@ const baseInputClass =
                     headerStyle="width: 5%"
                   >
                     <template #body="{ data }">
-                      <div style="text-align: right">
-                        {{ Math.max(0, Number(data.mk_num || 0) - Number(data.inpt_qty || 0)) }}
+                      <div 
+                        style="text-align: right"
+                        :min="0"
+                        :max="Number(data.mk_num || 0)"
+                      >
+                        {{ Math.max(0, Number(data.mk_num || 0) - Number(data.total_input || 0)) }}
                       </div>
                     </template>
                   </Column>
@@ -634,21 +679,33 @@ const baseInputClass =
   </AdminLayout>
 </template>
 
-<style>
-.dense-table .p-datatable-thead > tr > th {
+<style scoped>
+:deep(.dense-table .p-datatable-thead > tr > th) {
   padding: 0.25rem 0.5rem;
   margin: 0;
   font-size: 14px;
   line-height: 1.2;
 }
-.dense-table .p-datatable-tbody > tr > td {
+:deep(.dense-table .p-datatable-tbody > tr > td) {
   padding: 0.25rem 0.5rem;
   font-size: 12px;
   line-height: 1.2;
 }
 /* 헤더 높이 추가 축소 시 */
-.dense-table .p-datatable-header {
+:deep(.dense-table .p-datatable-header) {
   padding: 0.25rem 0.5rem;
   font-size: 12px;
+}
+
+:deep(.disabled-row) {
+  opacity: 0.6; /* 불투명도 흐릿하게 만드는거 */
+  pointer-events: none; /* 클릭 선택 못하게 */
+  user-select: none; /* 사용자가 드래그 하지 못하게 */
+}
+:deep(.disabled-row .p-radiobutton) {
+  /* 비활성화 될경우 체크박스 배경색 */
+  background-color: #f5f5f5;
+  /* 비활성화 될경우 체크박스 선색 */
+  border-color: #ccc;
 }
 </style>

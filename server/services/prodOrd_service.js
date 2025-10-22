@@ -583,6 +583,28 @@ WHERE prod_code = ?`,
   }
 };
 
+// 현재 공정에 투입된 수량
+const nowProcessQty = async (mk_list, seq_no) => {
+  try {
+    const sql = `
+      SELECT SUM(inpt_qty) AS total_input
+      FROM processform
+      WHERE mk_list = ?
+      AND seq_no = ?
+    `;
+
+    // 숫자로 변환 후 전달
+    const rows = await mariadb.query(sql, [Number(mk_list), Number(seq_no)]);
+    const totalInput = rows[0]?.total_input || 0;
+
+    return totalInput;
+  } catch (err) {
+    console.error("[getNextProcessQty] Error:", err);
+    return 0;
+  }
+};
+
+
 const getNextProcessQty = async (mk_list, seq_no) => {
   try {
     const sql = `
@@ -596,8 +618,6 @@ const getNextProcessQty = async (mk_list, seq_no) => {
     // 숫자로 변환 후 전달
     const rows = await mariadb.query(sql, [Number(mk_list), Number(seq_no)]);
     const totalPass = rows[0]?.total_pass || 0;
-
-    console.log("Max next qty:", totalPass);
 
     return totalPass;
   } catch (err) {
@@ -617,5 +637,6 @@ module.exports = {
   updateProcessForm,
   processStart,
   getCurrentProcessQty,
+  nowProcessQty,
   getNextProcessQty,
 };
