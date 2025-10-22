@@ -11,6 +11,7 @@ const route = useRoute()
 const empId = route.query.emp_id as string
 const equipCode = route.query.equip_code as string
 const mkdNo = route.query.mkd_no as string
+const now_procs = route.query.now_procs as string
 console.log('넘어온 사원번호:', empId)
 
 // 제목이름 지정 변수
@@ -163,6 +164,7 @@ const fetchProcessData = async () => {
         emp_id: empId,
         equip_code: equipCode,
         mkd_no: mkdNo,
+        now_procs: now_procs,
       },
     })
     const dbResult = response.data.result[0]
@@ -254,7 +256,7 @@ onMounted(() => {
   fetchProcessData()
 })
 
-// [핵심] 컴포넌트가 사라질 때 setInterval 정리
+// 컴포넌트가 사라질 때 setInterval 정리
 onUnmounted(() => {
   stopPolling()
 })

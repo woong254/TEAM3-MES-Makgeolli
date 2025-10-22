@@ -64,5 +64,6 @@ SELECT  pf.procs_no,
         WHERE empm.emp_id = ?
         AND em.equip_code = ?
         AND md.mkd_no = ?
+        AND pf.now_procs = ?
         AND pf.procs_st <> 't3'`;
 module.exports = { insertedResult, selectProcessControlData };
