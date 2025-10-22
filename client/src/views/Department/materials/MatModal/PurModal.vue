@@ -157,6 +157,7 @@ const selectPur = () => {
             header="발주코드"
             :pt="{ columnHeaderContent: 'justify-center' }"
             class="text-sm"
+            style="text-align: center"
           />
           <DataCol
             field="pur_name"

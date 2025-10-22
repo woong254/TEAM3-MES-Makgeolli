@@ -303,13 +303,13 @@ onMounted(async () => {
               header="발주코드"
               v-if="purChase.length && purChase[0]?.pur_code"
               :pt="{ columnHeaderContent: 'justify-center' }"
-              style="width: 120px"
+              style="width: 120px; text-align: center"
               class="text-sm"
             />
 
             <DataCol
               field="pur_name"
-              header="발주서명"
+              header="발주서명*"
               :pt="{ columnHeaderContent: 'justify-center' }"
               style="width: 200px; padding: 8px"
               class="text-sm"
@@ -322,7 +322,7 @@ onMounted(async () => {
             <!-- 매입처명 + 돋보기 아이콘 -->
             <DataCol
               field="bcnc_name"
-              header="매입처명"
+              header="매입처명*"
               :pt="{ columnHeaderContent: 'justify-center' }"
               style="width: 200px; padding: 8px"
               class="text-sm"
@@ -370,7 +370,7 @@ onMounted(async () => {
             <!-- 입고요청일자 + 캘린더 아이콘 -->
             <DataCol
               field="receipt_date"
-              header="입고요청일자"
+              header="입고요청일자*"
               style="width: 170px; padding: 8px"
               :pt="{ columnHeaderContent: 'justify-center' }"
               class="text-sm"
@@ -428,7 +428,7 @@ onMounted(async () => {
         </template>
       </ComponentCard>
 
-      <ComponentCard title="발주자재" style="height: 536px">
+      <ComponentCard title="발주자재" style="height: 526px">
         <template #header-right>
           <div class="flex justify-end space-x-2">
             <button type="button" class="btn-color btn-common" @click="isMatModalOpen = true">
@@ -461,7 +461,7 @@ onMounted(async () => {
             <DataCol
               field="mat_code"
               header="자재코드"
-              style="width: 180px"
+              style="width: 180px; text-align: center"
               :pt="{ columnHeaderContent: 'justify-center' }"
               class="text-sm"
             />
@@ -502,7 +502,7 @@ onMounted(async () => {
             />
             <DataCol
               field="pur_qty"
-              header="발주수량"
+              header="발주수량*"
               style="width: 200px; padding: 8px"
               :pt="{ columnHeaderContent: 'justify-center' }"
               class="text-sm"

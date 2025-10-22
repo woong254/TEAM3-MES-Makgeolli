@@ -148,6 +148,7 @@ const selectMat = () => {
             field="mat_code"
             header="자재코드"
             :pt="{ columnHeaderContent: 'justify-center' }"
+            style="text-align: center"
             class="text-sm"
           />
           <DataCol
