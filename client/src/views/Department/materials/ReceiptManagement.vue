@@ -289,13 +289,13 @@ const registerIis = async () => {
               field="pre_receipt_date"
               header="가입고일자"
               :pt="{ columnHeaderContent: 'justify-center' }"
-              style="width: 150px; text-align: center"
+              style="width: 120px; text-align: center"
               class="text-sm"
             />
             <DataCol
               field="bcnc_code"
               header="매입처코드"
-              style="width: 120px"
+              style="width: 100px"
               :pt="{ columnHeaderContent: 'justify-center' }"
               class="text-sm"
             />
@@ -488,7 +488,7 @@ const registerIis = async () => {
       </ComponentCard>
 
       <!-- 하단: 검사대기/검사완료 카드 -->
-      <ComponentWoong style="height: 530px">
+      <ComponentWoong style="height: 536px">
         <template #body-content>
           <!-- 카드 바디 패딩(초록) 안에서만 작업 -->
           <div class="relative">
@@ -529,7 +529,7 @@ const registerIis = async () => {
                   scroll-height="350px"
                 >
                   <template #empty>
-                    <div class="text-center">검사대기중인 자재가 없습니다.</div>
+                    <div class="text-center text-sm">검사대기중인 자재가 없습니다.</div>
                   </template>
                   <DataCol
                     selection-mode="multiple"
@@ -621,7 +621,7 @@ const registerIis = async () => {
                   scroll-height="380px"
                 >
                   <template #empty>
-                    <div class="text-center">검사완료된 자재가 없습니다.</div>
+                    <div class="text-center text-sm">검사완료된 자재가 없습니다.</div>
                   </template>
                   <DataCol
                     selection-mode="multiple"

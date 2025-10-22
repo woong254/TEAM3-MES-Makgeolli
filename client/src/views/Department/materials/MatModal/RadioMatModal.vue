@@ -109,7 +109,7 @@ const selectMat = () => {
     title-align="left"
     header-align="right"
     footer-align="center"
-    width="800px"
+    width="1000px"
   >
     <template #modal-header>
       <button type="button" class="btn-color btn-common" @click="searchMatList">조회</button>

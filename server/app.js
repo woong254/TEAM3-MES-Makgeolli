@@ -57,7 +57,7 @@ app.use("/api", salesRouter);
 app.use("/", prodOrdRouter); // 생산지시서
 
 // 3. 자재
-app.use("/", materialsRouter);
+app.use("/api", materialsRouter);
 
 // 4. 품질
 app.use("/", qualityRouter);

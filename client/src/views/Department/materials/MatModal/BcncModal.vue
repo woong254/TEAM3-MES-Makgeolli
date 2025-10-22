@@ -4,7 +4,6 @@ import DataTable from 'primevue/datatable'
 import DataCol from 'primevue/column'
 import { ref, watch, computed } from 'vue'
 import axios from 'axios'
-import { template } from 'lodash'
 
 const props = defineProps({
   modelValue: Boolean,
