@@ -69,7 +69,6 @@ const findAllMakeList = async () => {
   const [makeRows, empRows] = await Promise.all([
     mariadb.query("selectMakeAll").catch((err) => console.error(err)),
     mariadb.query("selectEmpAll").catch((err) => console.error(err)),
-    
   ]);
   return { makeRows, empRows };
 };
@@ -576,10 +575,9 @@ const getNextProcessQty = async (mkd_no, prev_proc) => {
     WHERE mk_list = ?
     AND now_procs = ?
   `;
-  const [rows] = await db.execute(sql, [mkd_no, prev_proc]);
+  const [rows] = await mariadb.query(sql, [mkd_no, prev_proc]);
   return rows[0].total_pass || 0; // 값이 없으면 0
-}
-
+};
 
 module.exports = {
   findByEmpId,

@@ -16,7 +16,7 @@ SELECT
     prod.prod_spec, 
     CASE
         -- 공정 순서 1: 총 지시량 - (1번 공정에 이미 투입된 총량) = 잔여 지시 수량
-        WHEN pfd.seq_no = 1 THEN mkd.mk_num - COALESCE(
+        WHEN pfd.seq_no > 1 THEN mkd.mk_num - COALESCE(
             (SELECT SUM(inpt_qty) 
              FROM processform 
              WHERE mk_list = mkd.mkd_no 
@@ -95,4 +95,4 @@ module.exports = {
   selectEquipAll,
   selectEmpAll,
   nextProcessQty,
-}
+};
