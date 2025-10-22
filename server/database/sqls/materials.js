@@ -93,6 +93,7 @@ const selectPurMatList = `
     m.mat_unit
   FROM mat_master m
   LEFT JOIN lot_mat l ON l.mat_code = m.mat_code
+  WHERE m.mat_item_code = 'a1'
   GROUP BY m.mat_code, m.mat_name, m.safe_stock, m.mat_spec, m.mat_unit
   ORDER BY m.mat_code
 `;
@@ -108,6 +109,7 @@ const selectPurMatTarget = `
   FROM mat_master m
   LEFT JOIN lot_mat l ON l.mat_code = m.mat_code
   WHERE m.mat_name LIKE ?
+  AND m.mat_item_code = 'a1'
   GROUP BY m.mat_code, m.mat_name, m.safe_stock, m.mat_spec, m.mat_unit
   ORDER BY m.mat_code
 `;

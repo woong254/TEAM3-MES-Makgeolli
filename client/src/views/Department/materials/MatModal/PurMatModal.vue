@@ -24,6 +24,16 @@ const baseInputClass =
 
 const displayed = computed(() => modalPur.value)
 
+/** 숫자 표시: 항상 소수점 2자리(천단위 콤마 포함) */
+const fmtQty = (v) => {
+  if (v === null || v === undefined || v === '') return ''
+  let s = v
+  if (typeof s === 'string') s = s.replace(/[, ]+/g, '').trim()
+  const n = Number(s)
+  if (!Number.isFinite(n)) return String(v)
+  return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
 /** 전체 목록 조회 */
 const getPurList = async () => {
   try {
@@ -148,13 +158,16 @@ watch(
             :pt="{ columnHeaderContent: 'justify-center' }"
             class="text-sm"
           />
+          <!-- ✅ 미입고량: 항상 2자리 소수 표시 -->
           <DataCol
             field="unreceipt_qty"
             header="미입고량"
             style="text-align: right"
             :pt="{ columnHeaderContent: 'justify-center' }"
             class="text-sm"
-          />
+          >
+            <template #body="{ data }">{{ fmtQty(data.unreceipt_qty) }}</template>
+          </DataCol>
           <DataCol
             field="receipt_status"
             header="입고상태"

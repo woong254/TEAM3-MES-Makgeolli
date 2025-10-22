@@ -21,8 +21,17 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
 const baseInputClass =
   'dark:bg-dark-900 h-8 w-full rounded-lg border border-gray-300 bg-transparent pl-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
 
-const blocked = computed(() => new Set(props.blockedCodes))
+// 숫자 표시: 항상 소수점 2자리(, 포함)
+const fmtQty = (v) => {
+  if (v === null || v === undefined || v === '') return ''
+  let s = v
+  if (typeof s === 'string') s = s.replace(/[, ]+/g, '').trim()
+  const n = Number(s)
+  if (!Number.isFinite(n)) return String(v)
+  return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
 
+const blocked = computed(() => new Set(props.blockedCodes))
 const displayed = computed(() => modalMat.value.filter((r) => !blocked.value.has(r?.mat_code)))
 
 const pruneSelection = () => {
@@ -146,14 +155,20 @@ const selectMat = () => {
             :pt="{ columnHeaderContent: 'justify-center' }"
             class="text-sm"
             style="text-align: right"
-          />
+          >
+            <!-- ✅ 소수점 둘째자리 고정 -->
+            <template #body="{ data }">{{ fmtQty(data.stock_qty) }}</template>
+          </DataCol>
           <DataCol
             field="safe_stock"
             header="안전재고"
             :pt="{ columnHeaderContent: 'justify-center' }"
             class="text-sm"
             style="text-align: right"
-          />
+          >
+            <!-- ✅ 소수점 둘째자리 고정 -->
+            <template #body="{ data }">{{ fmtQty(data.safe_stock) }}</template>
+          </DataCol>
           <DataCol
             field="mat_spec"
             header="규격"
@@ -169,6 +184,7 @@ const selectMat = () => {
         </DataTable>
       </div>
     </template>
+
     <template #modal-footer>
       <button type="button" class="btn-white btn-common" @click="selectMat">확인</button>
     </template>
