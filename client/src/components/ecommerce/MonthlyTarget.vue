@@ -1,5 +1,5 @@
 <template>
-  <div
+  <!-- <div
     class="rounded-2xl border border-gray-200 bg-gray-100 dark:border-gray-800 dark:bg-white/[0.03]"
   >
     <div
@@ -129,7 +129,7 @@
         </p>
       </div>
     </div>
-  </div>
+  </div> -->
 </template>
 
 <script setup lang="ts">

@@ -48,22 +48,22 @@ app.get("/", (req, res) => {
 // 라우팅 영역
 
 // 0. 기준정보
-app.use("/", referenceRouter);
+app.use("/api", referenceRouter);
 
 // 1. 영업
 app.use("/api", salesRouter);
 
 // 2. 생산
-app.use("/", prodOrdRouter); // 생산지시서
+app.use("/api", prodOrdRouter); // 생산지시서
 
 // 3. 자재
-app.use("/", materialsRouter);
+app.use("/api", materialsRouter);
 
 // 4. 품질
 app.use("/api", qualityRouter);
 
 // 5. 장비
-app.use("/", equipmentRouter);
+app.use("/api", equipmentRouter);
 
 // 6. 업로드
 app.use("/", uploadsRouter);
