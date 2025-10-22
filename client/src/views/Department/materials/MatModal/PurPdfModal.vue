@@ -154,15 +154,15 @@ const exportPDF = async () => {
               <tbody>
                 <tr>
                   <th>발주코드</th>
-                  <td class="center">{{ cur.headerInfo.pur_code }}</td>
+                  <td class="left">{{ cur.headerInfo.pur_code }}</td>
                   <th>발주서명</th>
-                  <td class="center">{{ cur.headerInfo.pur_name }}</td>
+                  <td class="left">{{ cur.headerInfo.pur_name }}</td>
                 </tr>
                 <tr>
                   <th>매입처</th>
-                  <td class="center">{{ cur.headerInfo.bcnc_name }}</td>
+                  <td class="left">{{ cur.headerInfo.bcnc_name }}</td>
                   <th>담당자</th>
-                  <td class="center">{{ cur.headerInfo.emp_name }}</td>
+                  <td class="left">{{ cur.headerInfo.emp_name }}</td>
                 </tr>
                 <tr>
                   <th>발주일자</th>
@@ -196,7 +196,7 @@ const exportPDF = async () => {
                   <td class="col-no">{{ idx + 1 }}</td>
                   <td class="col-name">{{ it.mat_name }}</td>
                   <td class="col-spec">{{ it.mat_spec }}</td>
-                  <td class="col-unit">{{ it.mat_unit }}</td>
+                  <td class="col-unit; left">{{ it.mat_unit }}</td>
                   <td class="col-qty">{{ it.pur_qty }}</td>
                   <td class="col-remark">{{ it.pur_remark }}</td>
                 </tr>
