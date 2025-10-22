@@ -222,6 +222,7 @@ const rowUnselectHook = () => {
                 field="prod_code"
                 header="제품코드"
                 :pt="{ columnHeaderContent: 'justify-center' }"
+                style="text-align: center"
               />
               <DataCol
                 field="prod_name"
@@ -232,7 +233,6 @@ const rowUnselectHook = () => {
                 field="prod_spec"
                 header="규격"
                 :pt="{ columnHeaderContent: 'justify-center' }"
-                style="text-align: right"
               />
               <DataCol
                 field="prod_unit"

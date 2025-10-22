@@ -429,14 +429,12 @@ const baseInputClass = "dark:bg-dark-900 h-8 w-full rounded-lg border border-gra
                     field="prod_spec" 
                     header="규격"
                     :pt="{ columnHeaderContent: 'justify-center' }"
-                    style="text-align: right;"
                     headerStyle="width: 5%"
                   />
                   <Column 
                     field="prod_unit" 
                     header="단위"
                     :pt="{ columnHeaderContent: 'justify-center' }"
-                    style="text-align: left;"
                     headerStyle="width: 5%"
                   />
                   <Column
