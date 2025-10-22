@@ -138,7 +138,6 @@ const submitSearchForm = async () => {
             <button type="button" class="btn-common btn-white" @click="selectedBcncValue">
               확인
             </button>
-            <button class="btn-common btn-color" @click="closeModal">취소</button>
           </div>
         </template>
       </Modal>

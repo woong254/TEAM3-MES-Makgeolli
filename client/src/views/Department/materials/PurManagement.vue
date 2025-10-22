@@ -428,7 +428,7 @@ onMounted(async () => {
         </template>
       </ComponentCard>
 
-      <ComponentCard title="발주자재" style="height: 530px">
+      <ComponentCard title="발주자재" style="height: 536px">
         <template #header-right>
           <div class="flex justify-end space-x-2">
             <button type="button" class="btn-color btn-common" @click="isMatModalOpen = true">

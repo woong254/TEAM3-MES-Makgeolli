@@ -98,7 +98,6 @@ const closeModal = () => {
 
         <div class="flex justify-center mt-3 gap-3">
           <button type="button" class="btn-common btn-white" @click="confirmSelection">확인</button>
-          <button type="button" class="btn-common btn-color" @click="closeModal">취소</button>
         </div>
       </template>
     </Modal>

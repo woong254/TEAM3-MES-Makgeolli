@@ -178,6 +178,9 @@ onMounted(fetchRows)
             showGridlines
             :tableStyle="{ minWidth: '1200px' }"
           >
+            <template #empty>
+              <div class="text-center">등록된 자재가 없습니다.</div>
+            </template>
             <DataCol expander style="width: 50px" />
 
             <DataCol

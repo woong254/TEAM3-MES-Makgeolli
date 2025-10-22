@@ -413,7 +413,7 @@ onMounted(() => {
             @row-unselect="onRowUnselect"
           >
             <template #empty>
-              <div class="text-center">등록한 발주서가 없습니다.</div>
+              <div class="text-center text-sm">등록된 발주서가 없습니다.</div>
             </template>
 
             <DataCol selectionMode="multiple" headerStyle="width: 37px" bodyStyle="width: 37px" />
