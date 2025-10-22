@@ -197,7 +197,16 @@ const exportPDF = async () => {
                   <td class="col-name">{{ it.mat_name }}</td>
                   <td class="col-spec">{{ it.mat_spec }}</td>
                   <td class="col-unit; left">{{ it.mat_unit }}</td>
-                  <td class="col-qty">{{ it.pur_qty }}</td>
+                  <td class="col-qty">
+                    {{
+                      it.pur_qty === '' || it.pur_qty == null
+                        ? ''
+                        : Number(it.pur_qty).toLocaleString(undefined, {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })
+                    }}
+                  </td>
                   <td class="col-remark">{{ it.pur_remark }}</td>
                 </tr>
               </tbody>
