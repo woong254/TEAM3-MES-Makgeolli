@@ -344,7 +344,7 @@ onMounted(async () => {
                 />
                 비가동
               </label>
-              <label class="flex items-center gap-2">
+              <!-- <label class="flex items-center gap-2">
                 <input
                   v-model="searchForm.equipStatus"
                   type="radio"
@@ -352,7 +352,7 @@ onMounted(async () => {
                   value="j5"
                 />
                 가동대기
-              </label>
+              </label> -->
             </div>
           </div>
         </template>
@@ -518,6 +518,7 @@ onMounted(async () => {
                   </th>
                   <td class="border border-gray-300 p-2">
                     <input
+                      v-model="createForm.equipImage"
                       :key="imageKey"
                       ref="fileInputEl"
                       @change="onFileChange"
@@ -593,8 +594,4 @@ onMounted(async () => {
   </AdminLayout>
 </template>
 
-<style scoped>
-.center-header .p-column-header-content {
-  justify-content: center !important;
-}
-</style>
+<style scoped></style>
