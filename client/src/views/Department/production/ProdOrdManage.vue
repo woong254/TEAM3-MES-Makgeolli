@@ -150,7 +150,24 @@ onMounted(async () => {
   const res = await axios.get('/api/prodOrdManage')
   makeRows.value = res.data.makeRows ?? []
   empRows.value = res.data.empRows ?? []
-})
+
+  // 두번째 공정부터 이전 단계의 합격량이 잔여수량으로 보이게 함
+  for (let i = 0; i < makeRows.value.length; i++) {
+    const item = makeRows.value[i];
+    if (item.seq_no > 1) {
+      try {
+        const apiRes = await axios.post('/api/nextProcessMaxQty', {
+          mk_list: item.mkd_no,
+          seq_no: item.seq_no
+        });
+        item.mk_num = apiRes.data.success ? Number(apiRes.data.maxQty || 0) : 0;
+      } catch (err) {
+        console.error('공정 mk_num 자동 세팅 오류:', err);
+        item.mk_num = 0;
+      }
+    }
+  }
+});
 
 const isEquipLoading = ref(false)
 // 저장
@@ -224,9 +241,6 @@ const goToProcess = async () => {
   } else {
     remainingQty = Math.max(0, make.mk_num - make.inpt_qty);
   }
-
-  // 화면에 즉시 반영
-  make.remaining_qty = remainingQty;
 
   const payload = {
     mkd_no: make.mkd_no,
@@ -511,7 +525,7 @@ const baseInputClass =
                   >
                     <template #body="{ data }">
                       <div style="text-align: right">
-                        {{ data.remaining_qty ?? Math.max(0, Number(data.mk_num || 0) - Number(data.inpt_qty || 0)) }}
+                        {{ Math.max(0, Number(data.mk_num || 0) - Number(data.inpt_qty || 0)) }}
                       </div>
                     </template>
                   </Column>

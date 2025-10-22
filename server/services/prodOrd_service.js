@@ -428,6 +428,7 @@ const insertProcessForm = async (params) => {
               prod_code, 
               inpt_qty, 
               procs_st, 
+              seq_no,
               now_procs, 
               mk_qty
       FROM processform
@@ -449,10 +450,11 @@ const insertProcessForm = async (params) => {
                                 emp_no, 
                                 prod_code, 
                                 inpt_qty, 
-                                procs_st, 
+                                procs_st,
+                                seq_no,
                                 now_procs, 
                                 mk_qty)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 0)`, // mk_qty를 0으로 명시적 초기화
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)`, // mk_qty를 0으로 명시적 초기화
         [
           params.mk_list,
           params.equip_code,
@@ -460,6 +462,7 @@ const insertProcessForm = async (params) => {
           params.prod_code,
           params.inpt_qty,
           params.procs_st,
+          params.seq_no,
           now_procs,
         ]
       );
@@ -568,15 +571,27 @@ WHERE prod_code = ?`,
   }
 };
 
-const getNextProcessQty = async (mkd_no, prev_proc) => {
-  const sql = `
-    SELECT SUM(pass_qty) as total_pass
-    FROM processform
-    WHERE mk_list = ?
-    AND now_procs = ?
-  `;
-  const [rows] = await mariadb.query(sql, [mkd_no, prev_proc]);
-  return rows[0].total_pass || 0; // 값이 없으면 0
+const getNextProcessQty = async (mk_list, seq_no) => {
+  try {
+    const sql = `
+      SELECT SUM(pass_qty) AS total_pass
+      FROM processform
+      WHERE mk_list = ?
+      AND seq_no = ?
+      AND insp_status = 'u2'
+    `;
+
+    // 숫자로 변환 후 전달
+    const rows = await mariadb.query(sql, [Number(mk_list), Number(seq_no)]);
+    const totalPass = rows[0]?.total_pass || 0;
+
+    console.log("Max next qty:", totalPass);
+
+    return totalPass;
+  } catch (err) {
+    console.error("[getNextProcessQty] Error:", err);
+    return 0;
+  }
 };
 
 module.exports = {
