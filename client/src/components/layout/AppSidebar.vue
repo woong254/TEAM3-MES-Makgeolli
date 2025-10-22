@@ -229,11 +229,11 @@ const menuGroups: MenuGroup[] = [
   {
     title: 'Menu',
     items: [
-      {
-        icon: PageIcon,
-        name: '기준정보',
-        subItems: [{ name: 'Ecommerce', path: '/', pro: false }],
-      },
+      // {
+      //   icon: PageIcon,
+      //   name: '기준정보',
+      //   subItems: [{ name: 'Ecommerce', path: '/', pro: false }],
+      // },
       {
         icon: CalenderIcon,
         name: '영업',
@@ -275,7 +275,7 @@ const menuGroups: MenuGroup[] = [
           { name: '공정검사 관리', path: '/procinspmanage', pro: false },
           { name: '완제품검사 조회', path: '/prodinsplist', pro: false },
           { name: '완제품검사 관리', path: '/prodinspmanage', pro: false },
-          { name: '불량 기준 관리', path: '/defectmaster', pro: false },
+          // { name: '불량 기준 관리', path: '/defectmaster', pro: false },
         ],
       },
       {

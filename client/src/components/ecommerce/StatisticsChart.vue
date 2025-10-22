@@ -1,5 +1,5 @@
 <template>
-  <div
+  <!-- <div
     class="rounded-2xl border border-gray-200 bg-white px-5 pb-5 pt-5 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6 sm:pt-6"
   >
     <div class="flex flex-col gap-5 mb-6 sm:flex-row sm:justify-between">
@@ -33,7 +33,7 @@
         <VueApexCharts type="area" height="310" :options="chartOptions" :series="series" />
       </div>
     </div>
-  </div>
+  </div> -->
 </template>
 
 <script setup lang="ts">

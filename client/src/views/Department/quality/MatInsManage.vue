@@ -880,7 +880,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
           </template>
           <!-- 수정 모드 -->
           <template v-else>
-            <button class="btn-common btn-color">PDF</button>
+            <!-- <button class="btn-common btn-color">PDF</button> -->
             <button class="btn-common btn-color" @click="submitUpdate">수정</button>
             <button class="btn-common btn-white" @click="confirmDelete">삭제</button>
           </template>
