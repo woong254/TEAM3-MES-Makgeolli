@@ -131,10 +131,10 @@ const matInspTargetData = reactive({
   mat_name: '',
   mat_spec: '',
   mat_unit: '',
-  pur_qty: 0,
-  receipt_qty: 0,
+  pur_qty: null as number | null,
+  receipt_qty: null as number | null,
 })
-const matInspQty = ref<number>(0) // 검사량
+const matInspQty = ref<number>() // 검사량
 const matInspNG = ref<number>(0) // 불량량
 const matInspPass = ref<number>(0) // 합격량
 const inspName = ref('') // 검사명
@@ -713,13 +713,13 @@ const submitUpdate = async () => {
 const confirmDelete = async () => {
   try {
     if (!currentInspId.value) return alert('삭제할 검사ID가 없습니다.')
-    if (!confirm('정말 삭제하시겠습니까?')) return
+    if (!confirm(`'${inspName.value}'를 삭제하시겠습니까?`)) return
     const { data } = await axios.delete(`/api/matInsp/${currentInspId.value}`)
     if (data?.ok) {
-      alert('삭제되었습니다.')
+      alert(`'${inspName.value}'가 삭제되었습니다.`)
       resetForm()
     } else {
-      alert(data?.message || '삭제 실패')
+      alert(data?.message || '삭제를 실패했습니다.')
     }
   } catch (e) {
     console.error('[FE] 삭제 오류:', e)
@@ -767,9 +767,6 @@ const resetForm = () => {
   currentInspId.value = null
   mode.value = 'create'
 }
-
-// toFixed(2) 소수점 두번째자리 까지 나타내기
-const fmt2 = (v: any) => (Number.isFinite(Number(v)) ? Number(v).toFixed(2) : '0.00')
 
 // style
 const inputStyle =
@@ -880,7 +877,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
           </template>
           <!-- 수정 모드 -->
           <template v-else>
-            <button class="btn-common btn-color">PDF</button>
+            <!-- <button class="btn-common btn-color">PDF</button> -->
             <button class="btn-common btn-color" @click="submitUpdate">수정</button>
             <button class="btn-common btn-white" @click="confirmDelete">삭제</button>
           </template>
@@ -891,7 +888,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
           <div class="rounded-lg border border-gray-200 shadow-sm p-4 mb-2">
             <h3 class="text-md mb-2 font-medium">기본정보</h3>
             <div class="w-full flex items-center mb-2">
-              <label :class="labelStyle" class="w-[86px]"> 검사명 </label>
+              <label :class="labelStyle" class="w-[86px]"> 검사명 * </label>
               <input
                 type="text"
                 :class="inputStyleSM"
@@ -902,7 +899,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
             </div>
             <div class="flex flex-wrap justify-between gap-2">
               <div class="w-1/5 flex items-center relative">
-                <label :class="labelStyle" class="w-[120px]"> 가입고번호 </label>
+                <label :class="labelStyle" class="w-[120px]"> 가입고번호 * </label>
                 <input
                   type="text"
                   :class="inputStyleClick"
@@ -1113,7 +1110,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
             <h3 class="text-md mb-2 font-medium">수량입력</h3>
             <div class="flex flex-wrap mb-2">
               <div class="w-1/4 flex items-center">
-                <label :class="labelStyle" class="w-[120px]">입고량 </label>
+                <label :class="labelStyle" class="w-[120px]">입고량 *</label>
                 <div class="relative">
                   <input
                     type="number"
@@ -1135,7 +1132,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                 <div class="text-sm w-[100px] ml-2">{{ matInspTargetData.mat_unit || '단위' }}</div>
               </div>
               <div class="w-1/4 flex items-center">
-                <label :class="labelStyle" class="w-[120px]"> 검사량 </label>
+                <label :class="labelStyle" class="w-[120px]"> 검사량 *</label>
                 <div>
                   <input
                     type="number"
@@ -1231,7 +1228,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
             >
               <!-- 데이터가 없을 때 나타낼 방법 #empty슬롯 -->
               <template #empty>
-                <div class="text-center">추가된 검사대상이 없습니다.</div>
+                <div class="text-center" style="color: #888">추가된 검사대상이 없습니다.</div>
               </template>
 
               <Column
@@ -1260,25 +1257,6 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                   </div>
                 </template>
               </Column>
-              <!-- <Column
-                field="file_name"
-                header="첨부파일"
-                :pt="{ columnHeaderContent: 'justify-center' }"
-                style="width: 100px"
-              >
-                <template #body="slotProps">
-                  <div class="flex justify-center">
-                    <Button
-                      icon="pi pi-paperclip"
-                      :text="true"
-                      severity="secondary"
-                      class="p-button-sm"
-                      style="width: 20px; height: 15px; text-align: center; color: #999"
-                      :disabled="!slotProps.data.file_name"
-                    />
-                  </div>
-                </template>
-              </Column> -->
               <Column
                 field="range_stand"
                 header="범위기준"
@@ -1372,7 +1350,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
             >
               <!-- 데이터가 없을 때 나타낼 방법 #empty슬롯 -->
               <template #empty>
-                <div class="text-center">추가된 검사대상이 없습니다.</div>
+                <div class="text-center" style="color: #888">추가된 검사대상이 없습니다.</div>
               </template>
 
               <Column expander style="width: 3rem" />

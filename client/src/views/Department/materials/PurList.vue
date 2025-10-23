@@ -384,7 +384,7 @@ onMounted(() => {
       </ComponentCard>
 
       <!-- ✅ 발주서 목록 -->
-      <ComponentCard title="발주서 목록" style="height: 475px">
+      <ComponentCard title="발주서 목록" style="height: 465px">
         <template #header-right>
           <div class="flex justify-end space-x-2 mb-1">
             <button
@@ -405,7 +405,7 @@ onMounted(() => {
             :value="purList"
             dataKey="rowKey"
             scrollable
-            scrollHeight="345px"
+            scrollHeight="330px"
             size="small"
             sortMode="single"
             :tableStyle="{ minWidth: '1700px' }"
@@ -422,7 +422,7 @@ onMounted(() => {
               field="pur_code"
               header="발주코드"
               headerClass="no-wrap"
-              style="min-width: 90px"
+              style="min-width: 90px; text-align: center"
               :pt="{ columnHeaderContent: 'justify-center' }"
               class="text-sm"
             />
@@ -465,7 +465,7 @@ onMounted(() => {
               field="bcnc_code"
               header="매입처코드"
               headerClass="no-wrap"
-              style="min-width: 110px"
+              style="min-width: 110px; text-align: center"
               :pt="{ columnHeaderContent: 'justify-center' }"
               class="text-sm"
             />
@@ -482,7 +482,7 @@ onMounted(() => {
               field="mat_code"
               header="자재코드"
               headerClass="no-wrap"
-              style="min-width: 150px"
+              style="min-width: 150px; text-align: center"
               :pt="{ columnHeaderContent: 'justify-center' }"
               class="text-sm"
             />

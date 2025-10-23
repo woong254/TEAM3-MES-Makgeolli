@@ -799,7 +799,7 @@ const deleteMatInsp = async (insp_id) => {
 // 3-1. 자재입고검사 조회
 const matInspectSelect = async () => {
   let list = await mariadb
-    .query("matInspSelect")
+    .query("matInspSelect_basic")
     .catch((err) => console.log(err));
   return list;
 };
@@ -1267,7 +1267,7 @@ const deleteProdInsp = async (insp_id) => {
 // 5-1. 완제품검사 리스트 조회
 const prodInspectSelect = async () => {
   let list = await mariadb
-    .query("prodInspSearch")
+    .query("prodInspSearch_basic")
     .catch((err) => console.log(err));
   return list;
 };
@@ -1720,7 +1720,7 @@ const deleteProcInsp = async (insp_id) => {
 // 5-1. 공정검사 리스트 조회
 const procInspectSelect = async () => {
   let list = await mariadb
-    .query("procInspSearch")
+    .query("procInspSearch_basic")
     .catch((err) => console.log(err));
   return list;
 };

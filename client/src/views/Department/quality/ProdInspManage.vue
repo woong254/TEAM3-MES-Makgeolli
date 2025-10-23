@@ -106,16 +106,16 @@ interface modalRowDT {
 const inspector = ref('이한솔') // 검사자
 // 3-1. 검사대상(공정실적번호 완제품)
 const prodInspTargetData = reactive({
-  procs_no: 0, //공정실적번호
+  procs_no: null as number | null, //공정실적번호
   prod_code: '', //제품코드
   prod_name: '', //제품명
   prod_spec: '', //규격
   comncode_dtnm: '', //단위 공통코드 이름
-  mk_qty: 0, //생산량
+  mk_qty: null as number | null, //생산량
   procs_endtm: '', //생산종료날짜
 })
 const inspName = ref('') // 검사명
-const prodInspQty = ref<number>(0) // 검사량
+const prodInspQty = ref<number>() // 검사량
 const prodInspNG = ref<number>(0) // 불량량
 const prodInspPass = ref<number>(0) // 합격량
 const remark = ref('') // 비고
@@ -535,13 +535,13 @@ const submitUpdate = async () => {
 const confirmDelete = async () => {
   try {
     if (!currentInspId.value) return alert('삭제할 검사ID가 없습니다.')
-    if (!confirm('정말 삭제하시겠습니까?')) return
+    if (!confirm(`'${inspName.value}'를 삭제하시겠습니까?`)) return
     const { data } = await axios.delete(`/api/prodInsp/${currentInspId.value}`)
     if (data?.ok) {
-      alert('삭제되었습니다.')
+      alert(`'${inspName.value}'가 삭제되었습니다.`)
       resetForm()
     } else {
-      alert(data?.message || '삭제 실패')
+      alert(data?.message || '삭제를 실패했습니다.')
     }
   } catch (e) {
     console.error('[FE] 삭제 오류:', e)
@@ -717,9 +717,6 @@ async function onPickedRow(row: modalRowDT) {
   mode.value = 'edit'
 }
 
-// toFixed(2) 소수점 두번째자리 까지 나타내기
-const fmt2 = (v: any) => (Number.isFinite(Number(v)) ? Number(v).toFixed(2) : '0.00')
-
 // style
 const inputStyle =
   'dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-950 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
@@ -829,7 +826,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
           </template>
           <!-- 수정 모드 -->
           <template v-else>
-            <button class="btn-common btn-color">PDF</button>
+            <!-- <button class="btn-common btn-color">PDF</button> -->
             <button class="btn-common btn-color" @click="submitUpdate">수정</button>
             <button class="btn-common btn-white" @click="confirmDelete">삭제</button>
           </template>
@@ -840,7 +837,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
           <div class="rounded-lg border border-gray-200 shadow-sm p-4 mb-2">
             <h3 class="text-md mb-2 font-medium">기본정보</h3>
             <div class="w-full flex items-center mb-2">
-              <label :class="labelStyle" class="w-[86px]"> 검사명 </label>
+              <label :class="labelStyle" class="w-[86px]"> 검사명 *</label>
               <input
                 type="text"
                 :class="inputStyleSM"
@@ -851,7 +848,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
             </div>
             <div class="flex flex-wrap justify-between gap-2">
               <div class="w-1/5 flex items-center relative">
-                <label :class="labelStyle" class="w-[120px]"> 제품코드 </label>
+                <label :class="labelStyle" class="w-[120px]"> 제품코드 *</label>
                 <input
                   type="text"
                   :class="inputStyleClick"
@@ -989,7 +986,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
             <h3 class="text-md mb-2 font-medium">수량입력</h3>
             <div class="flex flex-wrap mb-2">
               <div class="w-1/4 flex items-center">
-                <label :class="labelStyle" class="w-[120px]"> 검사량 </label>
+                <label :class="labelStyle" class="w-[120px]"> 검사량 *</label>
                 <div>
                   <input
                     type="number"
@@ -999,6 +996,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                     style="text-align: right"
                     v-model="prodInspQty"
                     @input="onInspValue"
+                    ref="tem_insp_qty"
                   />
                 </div>
                 <div class="text-sm w-[100px] ml-2">

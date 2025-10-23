@@ -1,5 +1,5 @@
 <template>
-  <div
+  <!-- <div
     class="overflow-hidden rounded-2xl border border-gray-200 bg-white px-5 pt-5 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6 sm:pt-6"
   >
     <div class="flex items-center justify-between">
@@ -32,7 +32,7 @@
         <VueApexCharts type="bar" height="180" :options="chartOptions" :series="series" />
       </div>
     </div>
-  </div>
+  </div> -->
 </template>
 
 <script setup>

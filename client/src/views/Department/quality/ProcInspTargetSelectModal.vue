@@ -151,6 +151,7 @@ function formatDateTime(value: any): string {
               field="prod_code"
               header="제품코드"
               :pt="{ columnHeaderContent: 'justify-center' }"
+              style="text-align: center"
             />
             <Column
               field="prod_name"
@@ -162,6 +163,7 @@ function formatDateTime(value: any): string {
               field="procs_endtm"
               header="작업종료일시"
               :pt="{ columnHeaderContent: 'justify-center' }"
+              style="text-align: center"
             />
             <Column
               field="mk_qty"

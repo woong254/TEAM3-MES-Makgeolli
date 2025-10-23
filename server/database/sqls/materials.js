@@ -17,7 +17,12 @@ const selectPurList = `
   LEFT JOIN emp_master  e ON p.emp_id    = e.emp_id
   LEFT JOIN iis i ON i.pur_code = p.pur_code
   WHERE p.pur_status = '입고대기'
-  AND i.pur_code IS NULL
+  AND NOT EXISTS (
+        SELECT 1
+        FROM iis i
+        WHERE i.pur_code = p.pur_code
+          AND (i.t_result <> 'F' OR i.t_result IS NULL)
+      )
   ORDER BY p.pur_code DESC
 `;
 
@@ -225,15 +230,15 @@ SELECT
   i.prod_date,
   i.exp_date,
   i.pre_receipt_date,
-  i.receipt_qty,
-  i.pass_qty
+  FORMAT(i.receipt_qty, 0) AS receipt_qty,
+  FORMAT(i.pass_qty, 0)    AS pass_qty     
 FROM iis i
 JOIN mat_master m ON m.mat_code  = i.mat_code
 JOIN bcnc_master b ON b.bcnc_code = i.bcnc_code
 JOIN pur_form f ON f.pur_code  = i.pur_code  
 WHERE i.insp_status = ?
   AND (i.t_result IS NULL OR i.t_result = 'P')
-ORDER BY i.iis_id;
+ORDER BY i.iis_id DESC;
 `;
 
 const deleteIis = `
@@ -430,7 +435,7 @@ SELECT
   m.mat_name,
   m.mat_spec,
   m.mat_unit,
-  pm.pur_qty,
+  FORMAT(pm.pur_qty,0) AS pur_qty,
   pf.pur_status,
   pf.remark,
   pm.remark AS pur_remark,

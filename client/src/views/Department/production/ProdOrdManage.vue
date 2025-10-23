@@ -153,21 +153,21 @@ onMounted(async () => {
 
   // 두번째 공정부터 이전 단계의 합격량이 잔여수량으로 보이게 함
   for (let i = 0; i < makeRows.value.length; i++) {
-    const item = makeRows.value[i]
+    const item = makeRows.value[i];
     if (item.seq_no > 1) {
       try {
         const apiRes = await axios.post('/api/nextProcessMaxQty', {
           mk_list: item.mkd_no,
-          seq_no: item.seq_no,
-        })
-        item.mk_num = apiRes.data.success ? Number(apiRes.data.maxQty || 0) : 0
+          seq_no: item.seq_no
+        });
+        item.mk_num = apiRes.data.success ? Number(apiRes.data.maxQty || 0) : 0;
       } catch (err) {
-        console.error('공정 mk_num 자동 세팅 오류:', err)
-        item.mk_num = 0
+        console.error('공정 mk_num 자동 세팅 오류:', err);
+        item.mk_num = 0;
       }
     }
   }
-})
+});
 
 const isEquipLoading = ref(false)
 // 저장
@@ -208,39 +208,14 @@ const validateBeforeGoToProcess = () => {
   return true
 }
 
-// 다음 공정 가능 수량 체크
-const getPrevProcName = (make: MakeOrderDetail) => {
-  const sorted = makeRows.value
-    .filter((row) => row.mk_ord_no === make.mk_ord_no)
-    .sort((a, b) => a.seq_no - b.seq_no)
-  const idx = sorted.findIndex((row) => row.proc_id === make.proc_id)
-  if (idx > 0) return sorted[idx - 1].proc_name
-  return null
-}
-
 const goToProcess = async () => {
   // 1. 중복 클릭 방지 및 상태 확인
   if (isSubmitting.value) return // 2. 유효성 검사
   if (!validateBeforeGoToProcess()) return
-
+  
   const make = selectMake.value as MakeOrderDetail
   const equip = selectEquip.value as ChooseEquip
   const emp = selectEmp.value as ChooseEmp // 공정 제어를 시작하기 위해 서버로 전송할 데이터 페이로드
-
-  const prevProc = getPrevProcName(make)
-
-  let remainingQty = 0
-  if (prevProc) {
-    // 이전 공정 합격량 조회
-    const previousQtyRes = await axios.post('/api/getPreviousQty', {
-      mkd_no: make.mkd_no,
-      prev_proc: prevProc,
-    })
-    const prevQty = Number(previousQtyRes.data.previousQty || 0)
-    remainingQty = Math.max(0, prevQty - make.inpt_qty)
-  } else {
-    remainingQty = Math.max(0, make.mk_num - make.inpt_qty)
-  }
 
   const payload = {
     mkd_no: make.mkd_no,
@@ -253,7 +228,6 @@ const goToProcess = async () => {
     mk_ord_no: make.mk_ord_no,
     seq_no: make.seq_no, // 우선순위
     now_procs: make.proc_name, // 공정명
-    remaining_qty: remainingQty,
   }
 
   console.log('Process Start Payload:', payload)
@@ -271,6 +245,7 @@ const goToProcess = async () => {
         emp_id: emp.emp_id,
         equip_code: equip.equip_code,
         mkd_no: make.mkd_no, // 다음 페이지에서 데이터를 조회하는 데 필요한 최소한의 정보를 쿼리로 전달
+        now_procs: payload.now_procs,
       },
     }) // 페이지 이동에 성공하면 이 컴포넌트는 언마운트되므로 isSubmitting을 false로 되돌릴 필요가 없습니다.
   } catch (err) {
@@ -305,6 +280,7 @@ const onInputInptQty = (data: MakeOrderDetail) => {
     selectMake.value.inpt_qty = data.inpt_qty
   }
 }
+
 
 const currentPageTitle = ref('공정 실적 관리')
 
@@ -453,6 +429,7 @@ const baseInputClass =
                     field="mk_ord_no"
                     header="작업지시코드"
                     :pt="{ columnHeaderContent: 'justify-center' }"
+                    style="text-align: center"
                     headerStyle="width: 10%"
                   />
                   <Column
@@ -483,14 +460,12 @@ const baseInputClass =
                   <Column
                     field="prod_spec"
                     header="규격"
-                    style="text-align: right"
                     :pt="{ columnHeaderContent: 'justify-center' }"
                     headerStyle="width: 5%"
                   />
                   <Column
                     field="comncode_dtnm"
                     header="단위"
-                    style="text-align: right"
                     :pt="{ columnHeaderContent: 'justify-center' }"
                     headerStyle="width: 5%"
                   />
@@ -596,6 +571,7 @@ const baseInputClass =
                     field="equip_code"
                     header="설비코드"
                     :pt="{ columnHeaderContent: 'justify-center' }"
+                    style="text-align: center"
                   />
                   <Column
                     field="equip_name"
@@ -641,6 +617,7 @@ const baseInputClass =
                     field="emp_id"
                     header="사원번호"
                     :pt="{ columnHeaderContent: 'justify-center' }"
+                    style="text-align: center"
                   />
                   <Column
                     field="emp_name"
