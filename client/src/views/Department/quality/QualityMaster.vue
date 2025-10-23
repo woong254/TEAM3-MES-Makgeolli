@@ -657,7 +657,7 @@ const fileStyle =
             />
             <Column
               field="insp_item_name"
-              header="검사대상명"
+              header="검사항목명"
               :pt="{ columnHeaderContent: 'justify-center' }"
             />
             <Column

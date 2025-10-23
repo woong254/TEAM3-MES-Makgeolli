@@ -69,7 +69,7 @@ app.use("/api", qualityRouter);
 app.use("/api", equipmentRouter);
 
 // 6. 업로드
-app.use("/", uploadsRouter);
+app.use("/api", uploadsRouter);
 
 // pdf 출력
 app.use("/api", pdfRouter);

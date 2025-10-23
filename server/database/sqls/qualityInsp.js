@@ -356,34 +356,50 @@ WHERE mi.insp_id = ?`;
 // 2-5-2. 자재입고검사 결과 + 품질기준관리 정보
 const selectMatInspResultsById = `
 SELECT
-  -- mat_insp_result(자재입고검사 결과) 테이블
-  r.insp_result_id,           -- 자재입고검사결과 ID
-  r.insp_item_id,             -- 품질기준관리 ID
-  r.insp_result_value,        -- 결과값
-  r.r_value,                  -- 적합(P)/부적합(F)
+  r.insp_result_id,
+  r.insp_item_id,
+  r.insp_result_value,
+  r.r_value,
 
-  -- qc_master(품질기준관리) 테이블 
-  qm.insp_item_name,          -- 품질기준관리 항목명
-  qm.insp_type,               -- R(범위), S(관능)
-  qm.insp_method,             -- 검사방법
-  qm.file_name,               -- 파일이름
+  qm.insp_item_name,
+  qm.insp_type,
+  qm.insp_method,
+  qm.file_name,
 
-  -- qc_master_ran(품질기준관리-범위)테이블 
-  qr.min_range,               
-  qr.min_range_spec,
-  qr.max_range,
-  qr.max_range_spec,
-  qr.unit,
+  -- 범위형
+  qr.min_range, qr.min_range_spec, qr.max_range, qr.max_range_spec, qr.unit,
 
-  -- qc_master(품질기준관리)인데 관능에 관련된 칼럼
-  qm.max_score,
-  qm.pass_score,
-  qm.pass_score_spec
+  -- 관능형(기존)
+  qm.max_score, qm.pass_score, qm.pass_score_spec,
+
+  -- 관능형
+  qm.score_desc,
+  qs.sens_questions
 FROM mat_insp_result r
 JOIN qc_master      qm ON qm.insp_item_id = r.insp_item_id
 LEFT JOIN qc_master_ran qr ON qr.insp_item_id = r.insp_item_id
+LEFT JOIN (
+  SELECT 
+    insp_item_id,
+    CONCAT(
+      '[',
+      GROUP_CONCAT(
+        CONCAT(
+          '{',
+          '"order":', ques_order, ',',
+          '"name":',  JSON_QUOTE(ques_name),
+          '}'
+        )
+        ORDER BY ques_order
+        SEPARATOR ','
+      ),
+      ']'
+    ) AS sens_questions
+  FROM qc_master_sen
+  GROUP BY insp_item_id
+) qs ON qs.insp_item_id = r.insp_item_id
 WHERE r.insp_id = ?
-ORDER BY r.insp_item_id
+ORDER BY r.insp_item_id;
 `;
 
 // 2-5-3. 불량목록 + 불량기준관리(이름)
@@ -395,7 +411,7 @@ SELECT
   d.def_item_name
 FROM mat_insp_ng n
 JOIN def_master d ON d.def_item_id = n.def_item_id
-WHERE n.insp_id = 'IQC-20251017-001'
+WHERE n.insp_id = ?
 ORDER BY d.def_item_name`;
 
 // 3. 자재입고검사 조회
@@ -608,28 +624,87 @@ SELECT
 
   -- qc_master (공통 품질기준)
   qm.insp_item_name,
-  qm.insp_type,           -- 'R' 또는 'S'
+  qm.insp_type, 
   qm.insp_method,
   qm.file_name,
   qm.max_score,
   qm.pass_score,
   qm.pass_score_spec,
+  qm.score_desc, 
 
   -- 범위형 세부 (있으면)
   qr.min_range,
   qr.min_range_spec,
   qr.max_range,
   qr.max_range_spec,
-  qr.unit
+  qr.unit,
+
+  qs.sens_questions
 
 FROM prod_insp_result r
 JOIN qc_master qm
   ON qm.insp_item_id = r.insp_item_id
 LEFT JOIN qc_master_ran qr
   ON qr.insp_item_id = r.insp_item_id
+LEFT JOIN (
+  SELECT 
+      insp_item_id,
+      CONCAT(
+        '[',
+        GROUP_CONCAT(
+          CONCAT(
+            '{',
+              '"order":', ques_order, ',',
+              '"name":',  JSON_QUOTE(ques_name),
+            '}'
+          )
+          ORDER BY ques_order
+          SEPARATOR ','
+        ),
+        ']'
+      ) AS sens_questions
+  FROM qc_master_sen
+  GROUP BY insp_item_id
+) qs
+  ON qs.insp_item_id = qm.insp_item_id
 WHERE r.insp_id = ?
 ORDER BY r.insp_item_id
 `;
+// SELECT
+//   -- prod_insp_result
+//   r.insp_id,
+//   r.insp_item_id,
+//   r.insp_result_value,
+//   r.r_value,
+
+//   -- qc_master (공통 품질기준)
+//   qm.insp_item_name,
+//   qm.insp_type,           -- 'R' 또는 'S'
+//   qm.insp_method,
+//   qm.file_name,
+//   qm.max_score,
+//   qm.pass_score,
+//   qm.pass_score_spec,
+
+//   -- 범위형 세부 (있으면)
+//   qr.min_range,
+//   qr.min_range_spec,
+//   qr.max_range,
+//   qr.max_range_spec,
+//   qr.unit
+
+//   -- 관능
+//   qm.score_desc,
+//   qs.sens_questions
+
+// FROM prod_insp_result r
+// JOIN qc_master qm
+//   ON qm.insp_item_id = r.insp_item_id
+// LEFT JOIN qc_master_ran qr
+//   ON qr.insp_item_id = r.insp_item_id
+// WHERE r.insp_id = ?
+// ORDER BY r.insp_item_id
+
 
 // 4-5-3. 불량 (prod_insp_ng + def_master)
 const selectProdInspNGsById = `
@@ -759,27 +834,81 @@ SELECT
 
   -- qc_master (공통 품질기준)
   qm.insp_item_name,
-  qm.insp_type,           -- 'R' 또는 'S'
+  qm.insp_type,           
   qm.insp_method,
   qm.file_name,
   qm.max_score,
   qm.pass_score,
   qm.pass_score_spec,
+  qm.score_desc,  
 
   -- 범위형 세부 (있으면)
   qr.min_range,
   qr.min_range_spec,
   qr.max_range,
   qr.max_range_spec,
-  qr.unit
+  qr.unit,
+
+  qs.sens_questions
+
 FROM proc_insp_result r
 JOIN qc_master qm
   ON qm.insp_item_id = r.insp_item_id
 LEFT JOIN qc_master_ran qr
   ON qr.insp_item_id = r.insp_item_id
+LEFT JOIN (
+  SELECT 
+      insp_item_id,
+      CONCAT(
+        '[',
+        GROUP_CONCAT(
+          CONCAT(
+            '{',
+              '"order":', ques_order, ',',
+              '"name":',  JSON_QUOTE(ques_name),
+            '}'
+          )
+          ORDER BY ques_order
+          SEPARATOR ','
+        ),
+        ']'
+      ) AS sens_questions
+  FROM qc_master_sen
+  GROUP BY insp_item_id
+) qs
+  ON qs.insp_item_id = qm.insp_item_id
 WHERE r.insp_id = ?
 ORDER BY r.insp_item_id
 `;
+// SELECT
+//   -- proc_insp_result
+//   r.insp_id,
+//   r.insp_item_id,
+//   r.insp_result_value,
+//   r.r_value,
+
+//   -- qc_master (공통 품질기준)
+//   qm.insp_item_name,
+//   qm.insp_type,           -- 'R' 또는 'S'
+//   qm.insp_method,
+//   qm.file_name,
+//   qm.max_score,
+//   qm.pass_score,
+//   qm.pass_score_spec,
+
+//   -- 범위형 세부 (있으면)
+//   qr.min_range,
+//   qr.min_range_spec,
+//   qr.max_range,
+//   qr.max_range_spec,
+//   qr.unit
+// FROM proc_insp_result r
+// JOIN qc_master qm
+//   ON qm.insp_item_id = r.insp_item_id
+// LEFT JOIN qc_master_ran qr
+//   ON qr.insp_item_id = r.insp_item_id
+// WHERE r.insp_id = ?
+// ORDER BY r.insp_item_id
 
 // 5-3-3. 불량
 const selectProcInspNGsById = `

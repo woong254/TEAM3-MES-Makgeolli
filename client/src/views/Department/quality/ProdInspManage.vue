@@ -115,7 +115,7 @@ const prodInspTargetData = reactive({
   procs_endtm: '', //생산종료날짜
 })
 const inspName = ref('') // 검사명
-const prodInspQty = ref<number>() // 검사량
+const prodInspQty = ref<number>(0) // 검사량
 const prodInspNG = ref<number>(0) // 불량량
 const prodInspPass = ref<number>(0) // 합격량
 const remark = ref('') // 비고
@@ -147,17 +147,19 @@ const onInspChecked = async (row: prodInspTargetDT) => {
 }
 
 // 4. 검사일자
-const dateValue = new Date()
-// 4-1. 날짜 (YYYY-MM-DD)
-const year = dateValue.getFullYear()
-const month = String(dateValue.getMonth() + 1).padStart(2, '0')
-const day = String(dateValue.getDate()).padStart(2, '0')
-// 4-2. 시간 (HH:mm:ss)
-const hour = String(dateValue.getHours()).padStart(2, '0')
-const minute = String(dateValue.getMinutes()).padStart(2, '0')
-const second = String(dateValue.getSeconds()).padStart(2, '0')
-// 4-3. YYYY-MM-DD HH:mm:ss 형식으로 조합
-const prodInspTargetDataattedDateTime = `${year}-${month}-${day} ${hour}:${minute}:${second}`
+// 4-1. 날짜 함수
+function nowStr() {
+  const d = new Date()
+  const yyyy = d.getFullYear()
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  const hh = String(d.getHours()).padStart(2, '0')
+  const mi = String(d.getMinutes()).padStart(2, '0')
+  const ss = String(d.getSeconds()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`
+}
+// 4-2. 등록/수정 공용 검사일자 상태
+const inspDate = ref<string>(nowStr()) // 기본은 현재시간
 
 // 5. 테이블 확장
 const expandedRows = ref<Record<string, boolean> | null>(null)
@@ -206,13 +208,25 @@ watch([prodInspQty, prodInspNG], () => {
   prodInspPass.value = prodInspQty.value - prodInspNG.value
 })
 // 8-3. 불량량 계산
-const ngValues = reactive<Record<string, number>>({}) //불량유형별 수치를 담는 객체
+const ngValues = reactive({} as Record<string, number>)
+// 불량값 변경 감시
 watch(
-  () => Object.values(ngValues), // 모든 값이 변경될 때 감지
+  ngValues,
   (vals) => {
-    const sum = vals.reduce((acc, val) => acc + (val || 0), 0)
+    const sum = Object.values(vals).reduce((acc, v) => acc + (Number(v) || 0), 0)
     prodInspNG.value = sum
+
+    // 검사량보다 크면 바로 리셋
+    if (prodInspNG.value > (prodInspQty.value ?? 0)) {
+      alert('불량량은 검사량을 초과할 수 없습니다.')
+      // 초과하면 입력된 불량값 전부 지우기
+      for (const key in ngValues) {
+        ngValues[key] = 0
+      }
+      prodInspNG.value = 0
+    }
   },
+  { deep: true },
 )
 
 // 9. 데이터 조회 (mat_code로 불량 및 품질기준관리 자동조회)
@@ -425,7 +439,7 @@ const buildPayload = () => {
 
   return {
     insp_name: inspName.value,
-    insp_date: prodInspTargetDataattedDateTime,
+    insp_date: inspDate.value,
     insp_qty: Number(prodInspQty.value || 0),
     pass_qty: Number(prodInspPass.value || 0),
     fail_qty: Number(prodInspNG.value || 0),
@@ -442,6 +456,46 @@ const buildPayload = () => {
 // 숫자 입력 여부 체크
 const isFilledNumber = (v: any) =>
   v !== null && v !== undefined && v !== '' && !Number.isNaN(Number(v))
+
+// 음수 입력 방지용
+// 1) 키 입력으로는 '-' / 'e' / 'E' 자체를 막기 (UX 보조)
+function blockMinus(e: KeyboardEvent) {
+  if (['-', 'e', 'E'].includes(e.key)) e.preventDefault()
+}
+
+// 2) 검사량: 음수면 경고 띄우고 즉시 0으로 초기화
+function sanitizeQty() {
+  const v = Number(prodInspQty.value ?? 0)
+  if (v < 0) {
+    alert('검사량은 음수가 될 수 없습니다.')
+    prodInspQty.value = 0
+  }
+  // 기존 검사량 제한 로직(입고량 초과 방지)
+  onInspValue()
+}
+
+// 3) 불량유형: 음수면 경고 + 해당 칸만 0으로 초기화 + 합계 반영
+function sanitizeNG(id: string) {
+  const cur = Number(ngValues[id] ?? 0)
+  if (cur < 0) {
+    alert('불량 수량은 음수가 될 수 없습니다.')
+    ngValues[id] = 0
+  }
+  // 합계 반영 (초과 경고/보정은 기존 enforceNG가 있으면 호출하세요)
+  const sum = Object.values(ngValues).reduce((a, v) => a + (Number(v) || 0), 0)
+  prodInspNG.value = sum
+}
+
+// 4) 범위검사 측정값: 음수면 경고 + 0 초기화 + 판정 재계산
+function sanitizeRange(row: RangeRow) {
+  const v = Number(row.insp_result_value ?? 0)
+  if (v < 0) {
+    alert('측정값은 음수가 될 수 없습니다.')
+    row.insp_result_value = 0
+  }
+  judgeRange(row)
+}
+
 const validateBeforeSubmit = (): boolean => {
   // 0) 기본 수량/타겟
   if (!inspName.value?.trim()) {
@@ -464,6 +518,16 @@ const validateBeforeSubmit = (): boolean => {
     alert('합격량은 0보다 작을 수 없습니다.')
     return false
   }
+  if (prodInspNG.value > prodInspQty.value) {
+    alert('불량량은 검사량을 초과할 수 없습니다.')
+    return false
+  }
+  // ★ 추가: 불량(NG)도 없고, 검사기준(QC→테이블)도 없으면 등록 불가
+  if ((ng.value?.length ?? 0) === 0 && inspDataRan.value.length + inspDataSen.value.length === 0) {
+    alert('불량/품질 기준이 없습니다. 기준정보를 등록한 후 진행해 주세요.')
+    return false
+  }
+
   // 1) 범위검사: 측정값 필수
   if (inspDataRan.value.length > 0) {
     const missingRan = inspDataRan.value.filter((r) => !isFilledNumber(r.insp_result_value))
@@ -555,6 +619,7 @@ const resetForm = () => {
   inspName.value = ''
   inspector.value = '이한솔'
   remark.value = ''
+  inspDate.value = nowStr()
 
   // 타겟(공정실적관리)
   Object.assign(prodInspTargetData, {
@@ -644,6 +709,8 @@ async function onPickedRow(row: modalRowDT) {
       // 3) 상단 기본정보 주입
       inspName.value = header.insp_name || ''
       inspector.value = header.emp_id || inspector.value // 검사자
+      inspDate.value = header.insp_date || inspDate.value
+
       // 수량/비고
       prodInspQty.value = Number(header.insp_qty || 0)
       prodInspNG.value = Number(header.fail_qty || 0)
@@ -680,16 +747,25 @@ async function onPickedRow(row: modalRowDT) {
             r_value: r.r_value || '',
           })
         } else if (r.insp_type === 'S') {
+          const parsedDesc = safeParse(r.score_desc) as scoredescDT[]
+          const parsedQs = safeArr<any>(r.sens_questions).map((q: any, idx: number) => ({
+            id: `${r.insp_item_id}-${q.order ?? idx + 1}`,
+            order: q.order ?? idx + 1,
+            // 어떤 키로 올지 몰라서 안전하게 처리
+            question_name: q.name ?? q.question ?? q.question_name ?? '',
+            score: undefined, // 개별 점수 복구는 저장 테이블이 있어야 가능
+          }))
+
           sen.push({
             insp_item_id: r.insp_item_id,
             insp_item_name: r.insp_item_name,
             pass_score: Number(r.pass_score ?? 0),
             pass_score_spec: (r.pass_score_spec ?? '').toLowerCase(),
-            score_desc: [], // (필요 시 상세 설계 추가)
+            score_desc: parsedDesc,
             max_score: Number(r.max_score ?? 5),
             insp_result_value: Number(r.insp_result_value ?? 0),
             r_value: r.r_value || '',
-            details: [], // (질문별 점수 복구는 별도 저장 필요)
+            details: parsedQs,
           })
         }
       }
@@ -715,6 +791,41 @@ async function onPickedRow(row: modalRowDT) {
   // 6) 모드 전환
   currentInspId.value = row.insp_id
   mode.value = 'edit'
+}
+
+// 16. 측정값 소숫점
+// 16-1. 입력값을 소수 둘째 자리까지 자동 포맷
+function formatDecimal(row: any) {
+  let val = Number(row.insp_result_value)
+  if (isNaN(val)) {
+    row.insp_result_value = ''
+    return
+  }
+
+  // 항상 소수 둘째 자리까지 표현
+  row.insp_result_value = val.toFixed(2)
+}
+
+// 17. 수정모드 -> 기본정보값 disabled 처리
+// 17-1. 수정 모드 여부 (create/edit 이미 있으니 이걸로 판단)
+const isEdit = computed(() => mode.value === 'edit')
+// 17-2. 모달 열기 핸들러를 하나로 (수정모드면 무시)
+function onOpenTarget() {
+  if (isEdit.value) return
+  openModal()
+}
+
+// 18. 날짜 변경 (yyyy-MM-dd HH:mm:ss)
+function formatDateTime(v?: string | Date) {
+  if (!v) return ''
+  const d = new Date(v)
+  const yyyy = d.getFullYear()
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  const hh = String(d.getHours()).padStart(2, '0')
+  const mi = String(d.getMinutes()).padStart(2, '0')
+  const ss = String(d.getSeconds()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`
 }
 
 // style
@@ -837,7 +948,9 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
           <div class="rounded-lg border border-gray-200 shadow-sm p-4 mb-2">
             <h3 class="text-md mb-2 font-medium">기본정보</h3>
             <div class="w-full flex items-center mb-2">
-              <label :class="labelStyle" class="w-[86px]"> 검사명 *</label>
+              <label :class="labelStyle" class="w-[86px]">
+                검사명 <span style="color: #d70000">*</span></label
+              >
               <input
                 type="text"
                 :class="inputStyleSM"
@@ -848,19 +961,23 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
             </div>
             <div class="flex flex-wrap justify-between gap-2">
               <div class="w-1/5 flex items-center relative">
-                <label :class="labelStyle" class="w-[120px]"> 제품코드 *</label>
+                <label :class="labelStyle" class="w-[120px]">
+                  제품코드 <span style="color: #d70000">*</span></label
+                >
                 <input
                   type="text"
-                  :class="inputStyleClick"
+                  :class="isEdit ? inputDisabled : inputStyleClick"
                   class="w-2/3 cursor-pointer hover:bg-gray-100 duration-300"
                   readonly
-                  @click="openModal"
+                  @click="onOpenTarget"
                   v-model="prodInspTargetData.prod_code"
+                  :style="isEdit ? 'outline: none' : ''"
                 />
                 <button
                   type="button"
                   class="absolute inset-y-0 right-2 flex items-center text-gray-400"
-                  @click="openModal"
+                  @click="onOpenTarget"
+                  :disabled="isEdit"
                 >
                   <i class="pi pi-search"></i>
                 </button>
@@ -869,16 +986,18 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                 <label :class="labelStyle" class="w-[120px]"> 제품명 </label>
                 <input
                   type="text"
-                  :class="inputStyleClick"
+                  :class="isEdit ? inputDisabled : inputStyleClick"
                   class="w-2/3 cursor-pointer hover:bg-gray-100 duration-300"
                   readonly
-                  @click="openModal"
+                  @click="onOpenTarget"
                   v-model="prodInspTargetData.prod_name"
+                  :style="isEdit ? 'outline: none' : ''"
                 />
                 <button
                   type="button"
                   class="absolute inset-y-0 right-2 flex items-center text-gray-400"
-                  @click="openModal"
+                  @click="onOpenTarget"
+                  :disabled="isEdit"
                 >
                   <i class="pi pi-search"></i>
                 </button>
@@ -887,16 +1006,18 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                 <label :class="labelStyle" class="w-[120px]"> 공정실적번호 </label>
                 <input
                   type="text"
-                  :class="inputStyleClick"
+                  :class="isEdit ? inputDisabled : inputStyleClick"
                   class="w-2/3 cursor-pointer hover:bg-gray-100 duration-300"
                   readonly
-                  @click="openModal"
+                  @click="onOpenTarget"
                   v-model="prodInspTargetData.procs_no"
+                  :style="isEdit ? 'outline: none' : ''"
                 />
                 <button
                   type="button"
                   class="absolute inset-y-0 right-2 flex items-center text-gray-400"
-                  @click="openModal"
+                  @click="onOpenTarget"
+                  :disabled="isEdit"
                 >
                   <i class="pi pi-search"></i>
                 </button>
@@ -905,15 +1026,18 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                 <label :class="labelStyle" class="w-[120px]"> 규격 </label>
                 <input
                   type="text"
-                  :class="inputStyleClick"
+                  :class="isEdit ? inputDisabled : inputStyleClick"
                   class="w-2/3 cursor-pointer hover:bg-gray-100 duration-300"
                   readonly
                   v-model="prodInspTargetData.prod_spec"
+                  @click="onOpenTarget"
+                  :style="isEdit ? 'outline: none' : ''"
                 />
                 <button
                   type="button"
                   class="absolute inset-y-0 right-2 flex items-center text-gray-400"
-                  @click="openModal"
+                  @click="onOpenTarget"
+                  :disabled="isEdit"
                 >
                   <i class="pi pi-search"></i>
                 </button>
@@ -922,16 +1046,18 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                 <label :class="labelStyle" class="w-[120px]"> 단위 </label>
                 <input
                   type="text"
-                  :class="inputStyleClick"
+                  :class="isEdit ? inputDisabled : inputStyleClick"
                   class="w-2/3 cursor-pointer hover:bg-gray-100 duration-300"
                   readonly
-                  @click="openModal"
+                  @click="onOpenTarget"
                   v-model="prodInspTargetData.comncode_dtnm"
+                  :style="isEdit ? 'outline: none' : ''"
                 />
                 <button
                   type="button"
                   class="absolute inset-y-0 right-2 flex items-center text-gray-400"
-                  @click="openModal"
+                  @click="onOpenTarget"
+                  :disabled="isEdit"
                 >
                   <i class="pi pi-search"></i>
                 </button>
@@ -940,17 +1066,19 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                 <label :class="labelStyle" class="w-[120px]"> 생산량 </label>
                 <input
                   type="text"
-                  :class="inputStyleClick"
+                  :class="isEdit ? inputDisabled : inputStyleClick"
                   class="w-2/3 cursor-pointer hover:bg-gray-100 duration-300"
                   readonly
-                  @click="openModal"
+                  @click="onOpenTarget"
                   v-model="prodInspTargetData.mk_qty"
                   style="text-align: right; padding-right: 40px"
+                  :style="isEdit ? 'outline: none' : ''"
                 />
                 <button
                   type="button"
                   class="absolute inset-y-0 right-2 flex items-center text-gray-400"
-                  @click="openModal"
+                  @click="onOpenTarget"
+                  :disabled="isEdit"
                 >
                   <i class="pi pi-search"></i>
                 </button>
@@ -971,7 +1099,7 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                   type="text"
                   :class="inputDisabled"
                   class="w-2/3"
-                  v-model="prodInspTargetDataattedDateTime"
+                  :value="formatDateTime(inspDate)"
                   disabled
                 />
               </div>
@@ -986,8 +1114,11 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
             <h3 class="text-md mb-2 font-medium">수량입력</h3>
             <div class="flex flex-wrap mb-2">
               <div class="w-1/4 flex items-center">
-                <label :class="labelStyle" class="w-[120px]"> 검사량 *</label>
+                <label :class="labelStyle" class="w-[120px]">
+                  검사량 <span style="color: #d70000">*</span></label
+                >
                 <div>
+                  <!-- @input="onInspValue" -->
                   <input
                     type="number"
                     :class="inputStyleSM"
@@ -995,8 +1126,9 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                     placeholder="검사량을 입력하세요."
                     style="text-align: right"
                     v-model="prodInspQty"
-                    @input="onInspValue"
-                    ref="tem_insp_qty"
+                    @keydown="blockMinus"
+                    @input="sanitizeQty"
+                    @change="sanitizeQty"
                   />
                 </div>
                 <div class="text-sm w-[100px] ml-2">
@@ -1046,6 +1178,9 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                   :class="inputStyleSM"
                   class="w-2/3"
                   style="text-align: right"
+                  @keydown="blockMinus"
+                  @input="sanitizeNG(item.def_item_id)"
+                  @change="sanitizeNG(item.def_item_id)"
                 />
                 <div class="text-sm w-[100px] ml-2">
                   {{ prodInspTargetData.comncode_dtnm || '단위' }}
@@ -1120,25 +1255,6 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                   </div>
                 </template>
               </Column>
-              <!-- <Column
-                field="file_name"
-                header="첨부파일"
-                :pt="{ columnHeaderContent: 'justify-center' }"
-                style="width: 100px"
-              >
-                <template #body="slotProps">
-                  <div class="flex justify-center">
-                    <Button
-                      icon="pi pi-paperclip"
-                      :text="true"
-                      severity="secondary"
-                      class="p-button-sm"
-                      style="width: 20px; height: 15px; text-align: center; color: #999"
-                      :disabled="!slotProps.data.file_name"
-                    />
-                  </div>
-                </template>
-              </Column> -->
               <Column
                 field="range_stand"
                 header="범위기준"
@@ -1147,7 +1263,6 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
               >
                 <template #body="slotProps">
                   <div class="flex gap-2 w-full items-center">
-                    <!-- v-moel="min_range" -->
                     <input
                       type="text"
                       v-model="slotProps.data.min_range"
@@ -1155,10 +1270,8 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                       class="text-right w-[100px]"
                       disabled
                     />
-                    <!-- min_range_spec -->
                     <span class="w-[100px]">{{ slotProps.data.min_label || '단위' }}</span>
                     <span class="w-[80px] flex justify-center">- </span>
-                    <!-- v-model="max_range" -->
                     <input
                       type="text"
                       v-model="slotProps.data.max_range"
@@ -1166,7 +1279,6 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                       class="text-right"
                       disabled
                     />
-                    <!-- max_range_spec -->
                     <span class="w-[100px]">{{ slotProps.data.max_label || '단위' }}</span>
                   </div>
                 </template>
@@ -1184,13 +1296,27 @@ const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
                 style="width: 250px"
               >
                 <template #body="slotProps">
+                  <!-- @input="judgeRange(slotProps.data)" -->
                   <input
                     type="text"
                     :class="inputStyleSM"
                     placeholder="측정값 입력하세요."
                     v-model="slotProps.data.insp_result_value"
-                    @input="judgeRange(slotProps.data)"
                     style="text-align: right"
+                    @keydown="blockMinus"
+                    @input="sanitizeRange(slotProps.data)"
+                    @change="
+                      () => {
+                        sanitizeRange(slotProps.data)
+                        formatDecimal(slotProps.data)
+                      }
+                    "
+                    @blur="
+                      () => {
+                        sanitizeRange(slotProps.data)
+                        formatDecimal(slotProps.data)
+                      }
+                    "
                   />
                 </template>
               </Column>
