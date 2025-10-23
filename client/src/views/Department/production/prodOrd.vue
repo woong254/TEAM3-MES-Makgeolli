@@ -287,7 +287,10 @@ const baseInputClass =
                 />
               </div>
               <div class="flex-1">
-                <label :class="labelStyle"> 생산지시명 </label>
+                <label :class="labelStyle"> 
+                  생산지시명
+                  <span style="color: red">*</span> 
+                </label>
                 <input type="text" :class="inputStyle" v-model="makeInfo.make_name" />
               </div>
               <div class="flex-1">
@@ -303,7 +306,10 @@ const baseInputClass =
             </div>
             <div class="flex items-center gap-4">
               <div class="relative" style="min-width: 260px">
-                <label :class="labelStyle"> 생산일자 </label>
+                <label :class="labelStyle"> 
+                  생산일자 
+                  <span style="color: red">*</span> 
+                </label>
                 <div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
                   <div class="relative w-45">
                     <flat-pickr
