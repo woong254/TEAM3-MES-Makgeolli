@@ -191,6 +191,10 @@ const fetchProcessData = async () => {
 
 // 작업시작 버튼 누르면 시작하는 함수
 const processStart = async () => {
+  if (sf.value.procs_bgntm) {
+    alert('이미 작업이 시작되었습니다')
+    return
+  }
   if (ed.value.procs_endtm) {
     alert('이미 작업이 종료되었습니다.')
     return
