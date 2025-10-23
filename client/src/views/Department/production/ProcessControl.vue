@@ -191,7 +191,7 @@ const fetchProcessData = async () => {
 
 // 작업시작 버튼 누르면 시작하는 함수
 const processStart = async () => {
-  if (ed.value.mk_qty === processForm.value.inpt_qty) {
+  if (ed.value.procs_endtm) {
     alert('이미 작업이 종료되었습니다.')
     return
   }
@@ -220,7 +220,7 @@ const processStart = async () => {
 
 // 작업종료버튼 눌렀을때 실행
 const processEnd = async () => {
-  if (ed.value.mk_qty === 0) {
+  if (!sf.value.procs_bgntm) {
     alert('작업이 시작되지 않았습니다.')
     return
   }
