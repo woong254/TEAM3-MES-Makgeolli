@@ -127,7 +127,6 @@ onMounted(fetchRows)
                 v-model="form.name"
                 type="text"
                 :class="inputStyle"
-                placeholder="자재명을 입력"
                 @keyup.enter="fetchRows"
               />
             </div>
