@@ -70,19 +70,18 @@ const existingStoredPath = ref<string>('') // 수정 모드에서 받아온 기�
 const fileInputRef = ref<HTMLInputElement | null>(null)
 const fileInputKey = ref(0)
 
-// const scoreDesc = ref<Record<number, string>>({
-//   10: '',
-//   9: '',
-//   8: '',
-//   7: '',
-//   6: '',
-//   5: '',
-//   4: '',
-//   3: '',
-//   2: '',
-//   1: '',
-// }) // 관능 채점기준: 점수별 설명 (5점 모드일 때는 5~1 키 사용, 10점 모드일 땐 10~1 키 사용)
-const scoreDesc = ref<Record<number, string>>(buildEmptyScoreDesc(5))
+const scoreDesc = ref<Record<number, string>>({
+  10: '',
+  9: '',
+  8: '',
+  7: '',
+  6: '',
+  5: '',
+  4: '',
+  3: '',
+  2: '',
+  1: '',
+}) // 관능 채점기준: 점수별 설명 (5점 모드일 때는 5~1 키 사용, 10점 모드일 땐 10~1 키 사용)
 
 // 5. 모달에서 선택한 검사대상들 검사대상 테이블에 넣기
 const onInspChecked = (rows: any[]) => {
@@ -172,6 +171,7 @@ const validatePassScoreOnBlur = () => {
 }
 // 7-3. 10점 -> 5점 사용자 선택변경시 자동으로 값 변경
 watch(scoreMax, (max) => {
+  // resetScoreDesc() // **
   if (passScore.value === '') return
   const n = Number(passScore.value)
   if (!Number.isNaN(n) && n > max) {
@@ -209,12 +209,10 @@ const resetIspForm = () => {
   passScore.value = ''
   passSpec.value = 'r1'
   questions.value = [{ id: 1, text: '' }]
+  resetScoreDesc() // 채점기준 초기화**
 
   // 선택된 테이블 행
   selectedInspData.value = null
-
-  // 채점기준 초기화
-  scoreDesc.value = buildEmptyScoreDesc(scoreMax.value)
 }
 
 // 8-2. 등록/수정 공통 payload
@@ -315,7 +313,6 @@ const registerInsp = async () => {
       // 사용자에게 알림
       alert('등록되었습니다.')
       // 폼 초기화
-      scoreDesc.value = buildEmptyScoreDesc(scoreMax.value)
       resetIspForm()
     } else {
       alert(res.data?.message || '등록에 실패했습니다.')
@@ -356,13 +353,13 @@ async function loadInspDetail(id: string) {
     return
   }
 
-  const { master, targets, questions: qs } = data.data // ✅ 질문도 받기
+  const { master, targets, questions: qs } = data.data // 질문도 받기
 
   // 공통
   inspName.value = master.insp_item_name || ''
   inspUsing.value = master.use_yn === 'N'
   inspDesc.value = master.insp_method || ''
-  inspTarget.value = targets // ✅ 이제 t_name/t_spec/t_unit/t_type_name 채워짐
+  inspTarget.value = targets // 이제 t_name/t_spec/t_unit/t_type_name 채워짐
 
   existingFileName.value = master.file_name || ''
   existingFileUrl.value = master.file_name || '' // 서버가 '/uploads/...'로 주면 그대로 링크 사용
@@ -392,7 +389,7 @@ async function loadInspDetail(id: string) {
     maxValue.value = ''
     maxSpec.value = 'r3'
     unit.value = ''
-    // ✅ 질문 세팅
+    // 질문 세팅
     questions.value =
       qs && qs.length
         ? qs.map((q: any, i: number) => ({ id: q.id ?? i + 1, text: q.text ?? '' }))
@@ -542,47 +539,12 @@ const closeModal = () => {
   isModalOpen.value = false
 }
 
-// 관능 채점기준점수 초기화 (score_desc)
-// 0 ~ max 점수까지 키 초기화(보통 5 또는 10)
-function buildEmptyScoreDesc(max: number) {
-  const obj: Record<number, string> = {}
-  for (let s = max; s >= 1; s--) obj[s] = ''
-  return obj
+// 관능 질문(채점기준) 초기화 함수**
+function resetScoreDesc() {
+  scoreDesc.value = Object.fromEntries(
+    (scoreMax.value === 10 ? [10, 9, 8, 7, 6, 5, 4, 3, 2, 1] : [5, 4, 3, 2, 1]).map((s) => [s, '']),
+  ) as Record<number, string>
 }
-// 모드 전환시 초기화
-watch(inspMode, (mode) => {
-  if (mode === 'sensory') {
-    // 관능 진입 시 비어있는 스케일로 시작
-    scoreDesc.value = buildEmptyScoreDesc(scoreMax.value)
-  } else {
-    // 범위 진입 시 관능 관련 값들 제거
-    passScore.value = ''
-    passSpec.value = 'r1'
-    questions.value = [{ id: 1, text: '' }]
-    scoreDesc.value = buildEmptyScoreDesc(5) // 기본값으로 리셋
-  }
-})
-// 최고점수(5/10) 바꿀 때 스케일 재구성
-watch(scoreMax, (max, prev) => {
-  // 합격점 보정 로직은 기존처럼 유지
-  if (passScore.value !== '') {
-    const n = Number(passScore.value)
-    if (!Number.isNaN(n) && n > max) {
-      alert(`최고점수가 ${max}점으로 변경되어 합격 점수를 ${max}로 수정합니다.`)
-      passScore.value = String(max)
-    }
-  }
-
-  // ✅ 새 스케일로 재구성 (필요 시 일부 설명 이관)
-  const next = buildEmptyScoreDesc(max)
-
-  // 선택: 같은 점수는 가져가고, 나머지는 버림 (간단한 이관 로직)
-  for (let s = Math.min(max, prev); s >= 1; s--) {
-    next[s] = (scoreDesc.value[s] ?? '').trim()
-  }
-
-  scoreDesc.value = next // 완전 교체
-})
 
 // style
 const inputStyle =
