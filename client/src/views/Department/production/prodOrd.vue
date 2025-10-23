@@ -259,7 +259,7 @@ const baseInputClass =
           <template #header-right>
             <div class="flex justify-end">
               <button type="button" class="btn-white btn-common" style="width: auto">
-                계획서 불러오기
+                주문서 불러오기
               </button>
               <button type="button" class="btn-white btn-common">지시 목록</button>
               <button type="button" class="btn-white btn-common" @click="resetInfo">초기화</button>
@@ -269,7 +269,7 @@ const baseInputClass =
                 @click="submitMakeInfo"
                 :disabled="isSubmitting"
               >
-                {{ isSubmitting ? '등록 중' : '등록/수정' }}
+                {{ isSubmitting ? '등록 중' : '등록' }}
               </button>
               <button type="button" class="btn-white btn-common">삭제</button>
             </div>
