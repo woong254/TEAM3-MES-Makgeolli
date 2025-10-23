@@ -168,35 +168,33 @@ onMounted(async () => {
 
   // 두번째 공정부터 이전 단계의 합격량이 잔여수량으로 보이게 함
   for (let i = 0; i < makeRows.value.length; i++) {
-    const item = makeRows.value[i];
+    const item = makeRows.value[i]
     if (item.seq_no > 1) {
       try {
         // 현재 공정에서의 투입 수량 total_input
         const totalInput = await axios.post('/api/nowProcessInputQty', {
           mk_list: item.mkd_no,
-          seq_no: item.seq_no
-        });
-        item.total_input = totalInput.data.success ? Number(totalInput.data.inputQty || 0) : 0;
-
+          seq_no: item.seq_no,
+        })
+        item.total_input = totalInput.data.success ? Number(totalInput.data.inputQty || 0) : 0
 
         // 다음 공정의 최대 지시 수량을 위한 mk_num
         const apiRes = await axios.post('/api/nextProcessMaxQty', {
           mk_list: item.mkd_no,
-          seq_no: item.seq_no
-        });
-        item.mk_num = apiRes.data.success ? Number(apiRes.data.maxQty || 0) : 0;
+          seq_no: item.seq_no,
+        })
+        item.mk_num = apiRes.data.success ? Number(apiRes.data.maxQty || 0) : 0
       } catch (err) {
-        console.error('공정 mk_num 자동 세팅 오류:', err);
-        item.mk_num = 0;
+        console.error('공정 mk_num 자동 세팅 오류:', err)
+        item.mk_num = 0
       }
     }
   }
-  
 
   if (selectMake.value && !isSelectableRow(selectMake.value)) {
-    selectMake.value = null;
+    selectMake.value = null
   }
-});
+})
 
 const isEquipLoading = ref(false)
 // 저장
@@ -241,7 +239,7 @@ const goToProcess = async () => {
   // 1. 중복 클릭 방지 및 상태 확인
   if (isSubmitting.value) return // 2. 유효성 검사
   if (!validateBeforeGoToProcess()) return
-  
+
   const make = selectMake.value as MakeOrderDetail
   const equip = selectEquip.value as ChooseEquip
   const emp = selectEmp.value as ChooseEmp // 공정 제어를 시작하기 위해 서버로 전송할 데이터 페이로드
@@ -292,7 +290,6 @@ const onInputInptQty = (data: MakeOrderDetail) => {
   const cur = Number(data.inpt_qty || 0)
 
   const remaining = Math.max(0, mkNum - totalInput)
-
   const newInptQty = Math.min(remaining, Math.max(0, cur))
 
   if (data.inpt_qty !== newInptQty) {
@@ -304,11 +301,10 @@ const onInputInptQty = (data: MakeOrderDetail) => {
   }
 }
 
-
 // mk_num: 문자 0 -> 숫자 0으로 변환 
 const isSelectableRow = (data: MakeOrderDetail): boolean => {
-  const mkNum = Math.max(0, Number(data.mk_num || 0) - Number(data.total_input || 0));
-  return mkNum > 0; // false 반환
+  const mkNum = Math.max(0, Number(data.mk_num || 0) - Number(data.total_input || 0))
+  return mkNum > 0 // false 반환
 }
 
 // comncode_dtnm가 있는 행은 비활성화
@@ -349,16 +345,11 @@ const baseInputClass =
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <label :class="labelStyle"> 제품명 </label>
-              <input
-                type="text"
-                :class="inputStyle"
-                placeholder="제품 이름을 입력해주세요"
-                required
-              />
+              <input type="text" :class="inputStyle" required />
             </div>
             <div>
               <label :class="labelStyle"> 공정명 </label>
-              <input type="text" :class="inputStyle" placeholder="공정을 입력해주세요" required />
+              <input type="text" :class="inputStyle" required />
             </div>
             <div>
               <label :class="labelStyle"> 지시날짜 </label>
@@ -530,11 +521,10 @@ const baseInputClass =
                           :class="baseInputClass"
                           style="text-align: right; height: 2rem"
                           @input="onInputInptQty(data)"
-                          placeholder="투입"
                         />
                       </template>
                       <template v-else>
-                        <span style="display: block; text-align: center;">-</span>
+                        <span style="display: block; text-align: center">-</span>
                       </template>
                     </template>
                   </Column>
