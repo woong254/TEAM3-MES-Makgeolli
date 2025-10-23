@@ -81,7 +81,7 @@ const products = ref<MakeItem[]>([])
 const makeInfo = ref<MakeInfo>({
   make_code: '',
   make_name: '',
-  emp_name: '',
+  emp_name: '박봉근',
   make_start_date: '',
   make_end_date: '',
   remake: '',

@@ -505,7 +505,6 @@ const baseInputClass =
                     :pt="{ columnHeaderContent: 'justify-center' }"
                     headerStyle="width: 5%"
                   />
-
                   <Column
                     field="inpt_qty"
                     header="투입수량"
@@ -519,7 +518,7 @@ const baseInputClass =
                           v-model.number="data.inpt_qty"
                           type="number"
                           :min="0"
-                          :max="Number(data.mk_num || 0)"
+                          :max="Math.max(0, Number(data.mk_num || 0) - Number(data.total_input || 0))"
                           :class="baseInputClass"
                           style="text-align: right; height: 2rem"
                           @input="onInputInptQty(data)"
@@ -548,7 +547,6 @@ const baseInputClass =
                       </div>
                     </template>
                   </Column>
-
                   <Column
                     field="seq_no"
                     header="공정순서"
