@@ -81,9 +81,9 @@ const ordFormInfoView = async (filters) => {
     let params = [];
 
     if (ord_name) {
-      sql += ` AND o.ord_name = ?`; // 테이블명 포함
-      sql1 += ` AND o.ord_name = ?`; // 테이블명 포함
-      params.push(ord_name);
+      sql += ` AND o.ord_name LIKE ?`; // 테이블명 포함
+      sql1 += ` AND o.ord_name LIKE ?`; // 테이블명 포함
+      params.push(`%${ord_name}%`);
     }
     if (due_start_date) {
       sql += ` AND o.due_date >= ?`;

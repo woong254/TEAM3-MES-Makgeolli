@@ -47,6 +47,7 @@ const addMakeForm = async (header, details) => {
       header.emp_id,
       JSON.stringify(details),
     ];
+    console.log(params);
 
     const rows = await conn.query("CALL add_makeForm(?,?,?,?,?,?,?)", params);
 
@@ -54,6 +55,7 @@ const addMakeForm = async (header, details) => {
       Array.isArray(rows) && Array.isArray(rows[0]) && rows[0][0]
         ? rows[0][0]
         : { mk_ord_no: null, mk_list: null };
+    console.log(result);
 
     return result;
   } catch (e) {
@@ -122,10 +124,16 @@ const processStart = async (params) => {
     // 1. DB 상태를 't2' (진행 중)로 업데이트
     await mariadb.query(
       `
-      UPDATE processform
-      SET procs_bgntm = Now(),
-          procs_st = 't2'
-      WHERE procs_no = ?`,
+      UPDATE  processform pf
+              JOIN makedetail md
+              ON pf.mk_list = md.mkd_no
+              JOIN makeform mf
+              ON md.mk_ord_no = mf.mk_ord_no
+      SET     pf.procs_bgntm = Now(),
+              pf.procs_st = 't2',
+              md.mkd_st = CASE WHEN md.mkd_st = 'q1' THEN 'q2' ELSE md.mkd_st END,
+              mf.mk_st = CASE WHEN mf.mk_st = 'p1' THEN 'p2' ELSE mf.mk_st END
+      WHERE   procs_no = ?`,
       [params.procs_no]
     );
 
@@ -272,8 +280,37 @@ const updateProcessForm = async (params) => {
     // 3. 작업종료 행 업데이트 (최종 생산량 확정 및 상태 변경)
     // 요청에 따라 pass_qty를 0으로 설정합니다.
     await conn.query(
-      "UPDATE processform SET mk_qty = ?, procs_endtm = Now(), procs_st = 't3', pass_qty = 0, fail_qty = 0 WHERE procs_no = ?",
+      `
+      UPDATE  processform 
+      SET     mk_qty = ?,
+              procs_endtm = Now(),
+              procs_st = 't3'              
+      WHERE   procs_no = ?`,
       [finalQty, procs_no] // pass_qty를 쿼리에서 0으로 설정했으므로 매개변수 제거
+    );
+
+    // 작업종료 버튼을 눌렀을때 "포장"공정이고 그에 해당하는 실적상태값이"t3"일 경우 지시서의 마지막 공정을 했다는 의미니까 지시서의 상태를 t3으로 바꾸는 코드
+    await conn.query(
+      `
+      UPDATE makedetail md
+      JOIN processform pf
+      ON pf.mk_list = md.mkd_no
+      SET md.mkd_st = 'q3'
+      WHERE pf.now_procs = '포장'
+      AND pf.procs_st = 't3'`
+    );
+    // 작업종료 버튼을 눌렀을때 지시서상세상태가 모두 q3일경우 지시서상태가 p3으로
+    await conn.query(
+      `UPDATE makeform mf
+JOIN makedetail md
+  ON md.mk_ord_no = mf.mk_ord_no
+SET mf.mk_st = 'p3'
+WHERE mf.mk_st <> 'p3'
+  AND (
+      SELECT MIN(mkd_st)
+      FROM makedetail
+      WHERE mk_ord_no = mf.mk_ord_no
+  ) = 'q3'`
     );
 
     // 4. 업데이트된 행 다시 조회

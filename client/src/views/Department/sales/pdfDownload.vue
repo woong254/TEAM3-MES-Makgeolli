@@ -402,7 +402,7 @@ const exportPDF = async () => {
                       height: 25px;
                     "
                   >
-                    납기일짜
+                    납기일자
                   </th>
                   <td
                     class="data"

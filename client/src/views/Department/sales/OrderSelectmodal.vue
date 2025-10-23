@@ -28,7 +28,7 @@ const confirmSelection = () => {
   if (selectedOrder.value) {
     emit('select', selectedOrder.value)
     emit('close')
-    alert('조회성공!')
+    // alert('조회성공!')
   } else {
     alert('주문서를 선택해주세요.')
   }
