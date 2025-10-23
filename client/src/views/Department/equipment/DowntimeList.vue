@@ -21,6 +21,7 @@ const route = useRoute()
 /* ========================
  * Types
  * ======================== */
+
 interface EquipItem {
   equipCode: string
   equipName: string
@@ -60,6 +61,9 @@ const currentPageTitle = ref('비가동 설비 관리')
 const inputStyle =
   'dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-950 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
 const labelStyle = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400'
+
+const selectStyle =
+  'dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-950 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
 
 /* ========================
  * Utils (mappers & inits)
@@ -284,8 +288,8 @@ watch(
     <ComponentCard title="조회">
       <template #header-right>
         <div class="flex justify-end gap-2">
-          <button @click="resetSearchForm" class="btn-common btn-color">초기화</button>
-          <button @click="getEquipList" class="btn-common btn-white">조회</button>
+          <button @click="resetSearchForm" class="btn-common btn-white">초기화</button>
+          <button @click="getEquipList" class="btn-common btn-color">조회</button>
         </div>
       </template>
 
@@ -301,12 +305,27 @@ watch(
           </div>
           <div class="w-1/4">
             <label :class="labelStyle">설비유형</label>
-            <select v-model="searchForm.equipType" :class="inputStyle">
-              <option value="">설비유형 선택</option>
-              <option v-for="(item, index) in TypeInfo" :key="index" :value="item.code">
-                {{ item.name }}
-              </option>
-            </select>
+            <div class="relative z-20 bg-transparent">
+              <select v-model="searchForm.equipType" :class="selectStyle">
+                <option value="">설비유형 선택</option>
+                <option v-for="(item, index) in TypeInfo" :key="index" :value="item.code">
+                  {{ item.name }}
+                </option>
+              </select>
+              <span
+                class="absolute z-30 text-gray-500 -translate-y-1/2 pointer-events-none right-4 top-1/2 dark:text-gray-400"
+              >
+                <svg class="stroke-current" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                  <path
+                    d="M4.79175 7.396L10.0001 12.6043L15.2084 7.396"
+                    stroke=""
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </span>
+            </div>
           </div>
           <div class="hidden">
             <div :class="labelStyle">설비상태</div>
@@ -348,6 +367,7 @@ watch(
               header="설비코드"
               :pt="{ columnHeaderContent: 'justify-center' }"
               style="min-width: 100px"
+              bodyStyle="text-align: center"
             />
             <DataCol
               field="equipName"
@@ -375,9 +395,10 @@ watch(
             />
             <DataCol
               field="inspCycle"
-              header="점검주기"
+              header="점검주기(일)"
               :pt="{ columnHeaderContent: 'justify-center' }"
               style="min-width: 100px"
+              bodyStyle="text-align: right"
             />
           </DataTable>
         </template>
@@ -433,6 +454,7 @@ watch(
                     header="설비코드"
                     :pt="{ columnHeaderContent: 'justify-center' }"
                     style="min-width: 100px"
+                    bodyStyle="text-align: center"
                   />
                   <DataCol
                     field="equipName"
@@ -458,6 +480,7 @@ watch(
                     header="비가동시작일시"
                     :pt="{ columnHeaderContent: 'justify-center' }"
                     style="min-width: 100px"
+                    bodyStyle="text-align: center"
                   >
                     <template #body="{ data }">
                       {{ formatDt(data.downtimeStart) }}
@@ -468,6 +491,7 @@ watch(
                     header="비가동종료일시"
                     :pt="{ columnHeaderContent: 'justify-center' }"
                     style="min-width: 100px"
+                    bodyStyle="text-align: center"
                   >
                     <template #body="{ data }">
                       {{ data.downtimeEnd ? formatDt(data.downtimeEnd) : '—' }}
@@ -499,6 +523,7 @@ watch(
                     header="설비코드"
                     :pt="{ columnHeaderContent: 'justify-center' }"
                     style="min-width: 100px"
+                    bodyStyle="text-align: center"
                   />
                   <DataCol
                     field="equipName"
@@ -524,6 +549,7 @@ watch(
                     header="비가동시작일시"
                     :pt="{ columnHeaderContent: 'justify-center' }"
                     style="min-width: 100px"
+                    bodyStyle="text-align: center"
                   >
                     <template #body="{ data }">
                       {{ formatDt(data.downtimeStart) }}
@@ -536,6 +562,7 @@ watch(
                     header="비가동종료일시"
                     :pt="{ columnHeaderContent: 'justify-center' }"
                     style="min-width: 100px"
+                    bodyStyle="text-align: center"
                   >
                     <template #body="{ data }">
                       {{ formatDt(data.downtimeEnd) }}

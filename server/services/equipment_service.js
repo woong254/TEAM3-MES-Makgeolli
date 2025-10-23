@@ -138,7 +138,7 @@ async function list(filters = {}) {
     params.push(_equipStatus);
   }
 
-  sql += ` ORDER BY e.equip_code`;
+  sql += ` ORDER BY e.equip_code DESC`;
 
   // 페이지네이션 (옵션)
   if (Number.isInteger(Number(limit)) && Number.isInteger(Number(offset))) {
@@ -155,26 +155,22 @@ async function list(filters = {}) {
  * - pick()으로 둘 다 지원합니다.
  * ========================= */
 async function create(payload = {}) {
-  // 1) 입력 매핑 + 정리
-  const equipCode = toNullTrim(pick(payload, "equip_code", "equipCode"));
+  // 1) 입력 매핑 (equipCode 제거)
   const equipName = toNullTrim(pick(payload, "equip_name", "equipName"));
   const equipType = toNullTrim(pick(payload, "equip_type", "equipType"));
   const manager = toNullTrim(pick(payload, "manager", "manager"));
-
   const equipStatus =
     toNullTrim(pick(payload, "equip_status", "equipStatus")) || "j2";
   const inspCycle = toNullTrim(pick(payload, "insp_cycle", "inspCycle"));
 
-  const installDate = toYmdOrNull(pick(payload, "install_date", "installDate")); // 'YYYY-MM-DD'
+  const installDate = toYmdOrNull(pick(payload, "install_date", "installDate"));
   const modelName = toNullTrim(pick(payload, "model_name", "modelName"));
-  const equipImage = toNullTrim(pick(payload, "equip_image", "equipImage")); // URL/경로 (파일업로드면 라우터에서 req.file로 경로 생성)
-  const mfgDt = toYmdOrNull(pick(payload, "mfg_dt", "mfgDt")); // 'YYYY-MM-DD'
+  const equipImage = toNullTrim(pick(payload, "equip_image", "equipImage"));
+  const mfgDt = toYmdOrNull(pick(payload, "mfg_dt", "mfgDt"));
   const maker = toNullTrim(pick(payload, "maker", "maker"));
 
-  // 2) 필수값 가드 — 왜 필요한지 설명하기 쉬움
-  //    최소한의 기준(코드/이름/타입)이 없으면 등록 자체를 막습니다.
+  // 2) 필수값 (equip_code 삭제)
   const missing = [];
-  if (!equipCode) missing.push("equip_code");
   if (!equipName) missing.push("equip_name");
   if (!equipType) missing.push("equip_type");
   if (missing.length) {
@@ -183,9 +179,10 @@ async function create(payload = {}) {
     throw err;
   }
 
-  // 3) INSERT 파라미터 — SQL의 컬럼 순서와 반드시 일치해야 합니다.
+  // 3) INSERT 파라미터 (SQL ? 순서와 일치)
+  // SELECT 절 next_code 이후 ? 들: equip_name, manager, insp_cycle, install_date, model_name, equip_image, mfg_dt, maker
+  // 마지막 2개 ??: JOIN 조건용 equipType, equipStatus
   const params = [
-    equipCode,
     equipName,
     manager,
     inspCycle,
@@ -194,23 +191,33 @@ async function create(payload = {}) {
     equipImage,
     mfgDt,
     maker,
-    equipType,
-    equipStatus,
+    equipType, // t.comncode_detailid
+    equipStatus, // s.comncode_detailid
   ];
 
-  console.log(params);
-
-  // 4) DB 실행 + 에러 매핑(중복코드 등)
+  // 4) 트랜잭션으로 실행 (FOR UPDATE 동작 보장)
+  const conn = await mariadb.getConnection();
   try {
-    const result = await mariadb.query(insertEquip, params);
+    await conn.beginTransaction();
+
+    const result = await conn.query(insertEquip, params);
+
+    await conn.commit();
     return { id: result.insertId, affectedRows: result.affectedRows };
   } catch (err) {
+    await conn.rollback();
+
+    // 중복 키 등 케이스 매핑 (equip_code는 자동이라 드물지만 PK/UK 충돌 시 처리)
     if (err.code === "ER_DUP_ENTRY") {
-      const e = new Error("이미 존재하는 설비코드입니다.");
+      const e = new Error(
+        "설비코드가 중복되었습니다. 잠시 후 다시 시도해주세요."
+      );
       e.status = 409;
       throw e;
     }
     throw err;
+  } finally {
+    conn.release();
   }
 }
 

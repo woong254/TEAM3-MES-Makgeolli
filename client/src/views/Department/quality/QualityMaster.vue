@@ -171,6 +171,7 @@ const validatePassScoreOnBlur = () => {
 }
 // 7-3. 10점 -> 5점 사용자 선택변경시 자동으로 값 변경
 watch(scoreMax, (max) => {
+  // resetScoreDesc() // **
   if (passScore.value === '') return
   const n = Number(passScore.value)
   if (!Number.isNaN(n) && n > max) {
@@ -208,6 +209,7 @@ const resetIspForm = () => {
   passScore.value = ''
   passSpec.value = 'r1'
   questions.value = [{ id: 1, text: '' }]
+  resetScoreDesc() // 채점기준 초기화**
 
   // 선택된 테이블 행
   selectedInspData.value = null
@@ -351,13 +353,13 @@ async function loadInspDetail(id: string) {
     return
   }
 
-  const { master, targets, questions: qs } = data.data // ✅ 질문도 받기
+  const { master, targets, questions: qs } = data.data // 질문도 받기
 
   // 공통
   inspName.value = master.insp_item_name || ''
   inspUsing.value = master.use_yn === 'N'
   inspDesc.value = master.insp_method || ''
-  inspTarget.value = targets // ✅ 이제 t_name/t_spec/t_unit/t_type_name 채워짐
+  inspTarget.value = targets // 이제 t_name/t_spec/t_unit/t_type_name 채워짐
 
   existingFileName.value = master.file_name || ''
   existingFileUrl.value = master.file_name || '' // 서버가 '/uploads/...'로 주면 그대로 링크 사용
@@ -387,7 +389,7 @@ async function loadInspDetail(id: string) {
     maxValue.value = ''
     maxSpec.value = 'r3'
     unit.value = ''
-    // ✅ 질문 세팅
+    // 질문 세팅
     questions.value =
       qs && qs.length
         ? qs.map((q: any, i: number) => ({ id: q.id ?? i + 1, text: q.text ?? '' }))
@@ -535,6 +537,13 @@ const openModal = () => {
 }
 const closeModal = () => {
   isModalOpen.value = false
+}
+
+// 관능 질문(채점기준) 초기화 함수**
+function resetScoreDesc() {
+  scoreDesc.value = Object.fromEntries(
+    (scoreMax.value === 10 ? [10, 9, 8, 7, 6, 5, 4, 3, 2, 1] : [5, 4, 3, 2, 1]).map((s) => [s, '']),
+  ) as Record<number, string>
 }
 
 // style

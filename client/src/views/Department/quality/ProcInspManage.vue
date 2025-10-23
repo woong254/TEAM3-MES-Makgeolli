@@ -128,7 +128,9 @@ const mode = ref<'create' | 'edit'>('create') // 모드선택(등록/수정)
 const currentInspId = ref<string | null>(null) // 등록/수정 상태
 
 // 4. 모달에서 선택한 검사대상 해당 input에 넣기
-const onInspChecked = async (row: procInspTargetDT) => {
+const onInspChecked = async (row: procInspTargetDT | null) => {
+  if (!row) return
+
   // 1) 상단 input 바인딩
   procInspTargetData.procs_no = row.procs_no
   procInspTargetData.prod_code = row.prod_code
@@ -141,7 +143,7 @@ const onInspChecked = async (row: procInspTargetDT) => {
   // 2) 모달 닫기
   isModalOpen.value = false
   // 3) 불량 + 품질기준 조회를 위한 함수 호출 및 매개변수 전달
-  await findProdInspNgnQcMaster(row.prod_code, row.now_procs)
+  await findProdInspNgnQcMaster(row.prod_code)
   // 4) 수량 초기화(선택)
   procInspQty.value = 0
   procInspNG.value = 0
@@ -254,9 +256,7 @@ const safeParse = (s?: string) => {
 }
 const findProdInspNgnQcMaster = async (prod_code: string) => {
   try {
-    const { data } = await axios.get('/api/procInspQcMasternNg', {
-      params: { prod_code, now_procs },
-    })
+    const { data } = await axios.get(`/api/prodInspQcMasternNg/${prod_code}`)
     if (!data?.ok) throw new Error('조회 실패')
     ng.value = data.ng ?? []
     qc.value = (data.qc ?? []).map((r: any) => ({

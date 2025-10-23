@@ -81,7 +81,7 @@ const products = ref<MakeItem[]>([])
 const makeInfo = ref<MakeInfo>({
   make_code: '',
   make_name: '',
-  emp_name: '',
+  emp_name: '박봉근',
   make_start_date: '',
   make_end_date: '',
   remake: '',
@@ -259,7 +259,7 @@ const baseInputClass =
           <template #header-right>
             <div class="flex justify-end">
               <button type="button" class="btn-white btn-common" style="width: auto">
-                계획서 불러오기
+                주문서 불러오기
               </button>
               <button type="button" class="btn-white btn-common">지시 목록</button>
               <button type="button" class="btn-white btn-common" @click="resetInfo">초기화</button>
@@ -269,7 +269,7 @@ const baseInputClass =
                 @click="submitMakeInfo"
                 :disabled="isSubmitting"
               >
-                {{ isSubmitting ? '등록 중' : '등록/수정' }}
+                {{ isSubmitting ? '등록 중' : '등록' }}
               </button>
               <button type="button" class="btn-white btn-common">삭제</button>
             </div>
@@ -287,7 +287,10 @@ const baseInputClass =
                 />
               </div>
               <div class="flex-1">
-                <label :class="labelStyle"> 생산지시명 </label>
+                <label :class="labelStyle"> 
+                  생산지시명
+                  <span style="color: red">*</span> 
+                </label>
                 <input type="text" :class="inputStyle" v-model="makeInfo.make_name" />
               </div>
               <div class="flex-1">
@@ -303,7 +306,10 @@ const baseInputClass =
             </div>
             <div class="flex items-center gap-4">
               <div class="relative" style="min-width: 260px">
-                <label :class="labelStyle"> 생산일자 </label>
+                <label :class="labelStyle"> 
+                  생산일자 
+                  <span style="color: red">*</span> 
+                </label>
                 <div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
                   <div class="relative w-45">
                     <flat-pickr

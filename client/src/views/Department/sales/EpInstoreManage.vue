@@ -150,7 +150,7 @@ const submitEpIs = async () => {
       return
     }
     if (addRes.isSuccessed) {
-      alert('입고성공')
+      alert('입고가 완료되었습니다.')
       getEpIsManage()
       rowUnselectHook()
       return
@@ -215,7 +215,7 @@ onMounted(() => {
                 <input
                   type="text"
                   class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                  placeholder="검사이름을 입력해주세요"
+                  placeholder=""
                   v-model="search.insp_name"
                   required
                 />
@@ -227,7 +227,7 @@ onMounted(() => {
                 <input
                   type="text"
                   class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                  placeholder="제품이름을 입력해주세요"
+                  placeholder=""
                   v-model="search.prod_name"
                   required
                 />
@@ -243,7 +243,7 @@ onMounted(() => {
                       v-model="search.ep_start_date"
                       :config="epStartDateConfig"
                       class="dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pl-4 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                      placeholder="시작일"
+                      placeholder=""
                     />
                     <span
                       class="absolute text-gray-500 -translate-y-1/2 pointer-events-none right-3 top-1/2 dark:text-gray-400"
@@ -272,7 +272,7 @@ onMounted(() => {
                       v-model="search.ep_end_date"
                       :config="epEndDateConfig"
                       class="dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pl-4 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                      placeholder="종료일"
+                      placeholder=""
                     />
                     <span
                       class="absolute text-gray-500 -translate-y-1/2 pointer-events-none right-3 top-1/2 dark:text-gray-400"
