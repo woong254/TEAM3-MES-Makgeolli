@@ -421,7 +421,6 @@ const registerIis = async () => {
                   v-model="data[field]"
                   type="number"
                   min="1"
-                  step="0.01"
                   style="text-align: right"
                   :class="baseInputClass"
                   @blur="
