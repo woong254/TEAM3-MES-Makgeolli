@@ -71,6 +71,7 @@ const epStartDateConfig = computed(() => ({
   altInput: false,
   wrap: true,
   // 종료일이 설정되어 있으면 해당 날짜를 최대 날짜로 설정하여 범위를 제한
+
   maxDate: search.value.ep_end_date,
   locale: Korean,
 }))
