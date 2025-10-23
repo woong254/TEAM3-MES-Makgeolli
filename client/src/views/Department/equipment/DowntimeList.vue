@@ -395,7 +395,7 @@ watch(
             />
             <DataCol
               field="inspCycle"
-              header="점검주기"
+              header="점검주기(일)"
               :pt="{ columnHeaderContent: 'justify-center' }"
               style="min-width: 100px"
               bodyStyle="text-align: right"

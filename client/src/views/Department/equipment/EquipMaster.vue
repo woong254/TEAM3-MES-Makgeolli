@@ -207,15 +207,15 @@ const saveEquip = async () => {
     if (selectedRow.value) {
       const code = selectedRow.value.equipCode || createForm.value.equipCode
       await axios.put(`/api/equipment/${encodeURIComponent(code)}`, toSnake(createForm.value))
-      alert('수정 완료!')
+      alert('수정이 완료되었습니다!')
     } else {
       await axios.post('/api/equipment', toSnake(createForm.value))
-      alert('등록 완료!')
+      alert('등록이 완료되었습니다!')
     }
     await getEquipList()
   } catch (e) {
     console.error(e)
-    alert('저장 실패')
+    alert('저장을 실패하였습니다.')
   }
 }
 // (추가) 상세 단건 조회
@@ -586,7 +586,9 @@ onMounted(async () => {
                   <tr>
                     <!-- 설치일자 -->
                     <th class="border border-gray-300 bg-gray-50 text-sm text-center p-2">
-                      설치일자
+                      <span style="font-weight: bold"
+                        >설치일자<span style="color: red">*</span></span
+                      >
                     </th>
                     <td class="border border-gray-300 p-2">
                       <div class="relative w-full cursor-pointer" @click="openInstallPicker">
@@ -614,7 +616,9 @@ onMounted(async () => {
 
                     <!-- 제조일자 -->
                     <th class="border border-gray-300 bg-gray-50 text-sm text-center p-2">
-                      제조일자
+                      <span style="font-weight: bold"
+                        >제조일자<span style="color: red">*</span></span
+                      >
                     </th>
                     <td class="border border-gray-300 p-2">
                       <div class="relative w-full cursor-pointer" @click="openMfgPicker">
