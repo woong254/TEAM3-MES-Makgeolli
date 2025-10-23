@@ -355,7 +355,8 @@ const findInspMasterDetail = async (inspItemId) => {
       t_category: t.t_category,
       t_name: t.t_name ?? "",
       t_spec: t.t_spec ?? "",
-      t_unit: t.t_unit ?? "",
+      t_unit: t.t_unit ?? null,         
+      t_unit_name: t.t_unit_name ?? "",   // 추가
       t_type_name: t.t_type_name ?? "",
     }));
 
