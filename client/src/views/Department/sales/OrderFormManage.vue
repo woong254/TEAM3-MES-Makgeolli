@@ -483,7 +483,7 @@ const deleteOrder = async () => {
                 <input
                   type="text"
                   class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                  placeholder="주문서이름을 입력해주세요"
+                  placeholder=""
                   v-model="search.ord_name"
                   required
                 />
@@ -498,7 +498,7 @@ const deleteOrder = async () => {
                       v-model="search.ord_start_date"
                       :config="ordStartDateConfig"
                       class="dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pl-4 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                      placeholder="시작일"
+                      placeholder=""
                       type="date"
                     />
                     <span
@@ -528,7 +528,7 @@ const deleteOrder = async () => {
                       v-model="search.ord_end_date"
                       :config="ordEndDateConfig"
                       class="dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pl-4 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                      placeholder="종료일"
+                      placeholder=""
                       type="date"
                     />
                     <span
@@ -564,7 +564,7 @@ const deleteOrder = async () => {
                       v-model="search.due_start_date"
                       :config="dueStartDateConfig"
                       class="dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pl-4 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                      placeholder="시작일"
+                      placeholder=""
                     />
                     <span
                       class="absolute text-gray-500 -translate-y-1/2 pointer-events-none right-3 top-1/2 dark:text-gray-400"
@@ -593,7 +593,7 @@ const deleteOrder = async () => {
                       v-model="search.due_end_date"
                       :config="dueEndDateConfig"
                       class="dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pl-4 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                      placeholder="종료일"
+                      placeholder=""
                     />
                     <span
                       class="absolute text-gray-500 -translate-y-1/2 pointer-events-none right-3 top-1/2 dark:text-gray-400"
@@ -662,7 +662,7 @@ const deleteOrder = async () => {
                 <input
                   type="text"
                   class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                  placeholder="주문서이름을 입력해주세요"
+                  placeholder=""
                   v-model="orderinfo.ord_name"
                   required
                 />
@@ -674,7 +674,7 @@ const deleteOrder = async () => {
                 <input
                   type="text"
                   class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                  placeholder="거래처명을 입력해주세요"
+                  placeholder=""
                   v-model="orderinfo.bcnc_name"
                   @focus="BcncnameOpenmodal"
                   readonly
@@ -693,7 +693,7 @@ const deleteOrder = async () => {
                 <input
                   type="text"
                   class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                  placeholder="대표자를 입력해주세요"
+                  placeholder=""
                   v-model="orderinfo.pic"
                   @click="BcncnameOpenmodal"
                   readonly
@@ -737,7 +737,7 @@ const deleteOrder = async () => {
                 </label>
                 <div class="relative w-full">
                   <flat-pickr
-                    placeholder="납기날짜를 입력해주세요"
+                    placeholder=""
                     v-model="orderinfo.due_date"
                     :config="flatpickrConfig"
                     class="dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pl-4 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
@@ -784,7 +784,7 @@ const deleteOrder = async () => {
                 <input
                   type="text"
                   class="dark:bg-dark-900 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:shadow-focus-ring focus:outline-hidden focus:ring-0 disabled:border-gray-100 disabled:bg-gray-50 disabled:placeholder:text-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 dark:disabled:border-gray-800 dark:disabled:bg-white/[0.03] dark:disabled:placeholder:text-white/15"
-                  placeholder="비고를 입력해주세요"
+                  placeholder=""
                   v-model="orderinfo.remark"
                 />
                 <!-- db에 넣을때 주문서작성담당자는 로그인 되어있는 사람이름으로 -->
