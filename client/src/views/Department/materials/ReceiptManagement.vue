@@ -17,10 +17,12 @@ import PurMatModal from './MatModal/PurMatModal.vue'
 import TabView from 'primevue/tabview'
 import TabPanel from 'primevue/tabpanel'
 import userDateUtils from '@/utils/useDates.js'
+import axios from 'axios'
+
 const baseInputClass =
   'dark:bg-dark-900 h-8 w-full rounded-lg border border-gray-300 bg-transparent pl-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
 const currentPageTitle = ref('입고관리')
-import axios from 'axios'
+
 const isBcncModalOpen = ref(false)
 const isMatModalOpen = ref(false)
 const isPurMatModalOpen = ref(false)
@@ -29,6 +31,7 @@ const isRegistering = ref(false)
 const selectPending = ref([])
 const isSavingIis = ref(false)
 const activeTab = ref(0)
+
 const iis = ref([
   {
     prod_date: null,
@@ -43,8 +46,19 @@ const iis = ref([
     receipt_qty: '',
   },
 ])
+
 const pending = ref([])
 const complete = ref([])
+
+/** 수량 표시: 항상 소수점 2자리(, 포함) */
+const fmtQty = (v) => {
+  if (v === null || v === undefined || v === '') return ''
+  let s = v
+  if (typeof s === 'string') s = s.replace(/[, ]+/g, '').trim()
+  const n = Number(s)
+  if (!Number.isFinite(n)) return String(v)
+  return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
 
 /** yyyy-MM-dd 로 통일 */
 const toYmd = (v) => {
@@ -126,7 +140,6 @@ const submitIis = async () => {
   if (isSavingIis.value) return
   const r = iis.value?.[0] || {}
 
-  // ====== 필수값 검증 ======
   if (!r.prod_date) return alert('제조일자를 입력해주세요')
   if (!r.exp_date) return alert('유통기한을 입력해주세요')
   if (!r.pre_receipt_date) return alert('가입고일자를 입력해주세요')
@@ -136,7 +149,6 @@ const submitIis = async () => {
   const qtyNum = Number(r.receipt_qty)
   if (!Number.isFinite(qtyNum) || qtyNum <= 0) return alert('입고량을 입력해주세요')
 
-  // 수량 정수화(서버에는 정수로)
   const receipt_qty = Math.max(1, Math.floor(qtyNum))
 
   isSavingIis.value = true
@@ -206,10 +218,6 @@ const deleteIis = async () => {
   try {
     const { data } = await axios.post('/api/iis/delete', { ids })
 
-    if (!data?.ok) {
-      return alert(data?.msg || '삭제가 실패 되었습니다.')
-    }
-
     await refreshBoth()
 
     const pendingSet = new Set((pending.value || []).map((r) => r.iis_id))
@@ -224,7 +232,7 @@ const deleteIis = async () => {
         const reason = completeSet.has(s.iis_id)
           ? '검사완료 상태로 변경되어 삭제되지 않았습니다.'
           : '삭제 조건을 충족하지 않아 삭제되지 않았습니다.'
-        return `• ${s.pur_name ?? '-'} ${s.pre_receipt_date ?? '-'} ${s.bcnc_name ?? '-'} ${s.mat_name ?? '-'} ${s.mat_spec ?? '-'} ${s.mat_unit ?? '-'} ${s.receipt_qty ?? '-'} → ${reason}`
+        return `• ${s.pur_name ?? '-'} ${s.pre_receipt_date ?? '-'} ${s.bcnc_name ?? '-'} ${s.mat_name ?? '-'} ${s.mat_spec ?? '-'} ${s.mat_unit ?? '-'} ${s.receipt_qty ?? '-'} ${reason}`
       })
       msg += `\n\n아래 ${notDeleted.length}건은 삭제되지 않았습니다:\n` + lines.join('\n')
     }
@@ -284,7 +292,6 @@ const registerIis = async () => {
         <template #body-content>
           <!-- (원본) 가입고 입력 테이블 -->
           <DataTable :value="iis" show-gridlines>
-            <!-- ... 당신이 쓰던 DataCol 들 그대로 ... -->
             <DataCol
               field="pre_receipt_date"
               header="가입고일자"
@@ -301,11 +308,13 @@ const registerIis = async () => {
             />
             <DataCol
               field="bcnc_name"
-              header="매입처명*"
               :pt="{ columnHeaderContent: 'justify-center' }"
               class="text-sm"
               style="padding: 8px"
             >
+              <template #header>
+                <span style="font-weight: bold">매입처명<span style="color: red">*</span></span>
+              </template>
               <template #body="{ data, field }">
                 <div class="relative">
                   <input
@@ -319,7 +328,6 @@ const registerIis = async () => {
                     class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
                     aria-hidden="true"
                   >
-                    <!-- icon -->
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       class="w-4 h-4"
@@ -347,11 +355,13 @@ const registerIis = async () => {
             />
             <DataCol
               field="mat_name"
-              header="자재명*"
               style="width: 190px; padding: 8px"
               :pt="{ columnHeaderContent: 'justify-center' }"
               class="text-sm"
             >
+              <template #header>
+                <span style="font-weight: bold">자재명<span style="color: red">*</span></span>
+              </template>
               <template #body="{ data, field }">
                 <div class="relative">
                   <input
@@ -399,21 +409,24 @@ const registerIis = async () => {
             />
             <DataCol
               field="receipt_qty"
-              header="입고량*"
               style="width: 120px; padding: 8px"
               :pt="{ columnHeaderContent: 'justify-center' }"
               class="text-sm"
             >
+              <template #header>
+                <span style="font-weight: bold">입고량<span style="color: red">*</span></span>
+              </template>
               <template #body="{ data, field }">
                 <input
                   v-model="data[field]"
                   type="number"
                   min="1"
+                  step="0.01"
                   style="text-align: right"
                   :class="baseInputClass"
                   @blur="
                     data[field] = (
-                      Number.isFinite(+data[field]) ? Math.max(1, Math.floor(+data[field])) : 1
+                      Number.isFinite(+data[field]) ? Math.max(1, +data[field]) : 1
                     ).toFixed(2)
                   "
                 />
@@ -421,11 +434,13 @@ const registerIis = async () => {
             </DataCol>
             <DataCol
               field="prod_date"
-              header="제조일자*"
               :pt="{ columnHeaderContent: 'justify-center' }"
               style="width: 150px; padding: 8px"
               class="text-sm"
             >
+              <template #header>
+                <span style="font-weight: bold">제조일자<span style="color: red">*</span></span>
+              </template>
               <template #body="{ data, field }">
                 <div class="relative">
                   <flat-pickr v-model="data[field]" :config="prodFlatpickrConfig" />
@@ -453,11 +468,13 @@ const registerIis = async () => {
             </DataCol>
             <DataCol
               field="exp_date"
-              header="유통기한*"
               :pt="{ columnHeaderContent: 'justify-center' }"
               style="width: 150px; padding: 8px"
               class="text-sm"
             >
+              <template #header>
+                <span style="font-weight: bold">유통기한<span style="color: red">*</span></span>
+              </template>
               <template #body="{ data, field }">
                 <div class="relative">
                   <flat-pickr v-model="data[field]" :config="expFlatpickrConfig" />
@@ -490,9 +507,7 @@ const registerIis = async () => {
       <!-- 하단: 검사대기/검사완료 카드 -->
       <ComponentWoong style="height: 526px">
         <template #body-content>
-          <!-- 카드 바디 패딩(초록) 안에서만 작업 -->
           <div class="relative">
-            <!-- 버튼: 패딩 안쪽 우상단. absolute라 레이아웃을 밀지 않음 -->
             <div class="absolute right-0 top-0 z-10 flex space-x-2">
               <button
                 v-if="activeTab != 0"
@@ -512,12 +527,12 @@ const registerIis = async () => {
               </button>
             </div>
 
-            <!-- 탭: 상단 여백 없이 바로 시작(패딩 안쪽의 맨 위) -->
             <TabView
               @tab-change="onTabChange"
               :pt="{ navContainer: { class: 'pr-40' } }"
               class="mt-0"
             >
+              <!-- 검사대기 -->
               <TabPanel header="검사대기">
                 <DataTable
                   :value="pending"
@@ -588,13 +603,16 @@ const registerIis = async () => {
                     :pt="{ columnHeaderContent: 'justify-center' }"
                     class="text-sm"
                   />
+                  <!-- ✅ .00 고정 표시 -->
                   <DataCol
                     field="receipt_qty"
                     header="입고량"
                     :pt="{ columnHeaderContent: 'justify-center' }"
                     class="text-sm"
                     style="text-align: right"
-                  />
+                  >
+                    <template #body="{ data }">{{ fmtQty(data.receipt_qty) }}</template>
+                  </DataCol>
                   <DataCol
                     field="prod_date"
                     header="제조일자"
@@ -612,6 +630,7 @@ const registerIis = async () => {
                 </DataTable>
               </TabPanel>
 
+              <!-- 검사완료 -->
               <TabPanel header="검사완료">
                 <DataTable
                   :value="complete"
@@ -682,20 +701,25 @@ const registerIis = async () => {
                     :pt="{ columnHeaderContent: 'justify-center' }"
                     class="text-sm"
                   />
+                  <!-- ✅ .00 고정 표시 -->
                   <DataCol
                     field="receipt_qty"
                     header="입고량"
                     :pt="{ columnHeaderContent: 'justify-center' }"
                     class="text-sm"
                     style="text-align: right"
-                  />
+                  >
+                    <template #body="{ data }">{{ fmtQty(data.receipt_qty) }}</template>
+                  </DataCol>
                   <DataCol
                     field="pass_qty"
                     header="합격량"
                     :pt="{ columnHeaderContent: 'justify-center' }"
                     class="text-sm"
                     style="text-align: right"
-                  />
+                  >
+                    <template #body="{ data }">{{ fmtQty(data.pass_qty) }}</template>
+                  </DataCol>
                   <DataCol
                     field="prod_date"
                     header="제조일자"
@@ -750,7 +774,7 @@ const registerIis = async () => {
   margin-top: 0 !important;
 }
 
-/* 혹시 PrimeVue 테마에서 p-tabview 자체에 마진이 있으면 강제로 0 */
+/* PrimeVue TabView 상단 마진 제거 */
 :deep(.p-tabview) {
   margin-top: 0 !important;
 }

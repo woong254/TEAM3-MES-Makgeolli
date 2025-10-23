@@ -38,6 +38,16 @@ const purChase = ref([
 
 const purChaseMat = ref([])
 
+// ✅ 숫자 표시: 항상 소수점 2자리(천단위 콤마 포함)
+const fmtQty = (v) => {
+  if (v === null || v === undefined || v === '') return ''
+  let s = v
+  if (typeof s === 'string') s = s.replace(/[, ]+/g, '').trim()
+  const n = Number(s)
+  if (!Number.isFinite(n)) return String(v)
+  return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
 /** yyyy-MM-dd 로 통일 */
 const toYmd = (v) => {
   if (!v) return null
@@ -78,7 +88,7 @@ const validateBeforeSave = () => {
 
 // ---- 저장 ----
 const saveBtn = async () => {
-  let saved = false // ✅ 성공 여부 플래그
+  let saved = false
   try {
     validateBeforeSave()
     const h = purChase.value[0]
@@ -104,19 +114,18 @@ const saveBtn = async () => {
       return
     }
 
-    // ✅ 알림
     if (data.mode === 'create') alert('발주서가 등록되었습니다.')
     else if (data.mode === 'update') alert('발주서가 수정되었습니다.')
     else alert('저장되었습니다.')
 
-    saved = true // ✅ 여기서만 true
+    saved = true
   } catch (e) {
     if (e?.message === 'VALIDATION_STOP') return
     console.error(e)
     alert('저장 중 오류')
   } finally {
     if (saved) {
-      await resetBtn() // ✅ 성공시에만 초기화
+      await resetBtn()
       isExisting.value = false
     }
   }
@@ -157,7 +166,6 @@ const onSelectPur = async (selectedPur) => {
       remark: r.remark || '',
     }))
     selectMat.value = []
-    // 모달에서 가져온 건 DB에 존재하는 문서
     isExisting.value = true
   } catch (e) {
     console.error(e)
@@ -202,7 +210,6 @@ const deleteBtn = async () => {
     const { data } = await axios.post('/api/pur/delete', { pur_code: code })
     if (data?.ok) {
       alert('삭제되었습니다.')
-      // 삭제 완료 후 신규 작성 상태로 초기화
       await resetBtn()
       isExisting.value = false
     } else {
@@ -239,7 +246,6 @@ const resetBtn = async () => {
     },
   ]
   selectMat.value = []
-  // 신규 코드이므로 삭제 버튼 숨김
   isExisting.value = false
 }
 
@@ -264,7 +270,6 @@ const handleCloseModal = () => {
 }
 
 onMounted(async () => {
-  // 새 코드로 시작 → 삭제 버튼 숨김
   isExisting.value = false
 })
 </script>
@@ -281,7 +286,6 @@ onMounted(async () => {
               조회
             </button>
             <button type="button" class="btn-color btn-common" @click="saveBtn">등록/수정</button>
-            <!-- 삭제 버튼: DB에 존재하는 건일 때만 노출 -->
             <button v-if="canDelete" type="button" class="btn-color btn-common" @click="deleteBtn">
               삭제
             </button>
@@ -306,27 +310,28 @@ onMounted(async () => {
               style="width: 120px; text-align: center"
               class="text-sm"
             />
-
             <DataCol
               field="pur_name"
-              header="발주서명*"
               :pt="{ columnHeaderContent: 'justify-center' }"
               style="width: 200px; padding: 8px"
               class="text-sm"
             >
+              <template #header>
+                <span style="font-weight: bold">발주서명<span style="color: red">*</span></span>
+              </template>
               <template #body="{ data, field }">
                 <input v-model="data[field]" type="text" :class="baseInputClass" />
               </template>
             </DataCol>
-
-            <!-- 매입처명 + 돋보기 아이콘 -->
             <DataCol
               field="bcnc_name"
-              header="매입처명*"
               :pt="{ columnHeaderContent: 'justify-center' }"
               style="width: 200px; padding: 8px"
               class="text-sm"
             >
+              <template #header>
+                <span style="font-weight: bold">매입처명<span style="color: red">*</span></span>
+              </template>
               <template #body="{ data, field }">
                 <div class="relative">
                   <input
@@ -358,7 +363,6 @@ onMounted(async () => {
                 </div>
               </template>
             </DataCol>
-
             <DataCol
               field="pur_date"
               header="발주일자"
@@ -366,15 +370,15 @@ onMounted(async () => {
               :pt="{ columnHeaderContent: 'justify-center' }"
               class="text-sm"
             />
-
-            <!-- 입고요청일자 + 캘린더 아이콘 -->
             <DataCol
               field="receipt_date"
-              header="입고요청일자*"
               style="width: 170px; padding: 8px"
               :pt="{ columnHeaderContent: 'justify-center' }"
               class="text-sm"
             >
+              <template #header>
+                <span style="font-weight: bold">입고요청일자<span style="color: red">*</span></span>
+              </template>
               <template #body="{ data, field }">
                 <div class="relative">
                   <flat-pickr v-model="data[field]" :config="flatpickrConfig" />
@@ -388,7 +392,6 @@ onMounted(async () => {
                       height="20"
                       viewBox="0 0 20 20"
                       fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
                     >
                       <path
                         fill-rule="evenodd"
@@ -400,7 +403,6 @@ onMounted(async () => {
                 </div>
               </template>
             </DataCol>
-
             <DataCol
               field="emp_name"
               header="담당자"
@@ -452,6 +454,7 @@ onMounted(async () => {
             <template #empty>
               <div class="text-center text-sm">추가된 자재가 없습니다.</div>
             </template>
+
             <DataCol
               selectionMode="multiple"
               headerStyle="width: 37px"
@@ -486,27 +489,39 @@ onMounted(async () => {
               :pt="{ columnHeaderContent: 'justify-center' }"
               class="text-sm"
             />
+
+            <!-- ✅ 재고: 항상 2자리 소수 표시 -->
             <DataCol
               field="stock_qty"
               header="재고"
               style="width: 180px; text-align: right"
               :pt="{ columnHeaderContent: 'justify-center' }"
               class="text-sm"
-            />
+            >
+              <template #body="{ data }">{{ fmtQty(data.stock_qty) }}</template>
+            </DataCol>
+
+            <!-- ✅ 안전재고: 항상 2자리 소수 표시 -->
             <DataCol
               field="safe_stock"
               header="안전재고"
               style="width: 180px; text-align: right"
               :pt="{ columnHeaderContent: 'justify-center' }"
               class="text-sm"
-            />
+            >
+              <template #body="{ data }">{{ fmtQty(data.safe_stock) }}</template>
+            </DataCol>
+
+            <!-- 입력은 그대로 유지 -->
             <DataCol
               field="pur_qty"
-              header="발주수량*"
               style="width: 200px; padding: 8px"
               :pt="{ columnHeaderContent: 'justify-center' }"
               class="text-sm"
             >
+              <template #header>
+                <span style="font-weight: bold">발주수량<span style="color: red">*</span></span>
+              </template>
               <template #body="{ data, field }">
                 <input
                   v-model="data[field]"
@@ -516,12 +531,13 @@ onMounted(async () => {
                   :class="baseInputClass"
                   @blur="
                     data[field] = (
-                      Number.isFinite(+data[field]) ? Math.max(1, Math.floor(+data[field])) : 1
+                      Number.isFinite(+data[field]) ? Math.max(1, +data[field]) : 1
                     ).toFixed(2)
                   "
                 />
               </template>
             </DataCol>
+
             <DataCol
               field="remark"
               header="비고"

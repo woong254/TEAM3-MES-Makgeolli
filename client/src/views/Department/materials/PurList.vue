@@ -43,6 +43,19 @@ const loading = ref(false)
 const isPdfOpen = ref(false)
 const pdfDocs = ref([]) // [{ headerInfo:{...}, items:[...] }]
 
+const fmtQty = (v) => {
+  if (v === null || v === undefined || v === '') return ''
+  // 문자열에 콤마/공백 등 들어온 경우 제거
+  let s = v
+  if (typeof s === 'string') s = s.replace(/[, ]+/g, '').trim()
+  const n = Number(s)
+  if (!Number.isFinite(n)) return String(v) // 숫자화 실패 시 원문 유지
+  // 콤마 + 소수점 둘째자리 고정
+  return n.toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
+}
 // ✅ 선택된 행에서 pur_code 중복 제거 → 발주서당 1건만 생성
 const openPdfPreview = async () => {
   const rows = Array.isArray(selectPur.value) ? selectPur.value : []
@@ -517,10 +530,14 @@ onMounted(() => {
               header="발주수량"
               sortable
               headerClass="no-wrap"
+              bodyClass="text-sm text-right"
               style="min-width: 110px; text-align: right"
               :pt="{ columnHeaderContent: 'justify-center' }"
-              class="text-sm"
-            />
+            >
+              <template #body="{ data }">
+                {{ fmtQty(data.pur_qty) }}
+              </template>
+            </DataCol>
             <DataCol
               field="pur_status"
               header="입고상태"
