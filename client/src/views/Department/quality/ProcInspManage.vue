@@ -256,7 +256,7 @@ const safeParse = (s?: string) => {
 }
 const findProdInspNgnQcMaster = async (prod_code: string) => {
   try {
-    const { data } = await axios.get(`/api/prodInspQcMasternNg/${encodeURIComponent(prod_code)}`)
+    const { data } = await axios.get(`/api/prodInspQcMasternNg/${prod_code}`)
     if (!data?.ok) throw new Error('조회 실패')
     ng.value = data.ng ?? []
     qc.value = (data.qc ?? []).map((r: any) => ({
