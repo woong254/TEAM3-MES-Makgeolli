@@ -979,3 +979,41 @@ WHERE empm.emp_id = 'EMP-20250616-0006'
 ORDER BY pf.procs_no;
 
 select * from equip_master;
+
+select * from processform;
+SELECT 
+    p.procs_st,
+    CASE 
+        WHEN p.now_procs = '세미'
+             AND p.procs_st = 't3'
+             AND (SELECT SUM(pf.inpt_qty) 
+					FROM processform pf
+                    JOIN makedetail md
+                    ON pf.mk_list = md.mkd_no
+                    WHERE md.prod_code = ?
+                    AND mf.mk_list = ?
+                    AND mf.now_procs = ?) = md.mk_num
+        THEN '생산완료'
+        WHEN p.now_procs = '세미' AND p.procs_st != 't3' THEN '생산중'
+        ELSE '생산대기'
+    END AS status
+FROM 
+    processform p
+WHERE 
+    p.now_procs = '세미'
+    AND p.prod_code = 'PROD-20250101-001'  -- 예시 prod_code, 필요 시 동적 값으로 변경
+    AND p.mk_list = 76              -- 예시 mk_list, 필요 시 동적 값으로 변경
+GROUP BY 
+    p.procs_no, p.now_procs, p.inpt_qty, p.procs_st;
+    
+    
+SELECT SUM(inpt_qty) 
+					FROM processform 
+                    WHERE prod_code = 'PROD-20250101-001' 
+                    AND mk_list = 76
+                    AND now_procs = '세미';                    
+                    
+                    
+select * from epis;
+select * from orderform;
+select * from orderdetail;
