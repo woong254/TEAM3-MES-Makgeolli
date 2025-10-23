@@ -49,6 +49,13 @@ const SelectEmp = (value: EmpInfoInterface) => {
 const currentPageTitle = ref('비가동 등록')
 const inputStyle =
   'dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-950 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
+const inputStyleClick =
+  'dark:bg-dark-900 h-11 w-full rounded-sm border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-950 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
+const inputDisabled =
+  'dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-gray-100 px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30'
+
+const selectStyle =
+  'dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-950 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800'
 
 // 상태값
 const starting = ref(false)
@@ -144,52 +151,80 @@ onMounted(async () => {
                   <td class="border border-gray-200 p-2">
                     <input
                       v-model="createForm.equipCode"
-                      readonly
                       :disabled="isRunning() || starting"
                       type="text"
-                      :class="inputStyle"
-                      placeholder="설비코드를 입력해주세요"
+                      :class="inputDisabled"
+                      style="outline: none"
+                      readonly
                     />
                   </td>
                   <th class="border border-gray-200 bg-gray-50 text-sm text-center p-2">설비명</th>
                   <td class="border border-gray-200 p-2">
                     <input
                       v-model="createForm.equipName"
-                      readonly
                       :disabled="isRunning() || starting"
                       type="text"
-                      :class="inputStyle"
-                      placeholder="설비명을 입력해주세요"
+                      :class="inputDisabled"
+                      style="outline: none"
+                      readonly
                     />
                   </td>
                 </tr>
 
                 <tr>
                   <th class="border border-gray-200 bg-gray-50 text-sm text-center p-2">
-                    비가동유형 *
+                    <span style="font-weight: bold"
+                      >비가동유형<span style="color: red">*</span></span
+                    >
                   </th>
                   <td class="border border-gray-200 p-2">
-                    <select
-                      v-model="createForm.downtimeType"
-                      :class="inputStyle"
-                      :disabled="isRunning() || starting"
-                    >
-                      <option value="비계획정지">비계획정지</option>
-                      <option value="계획정지">계획정지</option>
-                      <option value="점검/수리">점검/수리</option>
-                    </select>
+                    <div class="relative z-20 bg-transparent">
+                      <select
+                        v-model="createForm.downtimeType"
+                        :class="selectStyle"
+                        :disabled="isRunning() || starting"
+                      >
+                        <option value="비계획정지">비계획정지</option>
+                        <option value="계획정지">계획정지</option>
+                        <option value="점검/수리">점검/수리</option>
+                      </select>
+                      <span
+                        class="absolute z-30 text-gray-500 -translate-y-1/2 pointer-events-none right-4 top-1/2 dark:text-gray-400"
+                      >
+                        <svg
+                          class="stroke-current"
+                          width="20"
+                          height="20"
+                          viewBox="0 0 20 20"
+                          fill="none"
+                        >
+                          <path
+                            d="M4.79175 7.396L10.0001 12.6043L15.2084 7.396"
+                            stroke=""
+                            stroke-width="1.5"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                          />
+                        </svg>
+                      </span>
+                    </div>
                   </td>
                   <th class="border border-gray-200 bg-gray-50 text-sm text-center p-2">
-                    담당자 *
+                    <span style="font-weight: bold">담당자<span style="color: red">*</span></span>
                   </th>
                   <td class="border border-gray-200 p-2">
                     <div class="relative">
                       <input
-                        v-model="createForm.workerId"
-                        :disabled="isRunning() || starting"
                         type="text"
-                        :class="inputStyle"
+                        placeholder="담당자를 선택해주세요"
+                        :disabled="isRunning() || starting"
+                        :class="inputStyleClick"
+                        class="w-2/3 cursor-pointer hover:bg-gray-100 duration-300"
+                        readonly
+                        @click="openModal"
+                        v-model="createForm.workerId"
                       />
+
                       <button
                         type="button"
                         class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500"

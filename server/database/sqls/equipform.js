@@ -52,13 +52,25 @@ ORDER BY comncode_detailid
 `;
 
 // ✅ 등록 (FK 안전: 존재하는 코드일 때만 INSERT 됨 → 없으면 0행 insert)
+// 월별(YYMM)로 일련번호 001부터 증가. 동시성 대비 FOR UPDATE 사용
 const insertEquip = `
 INSERT INTO equip_master (
   equip_code, equip_name, equip_type, manager, equip_status,
   insp_cycle, install_date, model_name, equip_image, mfg_dt, maker
 )
 SELECT
-  ?, ?, t.comncode_detailid, ?, s.comncode_detailid,
+  (
+    SELECT CONCAT(
+             'EQ-',
+             DATE_FORMAT(NOW(), '%Y%m%d'),
+             '-',
+             LPAD(IFNULL(MAX(CAST(SUBSTR(equip_code, -3) AS UNSIGNED)), 0) + 1, 3, '0')
+           )
+    FROM equip_master
+    WHERE SUBSTR(equip_code, 4, 8) = DATE_FORMAT(NOW(), '%Y%m%d')
+    FOR UPDATE
+  ) AS next_code,
+  ?, t.comncode_detailid, ?, s.comncode_detailid,
   ?, ?, ?, ?, ?, ?
 FROM comncode_dt s
 JOIN comncode_dt t

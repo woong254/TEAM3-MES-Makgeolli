@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, defineEmits } from 'vue'
+import { ref, defineEmits, watch, onMounted } from 'vue'
 import '@/assets/common.css'
 import Modal from '@/components/ui/Modal.vue'
 import DataTable from 'primevue/datatable'
@@ -47,6 +47,17 @@ function selectedEmpValue() {
     emit('close')
   }
 }
+
+// 전체 조회
+const loadAllEmp = async () => {
+  try {
+    // 서버가 빈 값이면 전체를 리턴하는 형태라면 이렇게 호출
+    const result = await axios.get('/api/empView', { params: { emp_name: '' } })
+    emp.value = result.data ?? []
+  } catch (err) {
+    console.error('전체 조회 중 오류', err)
+  }
+}
 // 조회 버튼 누르면 실행되는 함수
 const submitSearchForm = async () => {
   try {
@@ -66,6 +77,20 @@ const submitSearchForm = async () => {
     console.error('조회 중 오류 발생', err)
   }
 }
+// 모달 열릴 때 자동 조회
+watch(
+  () => props.visible,
+  (visible) => {
+    if (visible) {
+      resetSearchForm() // 검색창 초기화 (선택)
+      resetSelectedEmp() // 선택 초기화 (선택)
+      loadAllEmp() // 전체 조회
+    }
+  },
+)
+onMounted(() => {
+  if (props.visible) loadAllEmp()
+})
 </script>
 
 <template>
