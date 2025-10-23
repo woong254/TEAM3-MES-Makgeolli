@@ -21,8 +21,8 @@ SELECT od.no,
        od.prod_code,
        p.prod_name,
        p.prod_spec,
-       FORMAT(cd_pu.comncode_dtnm,0) AS prod_unit, 
-       od.op_qty,
+       cd_pu.comncode_dtnm AS prod_unit, 
+       FORMAT(od.op_qty, 0) AS op_qty,
        od.remark
 FROM   orderdetail od
        JOIN orderform o
