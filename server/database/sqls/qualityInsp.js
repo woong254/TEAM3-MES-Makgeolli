@@ -182,7 +182,7 @@ SELECT
   COALESCE(p.prod_name, m.mat_name)   AS t_name,
   COALESCE(p.prod_spec, m.mat_spec)   AS t_spec,
   COALESCE(p.prod_unit, m.mat_unit)   AS t_unit,
-  cu.comncode_dtnm                    AS t_unit_name, 
+  COALESCE(cu.comncode_dtnm, m.mat_unit) AS t_unit_name,
   CASE WHEN qmt.product_code IS NOT NULL THEN '제품' ELSE '자재' END AS t_category,
   c.comncode_dtnm                     AS t_type_name
 FROM qc_master_target AS qmt
