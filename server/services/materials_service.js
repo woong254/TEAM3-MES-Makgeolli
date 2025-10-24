@@ -322,8 +322,9 @@ const registerIisBatch = async (ids = []) => {
         );
         const seq = seqRow?.[0]?.seq || "001";
 
-        const base = String(mat_code).split("-")[0];
-        lotNo = `${base}-${toYYYYMMDD(exp_date)}-${seq}`;
+        lotNo = `${mat_code.split("-")[0]}${
+          mat_code.split("-")[1]
+        }-${toYYYYMMDD(exp_date)}-${seq}`;
 
         // 동시성 대비 IGNORE (이미 누가 만들었으면 0행)
         await mariadb.query("insertLotIgnore", [

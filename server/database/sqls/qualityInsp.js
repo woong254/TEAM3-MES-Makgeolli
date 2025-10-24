@@ -178,20 +178,45 @@ SELECT
   qmt.insp_target_code,
   qmt.product_code,
   qmt.mat_code,
-  COALESCE(p.prod_code, m.mat_code)         AS t_id,
-  COALESCE(p.prod_name, m.mat_name)         AS t_name,
-  COALESCE(p.prod_spec, m.mat_spec)         AS t_spec,
-  COALESCE(p.prod_unit, m.mat_unit)         AS t_unit,
+  COALESCE(p.prod_code, m.mat_code)   AS t_id,
+  COALESCE(p.prod_name, m.mat_name)   AS t_name,
+  COALESCE(p.prod_spec, m.mat_spec)   AS t_spec,
+  COALESCE(p.prod_unit, m.mat_unit)   AS t_unit,
+  COALESCE(cu.comncode_dtnm, m.mat_unit) AS t_unit_name,
   CASE WHEN qmt.product_code IS NOT NULL THEN '제품' ELSE '자재' END AS t_category,
-  c.comncode_dtnm                            AS t_type_name
+  c.comncode_dtnm                     AS t_type_name
 FROM qc_master_target AS qmt
-LEFT JOIN prod_master  AS p ON p.prod_code      = qmt.product_code
-LEFT JOIN mat_master   AS m ON m.mat_code       = qmt.mat_code
-LEFT JOIN comncode_dt  AS c ON c.comncode_id    = '0A'
-                            AND c.comncode_detailid = qmt.insp_target_code
+LEFT JOIN prod_master  AS p ON p.prod_code = qmt.product_code
+LEFT JOIN mat_master   AS m ON m.mat_code  = qmt.mat_code
+LEFT JOIN comncode_dt  AS c  ON c.comncode_id = '0A'
+                             AND c.comncode_detailid = qmt.insp_target_code
+LEFT JOIN comncode_dt  AS cu ON cu.comncode_id = '0B'
+                             AND cu.comncode_detailid = COALESCE(p.prod_unit, m.mat_unit) 
 WHERE qmt.insp_item_id = ?
 ORDER BY qmt.insp_target_code, qmt.product_code, qmt.mat_code
 `;
+
+// SELECT
+//   qmt.insp_target_id,
+//   qmt.insp_target_code,
+//   qmt.product_code,
+//   qmt.mat_code,
+//   COALESCE(p.prod_code, m.mat_code)         AS t_id,
+//   COALESCE(p.prod_name, m.mat_name)         AS t_name,
+//   COALESCE(p.prod_spec, m.mat_spec)         AS t_spec,
+//   COALESCE(p.prod_unit, m.mat_unit)         AS t_unit,
+//   CASE WHEN qmt.product_code IS NOT NULL THEN '제품' ELSE '자재' END AS t_category,
+//   c.comncode_dtnm                            AS t_type_name
+// FROM qc_master_target AS qmt
+// LEFT JOIN prod_master  AS p ON p.prod_code      = qmt.product_code
+// LEFT JOIN mat_master   AS m ON m.mat_code       = qmt.mat_code
+// LEFT JOIN comncode_dt  AS c ON c.comncode_id    = '0A'
+//                             AND c.comncode_detailid = qmt.insp_target_code
+// WHERE qmt.insp_item_id = ?
+// ORDER BY qmt.insp_target_code, qmt.product_code, qmt.mat_code
+
+
+
 const selectInspQuestionsByItem = `
 SELECT
   qs.ques_id,

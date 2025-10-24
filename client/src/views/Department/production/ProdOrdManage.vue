@@ -65,6 +65,19 @@ const searchMakeOrder = ref<SearchMakeOrder>({
   make_order_end_date: '',
 })
 
+// 초기화 버튼
+const resetSearch = () => {
+  searchMakeOrder.value = {
+    prod_name: '',
+    proc_name: '',
+    make_order_start_date: '',
+    make_order_end_date: '',
+  }
+  selectMake.value = null
+  selectEquip.value = null
+  selectEmp.value = null
+}
+
 // 목록 상태
 const makeRows = ref<MakeOrderDetail[]>([])
 const equipRows = ref<ChooseEquip[]>([])
@@ -155,35 +168,33 @@ onMounted(async () => {
 
   // 두번째 공정부터 이전 단계의 합격량이 잔여수량으로 보이게 함
   for (let i = 0; i < makeRows.value.length; i++) {
-    const item = makeRows.value[i];
+    const item = makeRows.value[i]
     if (item.seq_no > 1) {
       try {
         // 현재 공정에서의 투입 수량 total_input
         const totalInput = await axios.post('/api/nowProcessInputQty', {
           mk_list: item.mkd_no,
-          seq_no: item.seq_no
-        });
-        item.total_input = totalInput.data.success ? Number(totalInput.data.inputQty || 0) : 0;
-
+          seq_no: item.seq_no,
+        })
+        item.total_input = totalInput.data.success ? Number(totalInput.data.inputQty || 0) : 0
 
         // 다음 공정의 최대 지시 수량을 위한 mk_num
         const apiRes = await axios.post('/api/nextProcessMaxQty', {
           mk_list: item.mkd_no,
-          seq_no: item.seq_no
-        });
-        item.mk_num = apiRes.data.success ? Number(apiRes.data.maxQty || 0) : 0;
+          seq_no: item.seq_no,
+        })
+        item.mk_num = apiRes.data.success ? Number(apiRes.data.maxQty || 0) : 0
       } catch (err) {
-        console.error('공정 mk_num 자동 세팅 오류:', err);
-        item.mk_num = 0;
+        console.error('공정 mk_num 자동 세팅 오류:', err)
+        item.mk_num = 0
       }
     }
   }
-  
 
   if (selectMake.value && !isSelectableRow(selectMake.value)) {
-    selectMake.value = null;
+    selectMake.value = null
   }
-});
+})
 
 const isEquipLoading = ref(false)
 // 저장
@@ -228,7 +239,7 @@ const goToProcess = async () => {
   // 1. 중복 클릭 방지 및 상태 확인
   if (isSubmitting.value) return // 2. 유효성 검사
   if (!validateBeforeGoToProcess()) return
-  
+
   const make = selectMake.value as MakeOrderDetail
   const equip = selectEquip.value as ChooseEquip
   const emp = selectEmp.value as ChooseEmp // 공정 제어를 시작하기 위해 서버로 전송할 데이터 페이로드
@@ -274,46 +285,40 @@ const goToProcess = async () => {
 
 // 지시 가능 수량
 const onInputInptQty = (data: MakeOrderDetail) => {
-  const max = Number(data.mk_num || 0)
-  const cur = Number(data.inpt_qty || 0) 
+  const mkNum = Number(data.mk_num || 0)
+  const totalInput = Number(data.total_input || 0)
+  const cur = Number(data.inpt_qty || 0)
 
-  const newInptQty = Math.min(max, Math.max(0, cur))
-  
-  // 2. makeRows 배열에서 해당 행의 인덱스를 찾습니다.
-  const index = makeRows.value.findIndex(row => row.mkd_no === data.mkd_no)
+  const remaining = Math.max(0, mkNum - totalInput)
+  const newInptQty = Math.min(remaining, Math.max(0, cur))
 
-  console.log(index)
+  if (data.inpt_qty !== newInptQty) {
+    data.inpt_qty = newInptQty
+  }
 
-  if (index !== -1) {
-    // 3. 새로운 inpt_qty를 가진 새로운 객체를 생성합니다.
-    const updatedRow = { 
-        ...makeRows.value[index], // 기존 데이터 복사
-        inpt_qty: newInptQty      // 새로운 inpt_qty 할당
-    }
-    
-    // 4. makeRows 배열의 요소를 새로운 객체로 교체하여 PrimeVue/Vue에 변경을 명시적으로 알립니다.
-    makeRows.value[index] = updatedRow;
-    
-    // 5. 현재 선택된 행이 수정된 행이라면, selectMake.value도 동기화합니다.
-    if (selectMake.value && selectMake.value.mk_ord_no === updatedRow.mk_ord_no) {
-        // Vue의 반응성을 유지하며 값을 할당해야 합니다.
-        // selectMake.value는 makeRows의 객체를 참조할 수 있으므로,
-        // makeRows[index] = updatedRow 이후 이 코드는 사실상 불필요할 수 있지만,
-        // 안전을 위해 명시적으로 동기화합니다.
-        selectMake.value.inpt_qty = newInptQty
-    }
+  if (selectMake.value && selectMake.value.mk_ord_no === data.mk_ord_no) {
+    selectMake.value.inpt_qty = newInptQty
   }
 }
 
 // mk_num: 문자 0 -> 숫자 0으로 변환 
 const isSelectableRow = (data: MakeOrderDetail): boolean => {
-  const mkNum = Math.max(0, Number(data.mk_num || 0) - Number(data.total_input || 0));
-  return mkNum > 0; // false 반환
+  const mkNum = Math.max(0, Number(data.mk_num || 0) - Number(data.total_input || 0))
+  return mkNum > 0 // false 반환
 }
 
 // comncode_dtnm가 있는 행은 비활성화
 const rowClassHook = (data: MakeOrderDetail) => {
   return !isSelectableRow(data) ? 'disabled-row' : ''
+}
+
+// 잔여수량 계산
+const getRemainingQty = (data: MakeOrderDetail) => {
+  const mkNum = Number(data.mk_num || 0)
+  const totalInput = Number(data.total_input || 0)
+  const inptQty = Number(data.inpt_qty || 0)
+
+  return Math.max(0, mkNum - totalInput - inptQty)
 }
 
 const currentPageTitle = ref('공정 실적 관리')
@@ -332,7 +337,7 @@ const baseInputClass =
       <ComponentCard title="지시제품검색">
         <template #header-right>
           <div class="">
-            <button type="button" class="btn-white btn-common">초기화</button>
+            <button type="button" class="btn-white btn-common" @click="resetSearch">초기화</button>
             <button type="button" class="btn-color btn-common">조회</button>
           </div>
         </template>
@@ -340,16 +345,11 @@ const baseInputClass =
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <label :class="labelStyle"> 제품명 </label>
-              <input
-                type="text"
-                :class="inputStyle"
-                placeholder="제품 이름을 입력해주세요"
-                required
-              />
+              <input type="text" :class="inputStyle" required />
             </div>
             <div>
               <label :class="labelStyle"> 공정명 </label>
-              <input type="text" :class="inputStyle" placeholder="공정을 입력해주세요" required />
+              <input type="text" :class="inputStyle" required />
             </div>
             <div>
               <label :class="labelStyle"> 지시날짜 </label>
@@ -444,7 +444,6 @@ const baseInputClass =
                   editMode="cell"
                   size="small"
                   :value="makeRows"
-                  selectionMode="single"
                   @row-select="selectProcName"
                   v-model:selection="selectMake"
                   :rowSelectable="isSelectableRow"
@@ -505,7 +504,6 @@ const baseInputClass =
                     :pt="{ columnHeaderContent: 'justify-center' }"
                     headerStyle="width: 5%"
                   />
-
                   <Column
                     field="inpt_qty"
                     header="투입수량"
@@ -514,20 +512,19 @@ const baseInputClass =
                     headerStyle="width: 7%"
                   >
                     <template #body="{ data }">
-                      <template v-if="Number(data.mk_num || 0) > 0">
+                      <template v-if="Math.max(0, Number(data.mk_num || 0) - Number(data.total_input || 0)) > 0">
                         <input
                           v-model.number="data.inpt_qty"
                           type="number"
                           :min="0"
-                          :max="Number(data.mk_num || 0)"
+                          :max="Math.max(0, Number(data.mk_num || 0) - Number(data.total_input || 0))"
                           :class="baseInputClass"
                           style="text-align: right; height: 2rem"
                           @input="onInputInptQty(data)"
-                          placeholder="투입"
                         />
                       </template>
                       <template v-else>
-                        <span style="display: block; text-align: center;">-</span>
+                        <span style="display: block; text-align: center">-</span>
                       </template>
                     </template>
                   </Column>
@@ -544,11 +541,10 @@ const baseInputClass =
                         :min="0"
                         :max="Number(data.mk_num || 0)"
                       >
-                        {{ Math.max(0, Number(data.mk_num || 0) - Number(data.total_input || 0)) }}
+                        {{ getRemainingQty(data) }}
                       </div>
                     </template>
                   </Column>
-
                   <Column
                     field="seq_no"
                     header="공정순서"
