@@ -149,7 +149,7 @@ const submitEpIs = async () => {
       return
     }
     if (addRes.isSuccessed) {
-      alert('입고성공')
+      alert('입고가 완료되었습니다.')
       getEpIsManage()
       rowUnselectHook()
       return
