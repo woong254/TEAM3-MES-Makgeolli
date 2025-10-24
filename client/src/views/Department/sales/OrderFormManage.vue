@@ -217,10 +217,10 @@ const getOrderFormSearch = async () => {
       params: search.value,
     })
     const payload = result.data
-    if (!search.value.ord_name) {
-      alert('주문서명을 입력해주세요!')
-      return
-    }
+    //if (!search.value.ord_name) {
+    //  alert('주문서명을 입력해주세요!')
+    //  return
+    //}
     if (!payload || payload.list.length == 0) {
       alert('조회 결과가 없습니다.')
       resetInfoForm()
@@ -478,14 +478,13 @@ const deleteOrder = async () => {
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-400 mb-2">
-                  주문서명<span style="color: #d70000">*</span>
+                  주문서명
                 </label>
                 <input
                   type="text"
                   class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
                   placeholder=""
                   v-model="search.ord_name"
-                  required
                 />
               </div>
               <div>
