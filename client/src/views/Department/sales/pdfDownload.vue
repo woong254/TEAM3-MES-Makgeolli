@@ -74,7 +74,7 @@ const pdfStyles = `/* ================================================= */
 }
 .info-table th {
   background-color: #f2f2f2;
-  width: 15%; 
+  width: 15%;
   font-weight: bold;
   white-space: nowrap;
 }
@@ -147,20 +147,18 @@ const pdfStyles = `/* ================================================= */
 `
 
 const exportPDF = async () => {
-  const element = document.getElementById('purchase-order-pdf')
+  const element = document.getElementById('purchase-order-pdf') // 아이디태그가 purchase-order-pdf인걸 찾음
   if (!element) {
     console.error('Element not found')
     return
   }
-  // 1. PDF로 만들 HTML 내용 전체를 가져옵니다.
-  const rawHtmlContent = element.innerHTML
-  const filename = `주문서_${props.orderInfo.ord_id || 'TEMP'}_${dateString}.pdf` // <style> 태그로 CSS 문자열을 감싸서 HTML 내용의 시작 부분에 붙입니다.
-  // 🌟🌟🌟 2. HTML에 CSS 스타일을 직접 주입합니다. (핵심 수정)
-  const styledPdfContent = `<style>${pdfStyles}</style>${rawHtmlContent}`
+  const rawHtmlContent = element.innerHTML // PDF로 만들 HTML 내용 전체를 문자열로 가져옴
+  const filename = `주문서_${props.orderInfo.ord_id || 'TEMP'}_${dateString}.pdf` // 파일이름 설정
+  const styledPdfContent = `<style>${pdfStyles}</style>${rawHtmlContent}` // HTML에 CSS 스타일을 직접 넣음
   try {
     console.log(`[프론트엔드] PDF 생성 API 호출 시작: ${API_ENDPOINT}`)
-
     const response = await fetch(API_ENDPOINT, {
+      // 백엔드로 html전송
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -168,20 +166,16 @@ const exportPDF = async () => {
       body: JSON.stringify({
         html: styledPdfContent,
         filename: filename,
-        // 백엔드에서 필요하다면 CSS도 함께 전송할 수 있습니다.
-        // css: document.querySelector('style')?.innerHTML // 필요시 추가
       }),
     })
     if (!response.ok) {
-      // 백엔드에서 에러 메시지를 JSON으로 보낼 경우 처리
-      const errorText = await response.text()
+      const errorText = await response.text() // 백엔드에서 에러 메시지를 JSON으로 보낼 경우 처리
       throw new Error(`PDF 생성 실패: ${response.status} - ${errorText}`)
     }
-
-    // 2. 응답으로 받은 PDF 파일을 Blob 형태로 가져옵니다.
+    // pdf받기, 응답으로 받은 PDF 파일을 Blob 형태로 가져오기. Blob은 브라우저에서 파일처럼 다룰 수 있는 데이터 객체임
     const blob = await response.blob()
-
-    // 3. 다운로드 링크를 생성하고 클릭 이벤트를 발생시켜 다운로드를 유도합니다.
+    // 다운로드 링크를 생성하고 클릭 이벤트를 발생시켜 다운로드를 유도, 이 blob 데이터를 가리키는 임시 URL을 만들어줄게.네가 다운로드 링크처럼 쓸 수 있게 해줄게. 라는 의미
+    // Blob 데이터를 브라우저 메모리에 잠시 올려두고, 그걸 다운로드하는 방식이에요.
     const url = window.URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -189,7 +183,7 @@ const exportPDF = async () => {
     document.body.appendChild(a)
     a.click()
 
-    // 4. 사용이 끝난 임시 URL과 요소를 정리합니다.
+    // 사용이 끝난 임시 URL과 요소를 정리합니다.
     window.URL.revokeObjectURL(url)
     document.body.removeChild(a)
 
@@ -203,7 +197,6 @@ const exportPDF = async () => {
 
 <template>
   <div v-if="props.visible">
-    <!-- ⚠️ NOTE: 백엔드 API 호출 방식에서는 CDN 스크립트가 필요 없습니다. ⚠️ -->
     <Modal
       title="주문서 미리보기"
       :fullScreenBackdrop="true"

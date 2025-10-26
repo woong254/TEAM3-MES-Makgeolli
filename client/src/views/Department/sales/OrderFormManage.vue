@@ -130,6 +130,12 @@ const pdfopenModal = () => {
     alert('주문서 수정 저장 후 PDF 내보내기가 가능합니다.')
     return
   }
+  console.log(
+    'PDF dbOrderDetailInfo :',
+    dbOrderDetailInfo.value,
+    '/ PDF orderinfo.value :  ',
+    orderinfo.value,
+  )
   if (!isEqual(dbOrderDetailInfo.value, orderinfo.value)) {
     alert('주문서 수정 저장 후 PDF 내보내기가 가능합니다.')
     return
@@ -290,6 +296,7 @@ const submitInfoForm = async () => {
 
   console.log('dbOrderProducts:', dbOrderProducts.value)
   console.log('products:', products.value)
+  // 유효성검사
   if (!orderinfo.value.due_date) {
     alert('납기날짜를 선택해주세요.')
     return
@@ -335,30 +342,30 @@ const submitInfoForm = async () => {
       remark: item.remark || '',
     })),
   }
+
   try {
     // 저장 조회를 한 번에
     const result = await axios.post('/api/insertOrderFormProducts', obj)
     const addRes = result.data
-
     if (!addRes.isSuccessed) {
       alert('등록되지 않았습니다. 데이터를 확인해보세요.')
       return
     }
-
-    // 프로시저에서 바로 반환된 데이터 사용
     const { ord_id, orderinfo: savedOrderInfo, products: savedProducts } = addRes
+    const convertedProducts = savedProducts.map((item: OrderItem) => ({
+      ...item,
+      op_qty: Number(item.op_qty), // 문자열 -> 숫자
+    }))
     alert(`${isUpdate ? '수정' : '등록'}되었습니다. 주문서 ID: ${ord_id}`)
-
-    // 화면에 렌더링
+    // 저장하고 조회된 데이터 dbOrder에 다시 설정
     orderinfo.value = { ...orderinfo.value, ...savedOrderInfo }
-    products.value = savedProducts
+    products.value = convertedProducts
+    dbOrderProducts.value = structuredClone(convertedProducts)
+    dbOrderDetailInfo.value = structuredClone(savedOrderInfo)
   } catch (err) {
     console.error('추가 중 오류 발생', err)
     alert('서버 요청 중 오류가 발생했습니다.')
   }
-
-  console.log(orderinfo.value)
-  console.log(products.value)
 }
 
 // 주문서 조회 검색에 있는 초기화 버튼 누르면 실행되는 함수
