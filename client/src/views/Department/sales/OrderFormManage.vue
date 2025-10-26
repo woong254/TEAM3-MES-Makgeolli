@@ -130,6 +130,12 @@ const pdfopenModal = () => {
     alert('주문서 수정 저장 후 PDF 내보내기가 가능합니다.')
     return
   }
+  console.log(
+    'PDF dbOrderDetailInfo :',
+    dbOrderDetailInfo.value,
+    '/ PDF orderinfo.value :  ',
+    orderinfo.value,
+  )
   if (!isEqual(dbOrderDetailInfo.value, orderinfo.value)) {
     alert('주문서 수정 저장 후 PDF 내보내기가 가능합니다.')
     return
@@ -290,6 +296,7 @@ const submitInfoForm = async () => {
 
   console.log('dbOrderProducts:', dbOrderProducts.value)
   console.log('products:', products.value)
+  // 유효성검사
   if (!orderinfo.value.due_date) {
     alert('납기날짜를 선택해주세요.')
     return
@@ -346,13 +353,20 @@ const submitInfoForm = async () => {
       return
     }
 
-    // 프로시저에서 바로 반환된 데이터 사용
     const { ord_id, orderinfo: savedOrderInfo, products: savedProducts } = addRes
+
+    const convertedProducts = savedProducts.map((item: OrderItem) => ({
+      ...item,
+      op_qty: Number(item.op_qty), // 문자열 -> 숫자
+    }))
+
     alert(`${isUpdate ? '수정' : '등록'}되었습니다. 주문서 ID: ${ord_id}`)
 
     // 화면에 렌더링
     orderinfo.value = { ...orderinfo.value, ...savedOrderInfo }
-    products.value = savedProducts
+    products.value = convertedProducts
+    dbOrderProducts.value = structuredClone(convertedProducts)
+    dbOrderDetailInfo.value = structuredClone(savedOrderInfo)
   } catch (err) {
     console.error('추가 중 오류 발생', err)
     alert('서버 요청 중 오류가 발생했습니다.')
