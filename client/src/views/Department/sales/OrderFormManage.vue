@@ -335,6 +335,7 @@ const submitInfoForm = async () => {
       remark: item.remark || '',
     })),
   }
+
   try {
     // 저장 조회를 한 번에
     const result = await axios.post('/api/insertOrderFormProducts', obj)

@@ -147,6 +147,7 @@ const pdfStyles = `/* ================================================= */
 `
 
 const exportPDF = async () => {
+  // pdf로 만들 html영역으로 가져온다.
   const element = document.getElementById('purchase-order-pdf')
   if (!element) {
     console.error('Element not found')
@@ -155,7 +156,7 @@ const exportPDF = async () => {
   // 1. PDF로 만들 HTML 내용 전체를 가져옵니다.
   const rawHtmlContent = element.innerHTML
   const filename = `주문서_${props.orderInfo.ord_id || 'TEMP'}_${dateString}.pdf` // <style> 태그로 CSS 문자열을 감싸서 HTML 내용의 시작 부분에 붙입니다.
-  // 🌟🌟🌟 2. HTML에 CSS 스타일을 직접 주입합니다. (핵심 수정)
+  // 2. HTML에 CSS 스타일을 직접 주입합니다.
   const styledPdfContent = `<style>${pdfStyles}</style>${rawHtmlContent}`
   try {
     console.log(`[프론트엔드] PDF 생성 API 호출 시작: ${API_ENDPOINT}`)
@@ -203,7 +204,6 @@ const exportPDF = async () => {
 
 <template>
   <div v-if="props.visible">
-    <!-- ⚠️ NOTE: 백엔드 API 호출 방식에서는 CDN 스크립트가 필요 없습니다. ⚠️ -->
     <Modal
       title="주문서 미리보기"
       :fullScreenBackdrop="true"

@@ -4,9 +4,9 @@ const express = require("express");
 const router = express.Router();
 
 const prodOrdService = require("../services/prodOrd_service.js");
-const { 
+const {
   nowProcessQty,
-  getNextProcessQty
+  getNextProcessQty,
 } = require("../services/prodOrd_service.js");
 
 // 본인이 작성한 지시서 조회
@@ -99,31 +99,31 @@ router.get("/getProcessData", async (req, res) => {
 // ====================================================================
 // [추가] 공정제어 - 실시간 생산량 폴링을 위한 라우터
 // ====================================================================
-router.get("/getCurrentProcessQty", async (req, res) => {
-  const procs_no = req.query.procs_no;
-  if (!procs_no) {
-    // 공정 번호가 없으면 400 Bad Request 응답
-    return res.status(400).json({
-      isSuccessed: false,
-      message: "공정 번호(procs_no)가 필요합니다.",
-    });
-  }
+// router.get("/getCurrentProcessQty", async (req, res) => {
+//   const procs_no = req.query.procs_no;
+//   if (!procs_no) {
+//     // 공정 번호가 없으면 400 Bad Request 응답
+//     return res.status(400).json({
+//       isSuccessed: false,
+//       message: "공정 번호(procs_no)가 필요합니다.",
+//     });
+//   }
 
-  try {
-    // prodOrdService의 새로운 함수 호출 (실시간 데이터 조회 및 업데이트 역할)
-    const result = await prodOrdService.getCurrentProcessQty(procs_no);
+//   try {
+//     // prodOrdService의 새로운 함수 호출 (실시간 데이터 조회 및 업데이트 역할)
+//     const result = await prodOrdService.getCurrentProcessQty(procs_no);
 
-    // Vue 컴포넌트가 기대하는 형식에 맞게 isSuccessed: true와 result를 반환
-    return res.json({ isSuccessed: true, result: result });
-  } catch (err) {
-    console.error("getCurrentProcessQty 라우터 오류:", err);
-    return res.status(500).json({
-      isSuccessed: false,
-      message: "서버 내부 오류",
-      detail: err.message,
-    });
-  }
-});
+//     // Vue 컴포넌트가 기대하는 형식에 맞게 isSuccessed: true와 result를 반환
+//     return res.json({ isSuccessed: true, result: result });
+//   } catch (err) {
+//     console.error("getCurrentProcessQty 라우터 오류:", err);
+//     return res.status(500).json({
+//       isSuccessed: false,
+//       message: "서버 내부 오류",
+//       detail: err.message,
+//     });
+//   }
+// });
 // ====================================================================
 
 // 공정실적관리에서 서버로 보낸 데이터

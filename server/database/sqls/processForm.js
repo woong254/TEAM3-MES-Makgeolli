@@ -75,7 +75,9 @@ SELECT
                   AND pf_sub.now_procs = pf.now_procs
             )
         )
-    ) AS remain_qty
+    ) AS remain_qty,
+    DATE_FORMAT(pf.procs_bgntm, '%Y-%m-%d %H-%M-%S') AS procs_bgntm, -- 생산시작일
+    DATE_FORMAT(pf.procs_endtm, '%Y-%m-%d %H-%M-%S') AS procs_endtm  -- 생산종료일
 
 FROM processform pf
     JOIN prod_master pm 

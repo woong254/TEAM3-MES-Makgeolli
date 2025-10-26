@@ -10,18 +10,18 @@ const {
 // 서버 메모리에 실행 중인 공정 시뮬레이션을 관리하는 맵
 // 키: procs_no, 값: setInterval ID
 // *참고: 로드 밸런싱 환경에서는 Redis/Message Queue 등으로 대체해야 함*
-const activeProcesses = {};
+// const activeProcesses = {};
 
 // 공정 번호에 해당하는 시뮬레이션 중지 함수
-const stopProcessSimulation = (procs_no) => {
-  if (activeProcesses[procs_no]) {
-    clearInterval(activeProcesses[procs_no]);
-    delete activeProcesses[procs_no];
-    console.log(`[Simulation] Process ${procs_no} stopped.`);
-    return true;
-  }
-  return false;
-};
+// const stopProcessSimulation = (procs_no) => {
+//   if (activeProcesses[procs_no]) {
+//     clearInterval(activeProcesses[procs_no]);
+//     delete activeProcesses[procs_no];
+//     console.log(`[Simulation] Process ${procs_no} stopped.`);
+//     return true;
+//   }
+//   return false;
+// };
 // ----------------------------------------------------------------------
 
 // 생산 지시 목록
@@ -137,8 +137,8 @@ const processStart = async (params) => {
       [params.procs_no]
     );
 
-    // 2. 업데이트된 레코드와 최대 생산량을 가져옴
-    const updatedRecordResult = await mariadb.query(
+    // 2. 업데이트된 공정실적번호, 현투입량, 작업시작시간을 가져옴
+    const updatedRecord = await mariadb.query(
       `SELECT pf.procs_no,
               pf.inpt_qty,
               DATE_FORMAT(pf.procs_bgntm, '%Y-%m-%d %H:%i:%s') AS procs_bgntm
@@ -147,87 +147,10 @@ const processStart = async (params) => {
       [params.procs_no]
     );
 
-    // 쿼리 결과에서 단일 행 데이터 추출
-    const updatedRecord =
-      Array.isArray(updatedRecordResult) &&
-      Array.isArray(updatedRecordResult[0]) &&
-      updatedRecordResult[0].length > 0
-        ? updatedRecordResult[0][0]
-        : Array.isArray(updatedRecordResult) && updatedRecordResult.length > 0
-        ? updatedRecordResult[0]
-        : null;
-
-    if (!updatedRecord) {
-      throw new Error("작업 시작 후 업데이트된 레코드를 찾을 수 없습니다.");
-    }
-
-    // ------------------------------------------------------------------
-    // 3. 서버 측에서 생산량(mk_qty) 자동 증가 시뮬레이션 시작
-    // ------------------------------------------------------------------
-    const procs_no = updatedRecord.procs_no;
-    const maxQty = updatedRecord.inpt_qty; // 현 투입량 = 최대 생산량
-
-    if (activeProcesses[procs_no]) {
-      stopProcessSimulation(procs_no); // 혹시 모를 중복 실행 방지
-    }
-
-    // 0.5초마다 1개씩 증가 시뮬레이션 (실제 환경에 맞게 시간 조정 필요)
-    activeProcesses[procs_no] = setInterval(async () => {
-      try {
-        // 현재 DB의 mk_qty 값을 가져옴
-        const result = await mariadb.query(
-          "SELECT mk_qty FROM processform WHERE procs_no = ?",
-          [procs_no]
-        );
-
-        // DB 결과에서 mk_qty가 있는 row 객체를 안전하게 추출
-        const current =
-          Array.isArray(result) &&
-          Array.isArray(result[0]) &&
-          result[0].length > 0
-            ? result[0][0] // [rows, fields] 형식 처리
-            : Array.isArray(result) && result.length > 0
-            ? result[0]
-            : null; // rows 형식 처리
-
-        if (!current) {
-          stopProcessSimulation(procs_no);
-          return;
-        }
-
-        const oldQty = Number(current.mk_qty) || 0;
-
-        if (oldQty < maxQty) {
-          let newQty = oldQty + 1;
-
-          // 최대 생산량을 초과하지 않도록 제한
-          if (newQty > maxQty) {
-            newQty = maxQty;
-
-            // 생산 완료 시 서버 시뮬레이션 중지
-            stopProcessSimulation(procs_no);
-          }
-
-          // 생산량 증가
-          await mariadb.query(
-            "UPDATE processform SET mk_qty = ? WHERE procs_no = ?",
-            [newQty, procs_no]
-          );
-          // console.log(`[Simulation] Procs ${procs_no}: ${newQty}/${maxQty} updated.`);
-        } else {
-          // 이미 maxQty에 도달했으면 시뮬레이션 중지
-          stopProcessSimulation(procs_no);
-        }
-      } catch (simErr) {
-        console.error(`[Simulation] Error updating ${procs_no}:`, simErr);
-        stopProcessSimulation(procs_no);
-      }
-    }, 500); // 0.5초로 바꿈
-
     return {
       isSuccessed: true,
-      message: `작업 시작 및 생산 시뮬레이션이 시작되었습니다. (Procs No: ${procs_no})`,
-      result: updatedRecord,
+      message: `작업이 시작되었습니다. (Procs No: ${params.procs_no})`,
+      result: updatedRecord?.[0] || null,
     };
   } catch (err) {
     console.error(err);
@@ -241,41 +164,26 @@ const processStart = async (params) => {
 const updateProcessForm = async (params) => {
   let conn = null;
   const procs_no = params.procs_no; // 공정 번호
+  const mk_qty = params.mk_qty; // 생산량
   try {
-    // 1. 서버 측 생산 시뮬레이션 중지 (가장 중요)
-    stopProcessSimulation(procs_no);
-
     conn = await mariadb.getConnection();
     await conn.beginTransaction();
 
     // 2. 현투입량(inpt_qty) 조회 (최대 생산 가능 수량)
-    const processRowResult = await conn.query(
+    const processRow = await conn.query(
       "SELECT inpt_qty FROM processform WHERE procs_no = ?",
       [procs_no]
     );
 
-    // 단일 행 데이터 추출 (안정성 강화)
-    const processRow =
-      Array.isArray(processRowResult) &&
-      Array.isArray(processRowResult[0]) &&
-      processRowResult[0].length > 0
-        ? processRowResult[0][0]
-        : Array.isArray(processRowResult) && processRowResult.length > 0
-        ? processRowResult[0]
-        : null;
-
-    if (!processRow) {
+    if (!processRow || processRow.length === 0) {
       await conn.rollback();
       return {
         isSuccessed: false,
-        message: "유효한 공정 번호를 찾을 수 없습니다.",
+        message: "해당 공정 번호의 데이터를 찾을 수 없습니다.",
       };
     }
 
-    const maxInputQty = processRow.inpt_qty; // 현투입량 (최대값)
-
-    // 요구사항: 작업자가 종료를 누르면, 최종 생산량은 현투입량(maxInputQty)과 같아야 함.
-    const finalQty = maxInputQty;
+    const inpt_qty = processRow.inpt_qty; // 현투입량
 
     // 3. 작업종료 행 업데이트 (최종 생산량 확정 및 상태 변경)
     // 요청에 따라 pass_qty를 0으로 설정합니다.
@@ -286,7 +194,7 @@ const updateProcessForm = async (params) => {
               procs_endtm = Now(),
               procs_st = 't3'              
       WHERE   procs_no = ?`,
-      [finalQty, procs_no] // pass_qty를 쿼리에서 0으로 설정했으므로 매개변수 제거
+      [mk_qty, procs_no] // pass_qty를 쿼리에서 0으로 설정했으므로 매개변수 제거
     );
 
     // 작업종료 버튼을 눌렀을때 "포장"공정이고 그에 해당하는 실적상태값이"t3"일 경우 지시서의 마지막 공정을 했다는 의미니까 지시서의 상태를 t3으로 바꾸는 코드
@@ -530,33 +438,33 @@ const insertProcessForm = async (params) => {
 /**
  * getCurrentProcessQty: 특정 공정 번호의 현재 생산량, 상태 및 완료 데이터를 조회합니다.
  */
-const getCurrentProcessQty = async (procs_no) => {
-  try {
-    const result = await mariadb.query(
-      `SELECT mk_qty, procs_st, 
-                    DATE_FORMAT(procs_endtm, '%Y-%m-%d %H:%i:%s') AS procs_endtm,
-                    fail_qty,
-                    pass_qty,
-                    DATE_FORMAT(procs_bgntm, '%Y-%m-%d %H:%i:%s') AS procs_bgntm
-              FROM processform
-              WHERE procs_no = ?`,
-      [procs_no]
-    );
+// const getCurrentProcessQty = async (procs_no) => {
+//   try {
+//     const result = await mariadb.query(
+//       `SELECT mk_qty, procs_st,
+//                     DATE_FORMAT(procs_endtm, '%Y-%m-%d %H:%i:%s') AS procs_endtm,
+//                     fail_qty,
+//                     pass_qty,
+//                     DATE_FORMAT(procs_bgntm, '%Y-%m-%d %H:%i:%s') AS procs_bgntm
+//               FROM processform
+//               WHERE procs_no = ?`,
+//       [procs_no]
+//     );
 
-    // 단일 행 데이터 추출 (안정성 강화)
-    const row =
-      Array.isArray(result) && Array.isArray(result[0]) && result[0].length > 0
-        ? result[0][0]
-        : Array.isArray(result) && result.length > 0
-        ? result[0]
-        : null;
+//     // 단일 행 데이터 추출 (안정성 강화)
+//     const row =
+//       Array.isArray(result) && Array.isArray(result[0]) && result[0].length > 0
+//         ? result[0][0]
+//         : Array.isArray(result) && result.length > 0
+//         ? result[0]
+//         : null;
 
-    return row;
-  } catch (err) {
-    console.error("[getCurrentProcessQty] Error:", err);
-    throw err;
-  }
-};
+//     return row;
+//   } catch (err) {
+//     console.error("[getCurrentProcessQty] Error:", err);
+//     throw err;
+//   }
+// };
 
 // 공정실적에서 입력한 값이 공정 제어에 값이 있는지 비교
 const calculateRemainingQty = async (prod_code, target_qty) => {
@@ -641,7 +549,6 @@ const nowProcessQty = async (mk_list, seq_no) => {
   }
 };
 
-
 const getNextProcessQty = async (mk_list, seq_no) => {
   try {
     const sql = `
@@ -673,7 +580,6 @@ module.exports = {
   calculateRemainingQty,
   updateProcessForm,
   processStart,
-  getCurrentProcessQty,
   nowProcessQty,
   getNextProcessQty,
 };
