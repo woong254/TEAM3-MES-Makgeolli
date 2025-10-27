@@ -96,36 +96,6 @@ router.get("/getProcessData", async (req, res) => {
   }
 });
 
-// ====================================================================
-// [추가] 공정제어 - 실시간 생산량 폴링을 위한 라우터
-// ====================================================================
-// router.get("/getCurrentProcessQty", async (req, res) => {
-//   const procs_no = req.query.procs_no;
-//   if (!procs_no) {
-//     // 공정 번호가 없으면 400 Bad Request 응답
-//     return res.status(400).json({
-//       isSuccessed: false,
-//       message: "공정 번호(procs_no)가 필요합니다.",
-//     });
-//   }
-
-//   try {
-//     // prodOrdService의 새로운 함수 호출 (실시간 데이터 조회 및 업데이트 역할)
-//     const result = await prodOrdService.getCurrentProcessQty(procs_no);
-
-//     // Vue 컴포넌트가 기대하는 형식에 맞게 isSuccessed: true와 result를 반환
-//     return res.json({ isSuccessed: true, result: result });
-//   } catch (err) {
-//     console.error("getCurrentProcessQty 라우터 오류:", err);
-//     return res.status(500).json({
-//       isSuccessed: false,
-//       message: "서버 내부 오류",
-//       detail: err.message,
-//     });
-//   }
-// });
-// ====================================================================
-
 // 공정실적관리에서 서버로 보낸 데이터
 router.post("/startProcess", async (req, res) => {
   // 1. 요청 본문(req.body)에서 필요한 '평면적인' 데이터를 직접 구조 분해 할당으로 가져옵니다.

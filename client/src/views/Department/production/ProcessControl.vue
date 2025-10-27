@@ -3,7 +3,7 @@ import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import ComponentCard from '@/components/common/ComponentCardOrder.vue'
 import '@/assets/common.css'
-import { ref, onMounted, onUnmounted } from 'vue' // onUnmounted 추가
+import { ref, onMounted } from 'vue' // onUnmounted 추가
 import axios from 'axios' // axios 연결
 import { useRoute } from 'vue-router'
 
@@ -69,22 +69,6 @@ interface processRequest {
   procs_no: number
 }
 
-// /**
-//  * [수정된 함수] 컴포넌트 로드 후, 기존 작업 상태를 확인하고 화면에 반영합니다.
-//  * (주의: 이 함수는 실시간 폴링을 시작하지 않습니다.)
-//  */
-// const checkInitialProcessStatus = async (procsNo: number) => {
-//   if (procsNo !== 0) {
-//     // procs_no를 얻은 후, 현재 상태를 조회하여 기존 작업 상태를 화면에 반영합니다.
-//     // 실시간 폴링은 '작업시작' 버튼 클릭 시에만 시작됩니다.
-//     await fetchCurrentQty()
-//   }
-// }
-
-// --------------------------------------------------------------------------------
-// [수정된 로직] 기존 데이터 로드 함수 및 버튼 함수
-// --------------------------------------------------------------------------------
-
 // 화면이 켜질때 가져올 데이터 함수
 const fetchProcessData = async () => {
   try {
@@ -112,9 +96,6 @@ const fetchProcessData = async () => {
     processForm.value.remain_qty = dbResult.remain_qty
     sf.value.procs_bgntm = dbResult.procs_bgntm
     ed.value.procs_endtm = dbResult.procs_endtm
-
-    // [수정] 기존 작업 상태를 확인하고 화면에 반영 (폴링은 시작하지 않음)
-    // await checkInitialProcessStatus(dbResult.procs_no)
   } catch (err) {
     console.error('fetchProcessData에서 오류가 생겼습니다. 오류내용 : ', err)
   }
@@ -144,9 +125,6 @@ const processStart = async () => {
       alert('작업시작성공')
       // 작업 시작 시간 업데이트
       sf.value.procs_bgntm = response.data.result.procs_bgntm
-
-      // // [핵심] 작업 시작 성공 후, 실시간 생산량 폴링 시작
-      // startPolling()
     }
   } catch (err) {
     console.error('processStart 오류 : ', err)
@@ -178,9 +156,6 @@ const processEnd = async () => {
       alert('작업종료성공')
       ed.value.procs_endtm = response.data.result.procs_endtm
       ed.value.mk_qty = processForm.value.inpt_qty // ✅ 화면에서도 즉시 반영
-
-      // // [핵심] 작업 종료 성공 후, 실시간 생산량 폴링 중지
-      // stopPolling()
     }
   } catch (error) {
     console.error('processEnd오류 : ', error)
@@ -191,11 +166,6 @@ const processEnd = async () => {
 onMounted(() => {
   fetchProcessData()
 })
-
-// // 컴포넌트가 사라질 때 setInterval 정리
-// onUnmounted(() => {
-//   stopPolling()
-// })
 </script>
 
 <template>

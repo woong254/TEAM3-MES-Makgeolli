@@ -6,24 +6,6 @@ const {
   selectWorkerAll,
 } = require("../database/sqls/prodOrdManage");
 
-// ----------------------------------------------------------------------
-// 서버 메모리에 실행 중인 공정 시뮬레이션을 관리하는 맵
-// 키: procs_no, 값: setInterval ID
-// *참고: 로드 밸런싱 환경에서는 Redis/Message Queue 등으로 대체해야 함*
-// const activeProcesses = {};
-
-// 공정 번호에 해당하는 시뮬레이션 중지 함수
-// const stopProcessSimulation = (procs_no) => {
-//   if (activeProcesses[procs_no]) {
-//     clearInterval(activeProcesses[procs_no]);
-//     delete activeProcesses[procs_no];
-//     console.log(`[Simulation] Process ${procs_no} stopped.`);
-//     return true;
-//   }
-//   return false;
-// };
-// ----------------------------------------------------------------------
-
 // 생산 지시 목록
 const findByEmpId = async (empId) => {
   let list = await mariadb
@@ -434,37 +416,6 @@ const insertProcessForm = async (params) => {
     if (conn) conn.release(); // 커넥션 반환
   }
 };
-
-/**
- * getCurrentProcessQty: 특정 공정 번호의 현재 생산량, 상태 및 완료 데이터를 조회합니다.
- */
-// const getCurrentProcessQty = async (procs_no) => {
-//   try {
-//     const result = await mariadb.query(
-//       `SELECT mk_qty, procs_st,
-//                     DATE_FORMAT(procs_endtm, '%Y-%m-%d %H:%i:%s') AS procs_endtm,
-//                     fail_qty,
-//                     pass_qty,
-//                     DATE_FORMAT(procs_bgntm, '%Y-%m-%d %H:%i:%s') AS procs_bgntm
-//               FROM processform
-//               WHERE procs_no = ?`,
-//       [procs_no]
-//     );
-
-//     // 단일 행 데이터 추출 (안정성 강화)
-//     const row =
-//       Array.isArray(result) && Array.isArray(result[0]) && result[0].length > 0
-//         ? result[0][0]
-//         : Array.isArray(result) && result.length > 0
-//         ? result[0]
-//         : null;
-
-//     return row;
-//   } catch (err) {
-//     console.error("[getCurrentProcessQty] Error:", err);
-//     throw err;
-//   }
-// };
 
 // 공정실적에서 입력한 값이 공정 제어에 값이 있는지 비교
 const calculateRemainingQty = async (prod_code, target_qty) => {
