@@ -1,4 +1,4 @@
-# 술술풀리는 달구벌 막걸리 MES프로젝트
+# :baby_bottle:술술풀리는 달구벌 막걸리 MES프로젝트
 > 막걸리 제조공정의 MES프로그램
 
 ## :page_with_curl:목차
